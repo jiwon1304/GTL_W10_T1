@@ -26,6 +26,8 @@
 
 #include "Engine/EditorEngine.h"
 #include <Actors/HeightFogActor.h>
+
+#include "WindowsFileDialog.h"
 #include "Actors/PointLightActor.h"
 #include "Actors/DirectionalLightActor.h"
 #include "Actors/SpotLightActor.h"
@@ -123,19 +125,27 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
 
         if (ImGui::MenuItem("Load Level"))
         {
-            char const* lFilterPatterns[1] = { "*.scene" };
-            const char* FileName = tinyfd_openFileDialog("Open Scene File", "", 1, lFilterPatterns, "Scene(.scene) file", 0);
-
-            if (FileName == nullptr)
+            TArray<FString> FileNames;
+            if (!FDesktopPlatformWindows::OpenFileDialog(
+                "Open Scene File",
+                "",
+                {{
+                    .FilterPattern = "*.scene",
+                    .Description = "Scene file"
+                }},
+                EFileDialogFlag::None,
+                FileNames
+            ))
             {
                 tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
                 ImGui::End();
                 return;
             }
+
             if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
             {
                 EditorEngine->NewLevel();
-                EditorEngine->LoadLevel(FileName);
+                EditorEngine->LoadLevel(FileNames.Pop());
             }
         }
 
@@ -143,20 +153,26 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
 
         if (ImGui::MenuItem("Save Level"))
         {
-            char const* lFilterPatterns[1] = { "*.scene" };
-            const char* FileName = tinyfd_saveFileDialog("Save Scene File", "", 1, lFilterPatterns, "Scene(.scene) file");
-
-            if (FileName == nullptr)
+            TArray<FString> FileNames;
+            if (!FDesktopPlatformWindows::SaveFileDialog(
+                "Save Scene File",
+                "",
+                {{
+                    .FilterPattern = "*.scene",
+                    .Description = "Scene file"
+                }},
+                FileNames
+            ))
             {
                 ImGui::End();
                 return;
             }
+
             if (const UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
             {
-                EditorEngine->SaveLevel(FileName);
+                EditorEngine->SaveLevel(FileNames.Pop());
+                tinyfd_messageBox("알림", "저장되었습니다.", "ok", "info", 1);
             }
-
-            tinyfd_messageBox("알림", "저장되었습니다.", "ok", "info", 1);
         }
 
         ImGui::Separator();
@@ -177,17 +193,46 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
         {
             if (ImGui::MenuItem("Wavefront (.obj)"))
             {
-                char const* lFilterPatterns[1] = { "*.obj" };
-                const char* FileName = tinyfd_openFileDialog("Open OBJ File", "", 1, lFilterPatterns, "Wavefront(.obj) file", 0);
-
-                if (FileName != nullptr)
+                TArray<FString> FileNames;
+                if (FDesktopPlatformWindows::OpenFileDialog(
+                    "Open OBJ File",
+                    "",
+                    {{
+                        .FilterPattern = "*.obj",
+                        .Description = "Wavefront(.obj) file"
+                    }},
+                    EFileDialogFlag::None,
+                    FileNames
+                ))
                 {
-                    std::cout << FileName << '\n';
+                    const FString FileName = FileNames.Pop();
+                    UE_LOG(ELogLevel::Display, TEXT("Import Wavefront File: %s"), *FileName);
 
                     if (FObjManager::CreateStaticMesh(FileName) == nullptr)
                     {
                         tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
                     }
+                }
+            }
+
+            if (ImGui::MenuItem("FBX (.fbx)"))
+            {
+                TArray<FString> FileNames;
+                if (FDesktopPlatformWindows::OpenFileDialog(
+                    "Open FBX File",
+                    "",
+                    {{
+                        .FilterPattern = "*.fbx",
+                        .Description = "FBX(.fbx) file"
+                    }},
+                    EFileDialogFlag::None,
+                    FileNames
+                ))
+                {
+                    const FString FileName = FileNames.Pop();
+                    UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
+
+                    // TODO: FBX Import 구현
                 }
             }
 
