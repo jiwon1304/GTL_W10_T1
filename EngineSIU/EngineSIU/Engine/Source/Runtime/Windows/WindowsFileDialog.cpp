@@ -131,7 +131,6 @@ public:
 
 
 bool FDesktopPlatformWindows::OpenFileDialog(
-    const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
     const TArray<FFilterItem>& Filters,
@@ -139,6 +138,8 @@ bool FDesktopPlatformWindows::OpenFileDialog(
     TArray<FString>& OutFilenames
 ) {
     bool bSuccess = false;
+    const void* ParentWindowHandle = nullptr;
+
     FString SelectedFilePath = TEXT("");
 
     // IFileOpenDialog 인스턴스 생성
@@ -269,13 +270,13 @@ bool FDesktopPlatformWindows::OpenFileDialog(
 
 
 bool FDesktopPlatformWindows::SaveFileDialog(
-    const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
     const TArray<FFilterItem>& Filters,
     TArray<FString>& OutFilenames
 ) {
     bool bSuccess = false;
+    const void* ParentWindowHandle = nullptr;
 
     TComPtr<IFileSaveDialog> FileSaveDialog;
     HRESULT Result = ::CoCreateInstance(

@@ -24,7 +24,6 @@ struct FDesktopPlatformWindows
 public:
     /** 파일 열기 대화상자를 표시하고 선택된 파일 경로를 반환합니다. */
     static bool OpenFileDialog(
-        const void* ParentWindowHandle,
         const FString& Title,
         const FString& DefaultPathAndFileName,
         const TArray<FFilterItem>& Filters,
@@ -34,7 +33,6 @@ public:
 
     /** 파일 저장 대화상자를 표시하고 선택된 파일 경로를 반환합니다. */
     static bool SaveFileDialog(
-        const void* ParentWindowHandle,
         const FString& Title,
         const FString& DefaultPathAndFileName,
         const TArray<FFilterItem>& Filters,
