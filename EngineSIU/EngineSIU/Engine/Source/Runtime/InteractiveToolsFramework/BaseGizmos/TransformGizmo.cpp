@@ -7,6 +7,7 @@
 #include "Engine/EditorEngine.h"
 #include "World/World.h"
 #include "Engine/FObjLoader.h"
+#include "Engine/FFbxLoader.h"
 
 ATransformGizmo::ATransformGizmo()
 {
@@ -21,6 +22,7 @@ ATransformGizmo::ATransformGizmo()
     FObjManager::CreateStaticMesh("Assets/GizmoScaleX.obj");
     FObjManager::CreateStaticMesh("Assets/GizmoScaleY.obj");
     FObjManager::CreateStaticMesh("Assets/GizmoScaleZ.obj");
+    FFbxManager::CreateSkeletalMesh("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
 
     SetRootComponent(
         AddComponent<USceneComponent>()

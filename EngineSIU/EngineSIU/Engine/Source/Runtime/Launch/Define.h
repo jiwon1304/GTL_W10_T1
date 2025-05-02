@@ -37,6 +37,15 @@ struct FStaticMaterial
     FName MaterialSlotName;
 };
 
+struct FSkeletalMaterial
+{
+    class UMaterial* Material;     // Material Resource
+    FName MaterialSlotName;        // Slot Name for the Material
+    int32 SectionIndex;            // Index of the Mesh Section
+    bool bRequiresSkinning;        // Whether Skinning is Required for this Material
+    TArray<int32> InfluencedBones; // List of Bones Influencing this Material
+};
+
 // OBJ File Raw Data
 struct FObjInfo
 {
@@ -101,7 +110,7 @@ struct FTextureInfo
     bool bIsSRGB;
 };
 
-struct FObjMaterialInfo
+struct FMaterialInfo
 {
     FString MaterialName;  // newmtl: Material Name.
 
@@ -120,11 +129,22 @@ struct FObjMaterialInfo
     float BumpMultiplier = 1.f;                                    // -bm: Bump Multiplier
     uint32 IlluminanceModel;                                       // illum: illumination Model between 0 and 10.
 
-    float Metallic = 0.0f;                                         // Pm: Metallic
-    float Roughness = 0.5f;                                        // Pr: Roughness
+    float Metallic = 0.0f;                                 // Metallic
+    float Roughness = 0.5f;                                // Roughness
+    float AmbientOcclusion = 1.0f;                         // Ambient Occlusion Strength
+    float ClearCoat = 0.0f;                                // Clear Coat Layer Strength
+    float Sheen = 0.0f;                                    // Sheen Strength
+
     
     /* Texture */
-    TArray<FTextureInfo> TextureInfos;
+    /* Extended PBR Texture Slots */
+    TArray<FTextureInfo> TextureInfos;                     // Texture Information
+    FTextureInfo NormalMap;                                // Normal Map
+    FTextureInfo DisplacementMap;                          // Displacement Map
+    FTextureInfo AmbientOcclusionMap;                      // AO Map
+    FTextureInfo RoughnessMap;                             // Roughness Map
+    FTextureInfo MetallicMap;                              // Metallic Map
+    FTextureInfo EmissiveMap;                              // Emissive Map
 };
 
 struct FVertexTexture
