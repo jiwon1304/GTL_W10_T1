@@ -1,6 +1,8 @@
-﻿#include "WindowsFileDialog.h"
+﻿// ReSharper disable CppClangTidyClangDiagnosticCastQual
+// ReSharper disable CppCStyleCast
+#include "WindowsFileDialog.h"
 #include <cassert>
-#include <filesystem>    // std::filesystem 사용
+#include <filesystem>    // std::filesystem
 #include <ShObjIdl.h>    // IFileOpenDialog, IFileSaveDialog
 #include <string>        // std::wstring
 #include <system_error>  // std::error_code for filesystem checks
@@ -14,23 +16,23 @@ namespace fs = std::filesystem;
 
 // --- 여기서만 사용하는 간단한 COM 스마트 포인터 ---
 template <typename T>
-class TMiniComPtr
+class TComPtr
 {
 private:
     T* Ptr = nullptr;
 
 public:
     // 기본 생성자 (nullptr 초기화)
-    TMiniComPtr() = default;
+    TComPtr() = default;
 
     // nullptr로부터의 생성 (명시적)
-    explicit TMiniComPtr(std::nullptr_t)
+    explicit TComPtr(std::nullptr_t)
         : Ptr(nullptr)
     {
     }
 
     // 소멸자: 유효한 포인터면 Release 호출
-    ~TMiniComPtr()
+    ~TComPtr()
     {
         if (Ptr)
         {
@@ -39,19 +41,19 @@ public:
     }
 
     // 복사 생성자 삭제 (소유권 복제 방지)
-    TMiniComPtr(const TMiniComPtr&) = delete;
+    TComPtr(const TComPtr&) = delete;
     // 복사 대입 연산자 삭제
-    TMiniComPtr& operator=(const TMiniComPtr&) = delete;
+    TComPtr& operator=(const TComPtr&) = delete;
 
     // 이동 생성자
-    TMiniComPtr(TMiniComPtr&& Other) noexcept
+    TComPtr(TComPtr&& Other) noexcept
         : Ptr(Other.Ptr)
     {
         Other.Ptr = nullptr; // 원본은 소유권 잃음
     }
 
     // 이동 대입 연산자
-    TMiniComPtr& operator=(TMiniComPtr&& Other) noexcept
+    TComPtr& operator=(TComPtr&& Other) noexcept
     {
         if (this != &Other)
         {
@@ -128,24 +130,17 @@ public:
 };
 
 
-FString FWindowsFileDialog::OpenFileDialog(
+FString FDesktopPlatformWindows::OpenFileDialog(
+    const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filter
+    const TArray<FFilterItem>& Filters
 ) {
     FString SelectedFilePath = TEXT("");
 
-    // COM 초기화
-    HRESULT HResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
-    if (FAILED(HResult))
-    {
-        return SelectedFilePath;
-    }
-
-    TMiniComPtr<IFileOpenDialog> FileOpenDialog;
-
     // IFileOpenDialog 인스턴스 생성
-    HResult = CoCreateInstance(
+    TComPtr<IFileOpenDialog> FileOpenDialog;
+    HRESULT Result = CoCreateInstance(
         CLSID_FileOpenDialog,
         nullptr,
         CLSCTX_ALL,
@@ -154,7 +149,7 @@ FString FWindowsFileDialog::OpenFileDialog(
     );
 
     // 생성 성공 및 포인터 유효 확인
-    if (SUCCEEDED(HResult) && FileOpenDialog)
+    if (SUCCEEDED(Result) && FileOpenDialog)
     {
         // 다이얼로그 옵션 설정
         DWORD DialogOptions = 0;
@@ -166,14 +161,17 @@ FString FWindowsFileDialog::OpenFileDialog(
         // 필터 설정
         TArray<COMDLG_FILTERSPEC> ComFilterSpecs;
         TArray<std::wstring> WideFilterStrings;
-        ComFilterSpecs.Reserve(Filter.Num());
-        WideFilterStrings.Reserve(Filter.Num() * 2);
+        ComFilterSpecs.Reserve(Filters.Num());
+        WideFilterStrings.Reserve(Filters.Num() * 2);
 
-        for (const FFilterItem& FilterItem : Filter)
+        for (const auto& [FilterPattern, Description] : Filters)
         {
-            int32 DescIndex = WideFilterStrings.Emplace(FilterItem.Description.ToWideString());
-            int32 FilterIndex = WideFilterStrings.Emplace(FilterItem.FilterPattern.ToWideString());
-            ComFilterSpecs.Add({ WideFilterStrings[DescIndex].c_str(), WideFilterStrings[FilterIndex].c_str() });
+            const int32 DescIndex = WideFilterStrings.Emplace(Description.ToWideString());
+            const int32 FilterIndex = WideFilterStrings.Emplace(FilterPattern.ToWideString());
+            ComFilterSpecs.Add({
+                .pszName = WideFilterStrings[DescIndex].c_str(),
+                .pszSpec = WideFilterStrings[FilterIndex].c_str()
+            });
         }
         if (ComFilterSpecs.Num() > 0)
         {
@@ -217,9 +215,9 @@ FString FWindowsFileDialog::OpenFileDialog(
                     && fs::is_directory(DefaultDirectory, ErrorCode)
                     && ErrorCode == std::error_code{}
                 ) {
-                    TMiniComPtr<IShellItem> DefaultFolderItem;
-                    HResult = SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
-                    if (SUCCEEDED(HResult) && DefaultFolderItem)
+                    TComPtr<IShellItem> DefaultFolderItem;
+                    Result = SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
+                    if (SUCCEEDED(Result) && DefaultFolderItem)
                     {
                         FileOpenDialog->SetFolder(DefaultFolderItem.Get());
                     }
@@ -232,18 +230,18 @@ FString FWindowsFileDialog::OpenFileDialog(
             }
         }
 
-        HResult = FileOpenDialog->Show(nullptr);
-        if (SUCCEEDED(HResult)) // 사용자가 '열기'를 누름 (취소 아님)
+        Result = FileOpenDialog->Show((HWND)ParentWindowHandle);
+        if (SUCCEEDED(Result)) // 사용자가 '열기'를 누름 (취소 아님)
         {
-            TMiniComPtr<IShellItem> SelectedItem;
-            HResult = FileOpenDialog->GetResult(&SelectedItem);
-            if (SUCCEEDED(HResult) && SelectedItem)
+            TComPtr<IShellItem> SelectedItem;
+            Result = FileOpenDialog->GetResult(&SelectedItem);
+            if (SUCCEEDED(Result) && SelectedItem)
             {
                 PWSTR FilePathPtr = nullptr;
-                HResult = SelectedItem->GetDisplayName(SIGDN_FILESYSPATH, &FilePathPtr);
+                Result = SelectedItem->GetDisplayName(SIGDN_FILESYSPATH, &FilePathPtr);
 
                 // 선택된 파일 경로 가져오기
-                if (SUCCEEDED(HResult))
+                if (SUCCEEDED(Result))
                 {
                     SelectedFilePath = FString(FilePathPtr); // PWSTR -> FString 변환 필요
                     CoTaskMemFree(FilePathPtr);
@@ -256,22 +254,16 @@ FString FWindowsFileDialog::OpenFileDialog(
 }
 
 
-FString FWindowsFileDialog::SaveFileDialog(
+FString FDesktopPlatformWindows::SaveFileDialog(
+    const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filter
+    const TArray<FFilterItem>& Filters
 ) {
     FString SelectedFilePath = TEXT("");
 
-    HRESULT Result = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
-    if (FAILED(Result))
-    {
-        return SelectedFilePath;
-    }
-
-    TMiniComPtr<IFileSaveDialog> FileSaveDialog; // TMiniComPtr 사용
-
-    Result = CoCreateInstance(
+    TComPtr<IFileSaveDialog> FileSaveDialog;
+    HRESULT Result = CoCreateInstance(
         CLSID_FileSaveDialog,
         nullptr,
         CLSCTX_ALL,
@@ -294,14 +286,17 @@ FString FWindowsFileDialog::SaveFileDialog(
         // 필터 설정
         TArray<COMDLG_FILTERSPEC> ComFilterSpecs;
         TArray<std::wstring> WideFilterStrings;
-        ComFilterSpecs.Reserve(Filter.Num());
-        WideFilterStrings.Reserve(Filter.Num() * 2);
+        ComFilterSpecs.Reserve(Filters.Num());
+        WideFilterStrings.Reserve(Filters.Num() * 2);
 
-        for (const FFilterItem& FilterItem : Filter)
+        for (const auto& [FilterPattern, Description] : Filters)
         {
-            int32 DescIndex = WideFilterStrings.Emplace(FilterItem.Description.ToWideString());
-            int32 FilterIndex = WideFilterStrings.Emplace(FilterItem.FilterPattern.ToWideString());
-            ComFilterSpecs.Add({ WideFilterStrings[DescIndex].c_str(), WideFilterStrings[FilterIndex].c_str() });
+            const int32 DescIndex = WideFilterStrings.Emplace(Description.ToWideString());
+            const int32 FilterIndex = WideFilterStrings.Emplace(FilterPattern.ToWideString());
+            ComFilterSpecs.Add({
+                .pszName = WideFilterStrings[DescIndex].c_str(),
+                .pszSpec = WideFilterStrings[FilterIndex].c_str()
+            });
         }
 
         if (ComFilterSpecs.Num() > 0)
@@ -318,13 +313,9 @@ FString FWindowsFileDialog::SaveFileDialog(
         }
 
         // 기본 경로 및 파일 이름 설정
-        FString LocalDefault = DefaultPathAndFileName.IsEmpty()
-            ? TEXT("NewScene.scene")
-            : DefaultPathAndFileName;
-
         try
         {
-            const fs::path DefaultInputPath = LocalDefault.ToWideString();
+            const fs::path DefaultInputPath = DefaultPathAndFileName.ToWideString();
             fs::path DefaultDirectory;
             fs::path DefaultFileName;
 
@@ -347,7 +338,7 @@ FString FWindowsFileDialog::SaveFileDialog(
                 && fs::is_directory(DefaultDirectory, ErrorCode)
                 && ErrorCode == std::error_code{}
             ) {
-                TMiniComPtr<IShellItem> DefaultFolderItem;
+                TComPtr<IShellItem> DefaultFolderItem;
                 Result = SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
                 if (SUCCEEDED(Result) && DefaultFolderItem)
                 {
@@ -364,10 +355,10 @@ FString FWindowsFileDialog::SaveFileDialog(
             // 기본 확장자 설정 (std::filesystem::path::extension 사용 가능)
             // 또는 기존 필터 기반 로직 사용
             fs::path FileNameForExt = DefaultFileName.empty() ? fs::path(TEXT("file")) : DefaultFileName; // 파일명이 없으면 임시 이름 사용
-            if (!FileNameForExt.has_extension() && Filter.Num() > 0 && !Filter[0].FilterPattern.IsEmpty())
+            if (!FileNameForExt.has_extension() && Filters.Num() > 0 && !Filters[0].FilterPattern.IsEmpty())
             {
                 // 기존 로직 활용 (첫 필터에서 확장자 추출)
-                FString FilterPattern = Filter[0].FilterPattern;
+                FString FilterPattern = Filters[0].FilterPattern;
                 int32 WildcardIndex = FilterPattern.Find(TEXT("*."), ESearchCase::CaseSensitive); // "*." 위치 찾기
                 if (WildcardIndex != INDEX_NONE)
                 {
@@ -391,10 +382,10 @@ FString FWindowsFileDialog::SaveFileDialog(
         }
 
         // 다이얼로그 표시
-        Result = FileSaveDialog->Show(nullptr);
+        Result = FileSaveDialog->Show((HWND)ParentWindowHandle);
         if (SUCCEEDED(Result)) // 사용자가 '저장'을 누름
         {
-            TMiniComPtr<IShellItem> SelectedItem;
+            TComPtr<IShellItem> SelectedItem;
             Result = FileSaveDialog->GetResult(&SelectedItem);
             if (SUCCEEDED(Result) && SelectedItem)
             {
