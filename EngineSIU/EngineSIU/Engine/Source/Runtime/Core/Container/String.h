@@ -5,6 +5,7 @@
 #include "ContainerAllocator.h"
 #include "StringConv.h"
 #include "Core/HAL/PlatformType.h"
+#include "Math/NumericLimits.h"
 
 /*
 # TCHAR가 ANSICHAR인 경우
@@ -55,6 +56,9 @@ private:
         std::char_traits<ElementType>,
         FDefaultAllocator<ElementType>
     >;
+
+    using SizeType = FDefaultAllocator<ElementType>::SizeType;
+
 
     BaseStringType PrivateString;
 
@@ -176,6 +180,42 @@ public:
         ESearchDir::Type SearchDir = ESearchDir::FromStart, int32 StartPosition = -1
     ) const;
 
+    /**
+     * 문자열에서 특정 문자의 첫 번째 발생 위치를 찾습니다.
+     * @param CharToFind 찾을 문자.
+     * @param SearchCase 대소문자 구분 설정.
+     * @param SearchDir 검색 방향.
+     * @param StartPosition 검색 시작 위치.
+     * @return 문자를 찾으면 해당 인덱스를, 찾지 못하면 INDEX_NONE (-1)을 반환합니다.
+     */
+    int32 FindChar(
+        ElementType CharToFind, ESearchCase::Type SearchCase = ESearchCase::IgnoreCase,
+        ESearchDir::Type SearchDir = ESearchDir::FromStart, int32 StartPosition = 0
+    ) const;
+
+    /**
+     * 문자열의 지정된 부분 문자열을 반환합니다.
+     * @param Start 부분 문자열의 시작 인덱스.
+     * @param Count 부분 문자열의 길이. 지정하지 않으면 시작 위치부터 끝까지 반환합니다.
+     * @return 추출된 부분 문자열을 포함하는 새로운 FString 객체.
+     */
+    FString Mid(int32 Start, int32 Count = MAX_int32) const;
+
+    /**
+     * 문자열의 왼쪽에서 지정된 개수만큼의 문자를 반환합니다.
+     * @param Count 반환할 문자의 개수.
+     * @return 문자열의 왼쪽 부분을 포함하는 새로운 FString 객체.
+     */
+    FString Left(int32 Count) const;
+
+    /**
+     * 문자열 시작 부분에서 지정된 접두사를 제거합니다. (인라인 버전)
+     * @param InPrefix 제거할 접두사 문자열.
+     * @param SearchCase 대소문자 구분 설정.
+     * @return 접두사가 성공적으로 제거되었으면 true, 아니면 false를 반환합니다.
+     */
+    bool RemoveFromStart(const FString& InPrefix, ESearchCase::Type SearchCase = ESearchCase::IgnoreCase);
+
     void Reserve(int32 CharacterCount);
     void Resize(int32 CharacterCount);
 
@@ -260,7 +300,7 @@ FString operator+(const FString& Lhs, const FString& Rhs)
 
 FORCEINLINE bool FString::operator==(const FString& Rhs) const
 {
-    return Equals(Rhs, ESearchCase::IgnoreCase);
+    return Equals(Rhs);
 }
 
 FORCEINLINE bool FString::operator==(const ElementType* Rhs) const

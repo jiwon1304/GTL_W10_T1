@@ -1,6 +1,7 @@
 #include "String.h"
 #include <algorithm>
 #include <vector>
+#include <charconv>
 
 #include "CoreMiscDefines.h"
 #include "Math/MathUtility.h"
@@ -17,12 +18,56 @@ FString FString::SanitizeFloat(float InFloat)
 
 float FString::ToFloat(const FString& InString)
 {
-	return std::stof(*InString);
+    if (InString.IsEmpty())
+    {
+        return 0.0f;
+    }
+
+    const ElementType* const Ptr = *InString;
+    const ElementType* const EndPtr = Ptr + InString.Len();
+    float Value = 0.0f;
+    auto Result = std::from_chars(Ptr, EndPtr, Value); // TCHAR가 char 또는 wchar_t일 때 작동
+
+    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음 (완전히 변환되지 않은 경우 방지)
+    if (Result.ec == std::errc() && Result.ptr != Ptr)
+    {
+        // 선택적: 변환 후 남은 문자가 있는지 확인 (예: "123.45abc")
+        // 완전한 숫자 문자열만 허용하려면 Result.ptr == EndPtr 인지 확인
+        // 여기서는 일단 변환된 부분까지 인정하고 값을 반환 (UE와 유사)
+        return Value;
+    }
+    else
+    {
+        // 변환 실패 또는 부분 변환 시 0 반환
+        return 0.0f;
+    }
 }
 
 int FString::ToInt(const FString& InString)
 {
-    return std::stoi(*InString);
+    if (InString.IsEmpty())
+    {
+        return 0;
+    }
+
+    const ElementType* const Ptr = *InString;
+    const ElementType* const EndPtr = Ptr + InString.Len();
+    int Value = 0;
+
+    // 10진수로 변환 시도
+    auto Result = std::from_chars(Ptr, EndPtr, Value, 10);
+
+    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음
+    if (Result.ec == std::errc() && Result.ptr != Ptr)
+    {
+        // 선택적: 변환 후 남은 문자 확인 (위 ToFloat 주석 참조)
+        return Value;
+    }
+    else
+    {
+        // 변환 실패 시 0 반환
+        return 0;
+    }
 }
 
 bool FString::ToBool() const
@@ -97,28 +142,27 @@ bool FString::Equals(const FString& Other, ESearchCase::Type SearchCase) const
     const int32 Num = Len();
     const int32 OtherNum = Other.Len();
 
+    // 길이가 다르면 무조건 false
     if (Num != OtherNum)
     {
-        // Handle special case where FString() == FString("")
-        return Num + OtherNum == 1;
-    }
-    else if (Num > 1)
-    {
-        if (SearchCase == ESearchCase::CaseSensitive)
-        {
-        	return TCString<ElementType>::Strcmp(**this, *Other) == 0;
-        }
-        else
-        {
-        	return std::ranges::equal(
-		        PrivateString, Other.PrivateString, [](char a, char b)
-	        {
-		        return std::tolower(a) == std::tolower(b);
-	        });
-        }
+        return false;
     }
 
-    return true;
+    // 길이가 0이면 무조건 true (위에서 길이가 같다고 확인됨)
+    if (Num == 0)
+    {
+        return true;
+    }
+
+    // 길이가 1 이상이면 내용을 비교
+    if (SearchCase == ESearchCase::CaseSensitive)
+    {
+        return FCString::Strcmp(**this, *Other) == 0;
+    }
+    else // ESearchCase::IgnoreCase
+    {
+        return FCString::Stricmp(**this, *Other) == 0;
+    }
 }
 
 bool FString::Contains(const FString& SubStr, ESearchCase::Type SearchCase, ESearchDir::Type SearchDir) const
@@ -132,25 +176,48 @@ int32 FString::Find(
 {
     if (SubStr.IsEmpty() || IsEmpty())
     {
-        return INDEX_NONE;
+        return INDEX_NONE; // -1
     }
 
-    const ElementType* StrPtr = **this;
-    const ElementType* SubStrPtr = *SubStr;
     const int32 StrLen = Len();
     const int32 SubStrLen = SubStr.Len();
 
-    auto CompareFunc = [SearchCase](ElementType A, ElementType B) -> bool {
-        return (SearchCase == ESearchCase::IgnoreCase) ? 
-            tolower(A) == tolower(B) : A == B;
+    // 찾으려는 부분 문자열이 원본보다 길면 절대 찾을 수 없음
+    if (SubStrLen > StrLen)
+    {
+        return INDEX_NONE;
+    }
+
+    const ElementType* const StrPtr = **this;
+    const ElementType* const SubStrPtr = *SubStr;
+
+    // 대소문자 비교 함수 (FCString 사용 권장)
+    auto CompareFunc = [SearchCase](ElementType A, ElementType B) -> bool
+    {
+        if (SearchCase == ESearchCase::IgnoreCase)
+        {
+            return FCString::ToLower(A) == FCString::ToLower(B);
+        }
+        else
+        {
+            return A == B;
+        }
     };
 
-    auto FindSubString = [&](int32 Start, int32 End, int32 Step) -> int32 {
-        for (int32 i = Start; i != End; i += Step)
+    // 부분 문자열을 찾는 내부 람다 함수
+    // [SearchStartIndex, SearchEndIndex) 범위에서 Step 방향으로 검색
+    auto FindSubString = [&](int32 SearchStartIndex, int32 SearchEndIndex, int32 Step) -> int32
+    {
+        for (int32 i = SearchStartIndex; i != SearchEndIndex; i += Step)
         {
+            // 현재 위치 'i'에서 시작하는 부분 문자열이 SubStr과 일치하는지 확인
             bool Found = true;
             for (int32 j = 0; j < SubStrLen; ++j)
             {
+                // 경계 검사: i + j 가 StrLen을 넘지 않도록 확인 (특히 FromEnd 검색 시 중요)
+                // 이 로직에서는 외부에서 시작/종료 인덱스를 잘 설정하여 불필요할 수 있으나, 안전하게 추가 가능
+                // if (i + j >= StrLen) { Found = false; break; }
+
                 if (!CompareFunc(StrPtr[i + j], SubStrPtr[j]))
                 {
                     Found = false;
@@ -159,22 +226,85 @@ int32 FString::Find(
             }
             if (Found)
             {
-                return i;
+                return i; // 일치하는 부분 문자열의 시작 인덱스 반환
             }
         }
-        return INDEX_NONE;
+        return INDEX_NONE; // 찾지 못함
     };
 
     if (SearchDir == ESearchDir::FromStart)
     {
-        StartPosition = FMath::Clamp(StartPosition, 0, StrLen - SubStrLen);
-        return FindSubString(StartPosition, StrLen - SubStrLen + 1, 1);
+        // 시작 위치 보정: 0 이상, (문자열 길이 - 부분 문자열 길이) 이하
+        const int32 EffectiveStartPosition = FMath::Clamp(StartPosition, 0, StrLen - SubStrLen);
+        // 검색 범위: [EffectiveStartPosition, StrLen - SubStrLen + 1)
+        // 마지막 가능한 시작 위치는 StrLen - SubStrLen
+        return FindSubString(EffectiveStartPosition, StrLen - SubStrLen + 1, 1);
     }
     else // ESearchDir::FromEnd
     {
-        StartPosition = (StartPosition == INDEX_NONE) ? StrLen - SubStrLen : FMath::Min(StartPosition, StrLen - SubStrLen);
-        return FindSubString(StartPosition, -1, -1);
+        // 검색을 시작할 최대 인덱스 계산
+        const int32 MaxStartIndex = (StartPosition == INDEX_NONE)
+                               ? (StrLen - SubStrLen) // 지정 안되면 마지막 가능한 위치부터
+                               : FMath::Min(StartPosition, StrLen - SubStrLen); // 지정되면 그 위치까지만
+
+        // 시작 위치가 음수면 검색 불가
+        if (MaxStartIndex < 0)
+        {
+             return INDEX_NONE;
+        }
+
+        // 검색 범위: [MaxStartIndex, -1) 즉, MaxStartIndex 부터 0 까지 역방향 검색
+        return FindSubString(MaxStartIndex, -1, -1);
     }
+}
+
+int32 FString::FindChar(
+    ElementType CharToFind, ESearchCase::Type SearchCase, ESearchDir::Type SearchDir, int32 StartPosition
+) const
+{
+    const int32 MyLen = Len();
+    if (MyLen == 0)
+    {
+        return INDEX_NONE;
+    }
+
+    // Normalize StartPosition
+    StartPosition = (StartPosition < 0) ? 0 : FMath::Min(StartPosition, MyLen - 1);
+
+    ElementType CharToFindLower = (SearchCase == ESearchCase::IgnoreCase) ? FCString::ToLower(CharToFind) : CharToFind;
+
+    if (SearchDir == ESearchDir::FromStart)
+    {
+        for (int32 i = StartPosition; i < MyLen; ++i)
+        {
+            ElementType CurrentChar = PrivateString[i];
+            ElementType CurrentCharCompare = (SearchCase == ESearchCase::IgnoreCase) ? FCString::ToLower(CurrentChar) : CurrentChar;
+            if (CurrentCharCompare == CharToFindLower)
+            {
+                return i;
+            }
+        }
+    }
+    else // ESearchDir::FromEnd
+    {
+        // Adjust StartPosition for reverse search if it wasn't explicitly set for the end
+        // If StartPosition was default (0), start from the actual end.
+        // If StartPosition was set, use it as the starting point for reverse search.
+        int32 ActualStartPosition = (StartPosition == 0 && SearchDir == ESearchDir::FromEnd) ? MyLen - 1 : StartPosition;
+        ActualStartPosition = FMath::Min(ActualStartPosition, MyLen - 1); // Ensure it's within bounds
+
+        for (int32 i = ActualStartPosition; i >= 0; --i)
+        {
+            ElementType CurrentChar = PrivateString[i];
+            ElementType CurrentCharCompare = (SearchCase == ESearchCase::IgnoreCase) ? FCString::ToLower(CurrentChar) : CurrentChar;
+            if (CurrentCharCompare == CharToFindLower)
+            {
+                return i;
+            }
+        }
+    }
+
+    return INDEX_NONE;
 }
 
 void FString::Reserve(int32 CharacterCount)
@@ -193,7 +323,7 @@ FString FString::ToUpper() const &
     std::ranges::transform(
         UpperCaseString,
         UpperCaseString.begin(),
-        [](ElementType Char) { return std::toupper(Char); }
+        [](ElementType Char) { return FCString::ToUpper(Char); }
     );
     return FString{std::move(UpperCaseString)};
 }
@@ -203,7 +333,7 @@ FString FString::ToUpper() &&
     std::ranges::transform(
         PrivateString,
         PrivateString.begin(),
-        [](ElementType Char) { return std::toupper(Char); }
+        [](ElementType Char) { return FCString::ToUpper(Char); }
     );
     return std::move(*this);
 }
@@ -213,7 +343,7 @@ void FString::ToUpperInline()
     std::ranges::transform(
         PrivateString,
         PrivateString.begin(),
-        [](ElementType Char) { return std::toupper(Char); }
+        [](ElementType Char) { return FCString::ToUpper(Char); }
     );
 }
 
@@ -223,7 +353,7 @@ FString FString::ToLower() const &
     std::ranges::transform(
         LowerCaseString,
         LowerCaseString.begin(),
-        [](ElementType Char) { return std::tolower(Char); }
+        [](ElementType Char) { return FCString::ToLower(Char); }
     );
     return FString{std::move(LowerCaseString)};
 }
@@ -233,7 +363,7 @@ FString FString::ToLower() &&
     std::ranges::transform(
         PrivateString,
         PrivateString.begin(),
-        [](ElementType Char) { return std::tolower(Char); }
+        [](ElementType Char) { return FCString::ToLower(Char); }
     );
     return std::move(*this);
 }
@@ -243,100 +373,153 @@ void FString::ToLowerInline()
     std::ranges::transform(
         PrivateString,
         PrivateString.begin(),
-        [](ElementType Char) { return std::tolower(Char); }
+        [](ElementType Char) { return FCString::ToLower(Char); }
     );
 }
 
-
-// Printf 함수 구현
-FString FString::Printf(const ElementType* Format, ...)
+FString FString::Mid(int32 Start, int32 Count) const
 {
-    if (!Format) // 포맷 문자열 null 체크
+    const int32 MyLen = Len();
+    // Clamp Start to be within the bounds of the string
+    Start = FMath::Clamp(Start, 0, MyLen);
+
+    // If Count is negative or too large, adjust it to go up to the end of the string
+    if (Count < 0 || (Start + Count) > MyLen)
+    {
+        Count = MyLen - Start;
+    }
+
+    // If the adjusted Count is zero or negative, return an empty string
+    if (Count <= 0)
     {
         return FString{};
     }
 
-    // 첫 번째 시도: 스택에 작은 버퍼를 할당 (일반적인 경우를 빠르게 처리)
-    ElementType StaticBuffer[512];
-    va_list ArgPtr;
-    va_start(ArgPtr, Format);
+    // Use std::basic_string::substr
+    // substr(pos, count)
+    BaseStringType Sub = PrivateString.substr(Start, Count);
+    return FString{std::move(Sub)};
+}
 
+FString FString::Left(int32 Count) const
+{
+    const int32 MyLen = Len();
+    // Clamp Count to be non-negative and not exceed the string length
+    Count = FMath::Clamp(Count, 0, MyLen);
+
+    if (Count == 0)
+    {
+        return FString{};
+    }
+
+    // Use std::basic_string::substr
+    // substr(pos, count) - starting from pos 0
+    BaseStringType Sub = PrivateString.substr(0, static_cast<size_t>(Count));
+    return FString{std::move(Sub)};
+}
+
+bool FString::RemoveFromStart(const FString& InPrefix, ESearchCase::Type SearchCase)
+{
+    const int32 PrefixLen = InPrefix.Len();
+    const int32 MyLen = Len();
+
+    if (PrefixLen == 0 || PrefixLen > MyLen)
+    {
+        return false; // Cannot remove an empty or longer prefix
+    }
+
+    // Check if the string actually starts with the prefix
+    bool bStartsWithPrefix = false;
+    if (SearchCase == ESearchCase::CaseSensitive)
+    {
+        // Use std::basic_string::compare for case-sensitive comparison
+        bStartsWithPrefix = (PrivateString.compare(0, PrefixLen, *InPrefix) == 0);
+    }
+    else // ESearchCase::IgnoreCase
+    {
+        // Perform case-insensitive comparison manually or using ranges::equal
+        bStartsWithPrefix = std::ranges::equal(
+            PrivateString.begin(), PrivateString.begin() + PrefixLen,
+            InPrefix.PrivateString.begin(), InPrefix.PrivateString.end(),
+            [](ElementType a, ElementType b) { return FCString::ToLower(a) == FCString::ToLower(b); }
+        );
+    }
+
+    if (bStartsWithPrefix)
+    {
+        // If it starts with the prefix, remove it using erase or assign with substr
+        // erase(pos, count)
+        PrivateString.erase(0, PrefixLen);
+        return true;
+    }
+
+    return false; // Prefix not found at the start
+}
+
+// Printf 함수 구현
+FString FString::Printf(const ElementType* Format, ...)
+{
+    if (!Format)
+    {
+        return FString{};
+    }
+
+    va_list ArgPtr;
     int32 Result = -1;
+    std::vector<ElementType> Buffer; // 동적 버퍼 사용
+
+    // 필요한 버퍼 크기를 추정하며 반복
+    int32 BufferSize = 512; // 초기 시도 크기
+    while (true)
+    {
+        Buffer.resize(BufferSize); // 버퍼 크기 조정
+
+        va_start(ArgPtr, Format); // 각 시도마다 va_list 재시작 필요
 #if USE_WIDECHAR
     #ifdef _WIN32
         // _vsnwprintf는 널 종료를 보장하지 않을 수 있으며, 성공 시 문자 수(널 제외) 또는 버퍼가 작으면 -1 반환
-        Result = _vsnwprintf(StaticBuffer, sizeof(StaticBuffer) / sizeof(ElementType), Format, ArgPtr);
-    #else
-        // vswprintf는 C99 표준부터 버퍼 크기를 받고 널 종료를 보장. 성공 시 문자 수(널 제외), 오류 시 음수 반환.
-        Result = vswprintf(StaticBuffer, sizeof(StaticBuffer) / sizeof(ElementType), Format, ArgPtr);
+        // _TRUNCATE 플래그를 사용하면 버퍼에 맞게 잘라주고 널 종료를 보장하며 성공 시 문자 수(널 미포함), 잘렸으면 -1 반환
+        Result = _vsnwprintf_s(Buffer.data(), Buffer.size(), _TRUNCATE, Format, ArgPtr);
+        // _vsnwprintf_s는 성공해도 버퍼가 꽉 찼으면 -1 반환 가능. 필요한 크기를 알려주지 않음.
+        // 따라서 아래 C99 표준 vsnprintf/vswprintf 방식 사용이 더 효과적일 수 있음 (Windows에서도 사용 가능).
+        // 여기서는 일단 C99 표준 함수를 우선 사용하도록 수정
     #endif
-#else
-    // vsnprintf는 C99 표준부터 버퍼 크기를 받고 널 종료를 보장. 성공 시 문자 수(널 제외), 오류 시 음수 반환.
-    Result = vsnprintf(StaticBuffer, sizeof(StaticBuffer) / sizeof(ElementType), Format, ArgPtr);
-#endif
-    va_end(ArgPtr);
+    // C99 vswprintf (대부분의 현대 컴파일러에서 지원, Windows 포함)
+    // 성공 시: 필요한 문자 수 (널 제외) 반환. 버퍼 크기보다 작으면 버퍼에 쓰여짐.
+    // 버퍼 부족 시: 필요한 문자 수 (널 제외) 반환. 버퍼 내용은 미정의.
+    // 오류 시: 음수 반환.
+    Result = vswprintf(Buffer.data(), Buffer.size(), Format, ArgPtr);
 
-    // 작은 버퍼로 충분했고 오류가 없었다면 바로 반환
-    if (Result >= 0 && Result < static_cast<int32>(sizeof(StaticBuffer) / sizeof(ElementType)))
-    {
-        // StaticBuffer[Result] = 0; // _vsnwprintf는 널 종료 보장 안할 수 있으나, vsnprintf/vswprintf C99는 함. 안전하게 추가 가능.
-        return FString(BaseStringType(StaticBuffer));
-    }
-    else // 버퍼가 너무 작거나 오류 발생
-    {
-        // 두 번째 시도: 필요한 크기를 계산하여 동적 할당
-        int32 RequiredSize = -1;
-        va_list ArgPtr2;
-        va_start(ArgPtr2, Format);
-#if USE_WIDECHAR
-    #ifdef _WIN32
-        // _vsnwprintf에 null 버퍼와 0 크기를 전달하면 필요한 크기(널 포함 안함) 반환
-        RequiredSize = _vsnwprintf(nullptr, 0, Format, ArgPtr2);
-    #else
-        // C99 vswprintf 동작은 구현에 따라 다를 수 있음. 일반적으로 비슷하게 동작.
-        RequiredSize = vswprintf(nullptr, 0, Format, ArgPtr2); // 이 방식이 표준은 아닐 수 있음. 대안 필요시 다른 라이브러리 사용.
-        // 임시 버퍼를 크게 잡고 시도하는 방법도 있음.
-        // 또는 C++20 std::format 사용 고려.
-    #endif
-#else
-        // C99 vsnprintf에 null 버퍼와 0 크기를 전달하면 필요한 크기(널 포함 안함) 반환
-        RequiredSize = vsnprintf(nullptr, 0, Format, ArgPtr2);
+#else // TCHAR == char
+        // C99 vsnprintf
+        // 성공 시: 필요한 문자 수 (널 제외) 반환. 버퍼 크기보다 작으면 버퍼에 쓰여짐.
+        // 버퍼 부족 시: 필요한 문자 수 (널 제외) 반환. 버퍼 내용은 미정의.
+        // 오류 시: 음수 반환.
+        Result = vsnprintf(Buffer.data(), Buffer.size(), Format, ArgPtr);
 #endif
-        va_end(ArgPtr2);
+        va_end(ArgPtr);
 
-        if (RequiredSize < 0) // 크기 계산 실패 (오류)
+        // 결과 확인
+        if (Result < 0)
         {
+            // 포맷팅 오류 발생
             // 오류 로그 출력 가능
             return FString{}; // 빈 문자열 반환
         }
-
-        // 필요한 크기 + 널 종료 문자 공간 할당
-        std::vector<ElementType> DynamicBuffer(RequiredSize + 1);
-
-        // 다시 포맷팅 수행
-        va_list ArgPtr3;
-        va_start(ArgPtr3, Format);
-#if USE_WIDECHAR
-    #ifdef _WIN32
-        Result = _vsnwprintf(DynamicBuffer.data(), DynamicBuffer.size(), Format, ArgPtr3);
-    #else
-        Result = vswprintf(DynamicBuffer.data(), DynamicBuffer.size(), Format, ArgPtr3);
-    #endif
-#else
-        Result = vsnprintf(DynamicBuffer.data(), DynamicBuffer.size(), Format, ArgPtr3);
-#endif
-        va_end(ArgPtr3);
-
-        if (Result >= 0 && Result < static_cast<int32>(DynamicBuffer.size()))
+        else if (Result < BufferSize)
         {
-            // DynamicBuffer[Result] = 0; // 널 종료 보장됨 (C99)
-            return FString(BaseStringType(DynamicBuffer.data()));
+            // 성공: 버퍼가 충분했음. Result는 쓰여진 문자 수 (널 제외).
+            // Buffer.data()는 이미 널 종료된 상태(vsnprintf/vswprintf가 보장).
+            // 필요한 경우 Buffer.resize(Result); 로 정확한 크기로 줄일 수 있음.
+            return FString{BaseStringType(Buffer.data())};
         }
-        else
+        else // Result >= BufferSize
         {
-            // 최종 포맷팅 실패 (이론상 발생하기 어려움)
-            // 오류 로그 출력 가능
-            return FString{}; // 빈 문자열 반환
+            // 버퍼 부족: Result는 필요한 버퍼 크기 (널 포함).
+            // 필요한 크기 + 1 (널 문자 공간)으로 버퍼 재할당 후 재시도.
+            BufferSize = Result + 1;
+            // 무한 루프 방지 (매우 큰 문자열 등) - 필요시 최대 크기 제한 추가 가능
+            // if (BufferSize > SOME_MAX_LIMIT) { return FString{}; }
         }
     }
 }
