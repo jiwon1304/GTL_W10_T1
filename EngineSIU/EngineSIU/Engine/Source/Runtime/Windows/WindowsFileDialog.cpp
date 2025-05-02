@@ -268,13 +268,14 @@ bool FDesktopPlatformWindows::OpenFileDialog(
 }
 
 
-FString FDesktopPlatformWindows::SaveFileDialog(
+bool FDesktopPlatformWindows::SaveFileDialog(
     const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filters
+    const TArray<FFilterItem>& Filters,
+    TArray<FString>& OutFilenames
 ) {
-    FString SelectedFilePath = TEXT("");
+    bool bSuccess = false;
 
     TComPtr<IFileSaveDialog> FileSaveDialog;
     HRESULT Result = ::CoCreateInstance(
@@ -409,12 +410,13 @@ FString FDesktopPlatformWindows::SaveFileDialog(
                 // 선택된 파일 경로 가져오기
                 if (SUCCEEDED(Result))
                 {
-                    SelectedFilePath = FString(FilePathPtr); // PWSTR -> FString 변환 필요
+                    bSuccess = true;
+                    OutFilenames.Add(fs::path(FilePathPtr).generic_wstring()); // PWSTR -> FString 변환 필요
                     ::CoTaskMemFree(FilePathPtr);
                 }
             }
         }
     }
     ::CoUninitialize();
-    return SelectedFilePath;
+    return bSuccess;
 }
