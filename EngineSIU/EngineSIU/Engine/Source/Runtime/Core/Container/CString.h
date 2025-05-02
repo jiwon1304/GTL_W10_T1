@@ -13,7 +13,7 @@ struct TCString
 public:
     using CharType = T;
 
-private:
+public:
     // 문자가 영숫자인지 확인
     static constexpr bool IsAlnum(CharType C)
     {
@@ -70,7 +70,6 @@ private:
         return C;
     }
 
-public:
     // --- 문자열 길이 ---
     /** 문자열의 길이를 반환합니다 (널 종료 문자 제외). */
     static std::size_t Strlen(const CharType* str)
