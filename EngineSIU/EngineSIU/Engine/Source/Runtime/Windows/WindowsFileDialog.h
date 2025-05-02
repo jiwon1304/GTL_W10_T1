@@ -13,7 +13,7 @@ struct FFilterItem
     FString Description;
 };
 
-enum class EFileDialogFlags : uint8
+enum class EFileDialogFlag : uint8
 {
     None,    // No flags
     Multiple // Allow multiple file selections
@@ -23,11 +23,13 @@ struct FDesktopPlatformWindows
 {
 public:
     /** 파일 열기 대화상자를 표시하고 선택된 파일 경로를 반환합니다. */
-    static FString OpenFileDialog(
+    static bool OpenFileDialog(
         const void* ParentWindowHandle,
         const FString& Title,
         const FString& DefaultPathAndFileName,
-        const TArray<FFilterItem>& Filters
+        const TArray<FFilterItem>& Filters,
+        EFileDialogFlag Flag,
+        TArray<FString>& OutFilenames
     );
 
     /** 파일 저장 대화상자를 표시하고 선택된 파일 경로를 반환합니다. */
@@ -47,7 +49,7 @@ private:
         const FString& DefaultPath,
         const FString& DefaultFile,
         const TArray<FFilterItem>& FileTypes,
-        EFileDialogFlags Flag,
+        EFileDialogFlag Flag,
         TArray<FString>& OutFilenames
     );
 };

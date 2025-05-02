@@ -130,17 +130,20 @@ public:
 };
 
 
-FString FDesktopPlatformWindows::OpenFileDialog(
+bool FDesktopPlatformWindows::OpenFileDialog(
     const void* ParentWindowHandle,
     const FString& Title,
     const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filters
+    const TArray<FFilterItem>& Filters,
+    EFileDialogFlag Flag,
+    TArray<FString>& OutFilenames
 ) {
+    bool bSuccess = false;
     FString SelectedFilePath = TEXT("");
 
     // IFileOpenDialog 인스턴스 생성
     TComPtr<IFileOpenDialog> FileOpenDialog;
-    HRESULT Result = CoCreateInstance(
+    HRESULT DialogResult = ::CoCreateInstance(
         CLSID_FileOpenDialog,
         nullptr,
         CLSCTX_ALL,
@@ -149,12 +152,16 @@ FString FDesktopPlatformWindows::OpenFileDialog(
     );
 
     // 생성 성공 및 포인터 유효 확인
-    if (SUCCEEDED(Result) && FileOpenDialog)
+    if (SUCCEEDED(DialogResult) && FileOpenDialog)
     {
         // 다이얼로그 옵션 설정
         DWORD DialogOptions = 0;
         if (SUCCEEDED(FileOpenDialog->GetOptions(&DialogOptions)))
         {
+            if (Flag == EFileDialogFlag::Multiple)
+            {
+                DialogOptions |= FOS_ALLOWMULTISELECT;
+            }
             FileOpenDialog->SetOptions(DialogOptions | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM);
         }
 
@@ -216,8 +223,8 @@ FString FDesktopPlatformWindows::OpenFileDialog(
                     && ErrorCode == std::error_code{}
                 ) {
                     TComPtr<IShellItem> DefaultFolderItem;
-                    Result = SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
-                    if (SUCCEEDED(Result) && DefaultFolderItem)
+                    DialogResult = ::SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
+                    if (SUCCEEDED(DialogResult) && DefaultFolderItem)
                     {
                         FileOpenDialog->SetFolder(DefaultFolderItem.Get());
                     }
@@ -230,27 +237,34 @@ FString FDesktopPlatformWindows::OpenFileDialog(
             }
         }
 
-        Result = FileOpenDialog->Show((HWND)ParentWindowHandle);
-        if (SUCCEEDED(Result)) // 사용자가 '열기'를 누름 (취소 아님)
+        DialogResult = FileOpenDialog->Show((HWND)ParentWindowHandle);
+        if (SUCCEEDED(DialogResult)) // 사용자가 '열기'를 누름 (취소 아님)
         {
-            TComPtr<IShellItem> SelectedItem;
-            Result = FileOpenDialog->GetResult(&SelectedItem);
-            if (SUCCEEDED(Result) && SelectedItem)
+            TComPtr<IShellItemArray> Results;
+            if (SUCCEEDED(FileOpenDialog->GetResults(&Results)))
             {
-                PWSTR FilePathPtr = nullptr;
-                Result = SelectedItem->GetDisplayName(SIGDN_FILESYSPATH, &FilePathPtr);
-
-                // 선택된 파일 경로 가져오기
-                if (SUCCEEDED(Result))
+                DWORD NumResults = 0;
+                Results->GetCount(&NumResults);
+                for (DWORD ResultIndex = 0; ResultIndex < NumResults; ++ResultIndex)
                 {
-                    SelectedFilePath = FString(FilePathPtr); // PWSTR -> FString 변환 필요
-                    CoTaskMemFree(FilePathPtr);
+                    TComPtr<IShellItem> SelectedItem;
+                    if (SUCCEEDED(Results->GetItemAt(ResultIndex, &SelectedItem)))
+                    {
+                        PWSTR pFilePath = nullptr;
+                        if (SUCCEEDED(SelectedItem->GetDisplayName(SIGDN_FILESYSPATH, &pFilePath)))
+                        {
+                            // 선택된 파일 경로 가져오기
+                            bSuccess = true;
+                            OutFilenames.Add(fs::path(pFilePath).generic_wstring());
+                            ::CoTaskMemFree(pFilePath);
+                        }
+                    }
                 }
             }
         }
     }
-    CoUninitialize();
-    return SelectedFilePath;
+    ::CoUninitialize();
+    return bSuccess;
 }
 
 
@@ -263,7 +277,7 @@ FString FDesktopPlatformWindows::SaveFileDialog(
     FString SelectedFilePath = TEXT("");
 
     TComPtr<IFileSaveDialog> FileSaveDialog;
-    HRESULT Result = CoCreateInstance(
+    HRESULT Result = ::CoCreateInstance(
         CLSID_FileSaveDialog,
         nullptr,
         CLSCTX_ALL,
@@ -339,7 +353,7 @@ FString FDesktopPlatformWindows::SaveFileDialog(
                 && ErrorCode == std::error_code{}
             ) {
                 TComPtr<IShellItem> DefaultFolderItem;
-                Result = SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
+                Result = ::SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
                 if (SUCCEEDED(Result) && DefaultFolderItem)
                 {
                     FileSaveDialog->SetFolder(DefaultFolderItem.Get());
@@ -396,11 +410,11 @@ FString FDesktopPlatformWindows::SaveFileDialog(
                 if (SUCCEEDED(Result))
                 {
                     SelectedFilePath = FString(FilePathPtr); // PWSTR -> FString 변환 필요
-                    CoTaskMemFree(FilePathPtr);
+                    ::CoTaskMemFree(FilePathPtr);
                 }
             }
         }
     }
-    CoUninitialize();
+    ::CoUninitialize();
     return SelectedFilePath;
 }
