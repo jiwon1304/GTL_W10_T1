@@ -307,6 +307,17 @@ int32 FString::FindChar(
     return INDEX_NONE;
 }
 
+bool FString::FindChar(ElementType InChar, int32& Index) const
+{
+    const int32 IndexFound = FindChar(InChar);
+    if (IndexFound != INDEX_NONE)
+    {
+        Index = IndexFound;
+        return true;
+    }
+    return false;
+}
+
 void FString::Reserve(int32 CharacterCount)
 {
     PrivateString.reserve(CharacterCount);
@@ -414,7 +425,7 @@ FString FString::Left(int32 Count) const
 
     // Use std::basic_string::substr
     // substr(pos, count) - starting from pos 0
-    BaseStringType Sub = PrivateString.substr(0, static_cast<size_t>(Count));
+    BaseStringType Sub = PrivateString.substr(0, Count);
     return FString{std::move(Sub)};
 }
 
@@ -429,7 +440,7 @@ bool FString::RemoveFromStart(const FString& InPrefix, ESearchCase::Type SearchC
     }
 
     // Check if the string actually starts with the prefix
-    bool bStartsWithPrefix = false;
+    bool bStartsWithPrefix;
     if (SearchCase == ESearchCase::CaseSensitive)
     {
         // Use std::basic_string::compare for case-sensitive comparison
