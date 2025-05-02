@@ -7,18 +7,31 @@ on:
     branches:
       - main  # main 브랜치에 대한 PR만 트리거
   workflow_dispatch: # 수동으로 트리거할 수 있도록 설정
+    inputs:
+      force_clean_build:
+        description: 'Force clean build (do not use cache)'
+        required: false
+        type: boolean
+        default: false # 기본값은 캐시 사용 (false)
 
 env:
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: ./EngineSIU/EngineSIU.sln
 
+  # Path to the intermediate build directory relative to the root of the project.
+  # This is where MSBuild will place its intermediate files.
+  # You can change this to a different directory if you prefer.
+  INTERMEDIATE_DIR_PATH: EngineSIU/Intermediate/Build
+
   # Configuration type to build.
   # You can convert this to a build matrix if you need coverage of multiple configuration types.
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
+  BUILD_PLATFORM: x64
 
 permissions:
   contents: read
+  actions: write # actions/cache@v4 사용을 위해 필요
 
 jobs:
   build:
@@ -26,9 +39,29 @@ jobs:
 
     steps:
     # 1. 레포지토리 체크아웃
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    # 2. MSBuild Setup
+    # 2. MSBuild 중간 파일 캐싱 설정
+    # IntDir 경로를 캐싱합니다.
+    - name: Cache MSBuild intermediate files
+      uses: actions/cache@v4
+      # workflow_dispatch 트리거 시 force_clean_build 입력이 true가 아닐 때만 실행
+      if: github.event.inputs.force_clean_build != 'true'
+      with:
+        # 캐싱할 경로: $(SolutionDir)Intermediate/Build/ 를 기반으로 설정
+        # 특정 플랫폼/설정만 캐싱하려면 경로를 더 구체적으로 지정할 수 있습니다.
+        # 예: ${{ env.INTERMEDIATE_DIR_PATH }}/${{ env.BUILD_PLATFORM }}/
+        path: ${{ env.INTERMEDIATE_DIR_PATH }}
+        # 캐시 키: OS, 플랫폼, 설정, 솔루션/프로젝트 파일 해시를 조합
+        # 소스 파일 (**/*.cpp, **/*.h) 해시를 포함하면 더 정확하지만, 캐시 히트율이 낮아질 수 있습니다.
+        # 우선은 프로젝트 파일 변경 시 캐시를 무효화하는 방식으로 시작하는 것이 일반적입니다.
+        key: ${{ runner.os }}-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_CONFIGURATION }}-msbuild-${{ hashFiles('**/*.sln', '**/*.vcxproj') }}
+        # 복원 키: 정확한 키가 없을 때 이전 캐시라도 사용 시도
+        restore-keys: |
+          ${{ runner.os }}-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_CONFIGURATION }}-msbuild-
+
+    # 3. MSBuild Setup
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
@@ -37,17 +70,8 @@ jobs:
     #   working-directory: ${{ github.workspace }}
     #   run: nuget restore ${{ env.SOLUTION_FILE_PATH }}
 
-    # 3. MSBuild 중간 파일 캐싱
-    # - name: Cache MSBuild intermediate files
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: build/
-    #     key: ${{ runner.os }}-msbuild-${{ hashFiles('**/*.sln', '**/*.vcxproj') }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-msbuild-
-
-    - name: Build
+    - name: Build Solution
       working-directory: ${{ github.workspace }}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{ env.BUILD_CONFIGURATION }} ${{ env.SOLUTION_FILE_PATH }}
+      run: msbuild /m /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform=${{ env.BUILD_PLATFORM }} ${{ env.SOLUTION_FILE_PATH }}
