@@ -60,4 +60,6 @@ typedef ANSICHAR TCHAR;
 
 // 임시로 사용
 #include <string>
-using FWString = std::wstring;
+
+[[deprecated("Use FString Var = TEXT(Hello); Var.ToWideString(); instead")]]
+typedef std::wstring FWString;
