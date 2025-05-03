@@ -75,6 +75,81 @@ struct FObjInfo
     TArray<FMaterialSubset> MaterialSubsets;
 };
 
+// FBX File Raw Data
+struct FFbxInfo
+{
+    FWString ObjectName; // FBX File Name. Path + FileName.fbx
+    FWString FilePath;   // FBX File Paths
+    FString DisplayName; // Display Name
+
+    // Hierarchical Structure
+    struct FNode
+    {
+        FString NodeName;    // Node Name
+        FMatrix Transform;   // Local Transform Matrix
+        int32 ParentIndex;   // Parent Node Index (-1 if root)
+        TArray<int32> ChildIndices; // Indices of Child Nodes
+    };
+
+    TArray<FNode> Nodes; // Node hierarchy
+
+    // Mesh Data
+    struct FMesh
+    {
+        FString MeshName;                 // Mesh Name
+        TArray<FVector> Vertices;         // Vertex Positions
+        TArray<FVector> Normals;          // Vertex Normals
+        TArray<FVector2D> UVs;            // Vertex UVs
+        TArray<uint32> Indices;           // Triangle Indices
+        TArray<FMaterialSubset> MaterialSubsets; // Material Subsets
+    };
+
+    TArray<FMesh> Meshes; // List of Meshes
+
+    // Material Data
+    struct FMaterialInfo
+    {
+        FString MaterialName;            // Material Name
+        FVector DiffuseColor;            // Diffuse Color
+        FVector SpecularColor;           // Specular Color
+        FVector EmissiveColor;           // Emissive Color
+        FString TextureFilePath;         // Texture File Path
+    };
+
+    TArray<FMaterialInfo> Materials; // List of Materials
+
+    // Skeleton Data (for skeletal meshes)
+    struct FSkeletonBone
+    {
+        FString BoneName;           // Bone Name
+        int32 ParentIndex;          // Parent Bone Index (-1 if root)
+        FMatrix BindPoseMatrix;     // Bind Pose Matrix
+    };
+
+    TArray<FSkeletonBone> Skeleton; // List of Bones
+
+    // Animation Data
+    struct FAnimationKey
+    {
+        float Time;                 // Keyframe Time
+        FMatrix Transform;          // Transform Matrix
+    };
+
+    struct FAnimationTrack
+    {
+        FString BoneName;                   // Bone Name
+        TArray<FAnimationKey> Keyframes;    // Animation Keyframes
+    };
+
+    struct FAnimationClip
+    {
+        FString AnimationName;             // Animation Name
+        TArray<FAnimationTrack> Tracks;    // Animation Tracks
+    };
+
+    TArray<FAnimationClip> Animations; // List of Animation Clips
+};
+
 enum class EMaterialTextureFlags : uint16
 {
     MTF_Diffuse      = 1 << 0,
@@ -530,5 +605,10 @@ struct FDiffuseMultiplier
 {
     float DiffuseMultiplier;
     FVector DiffuseOverrideColor;
+};
+
+struct FBoneMatrices
+{
+    FMatrix BoneMatrices[64];
 };
 #pragma endregion

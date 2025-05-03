@@ -36,12 +36,12 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
     {
         if (*SkeletalMeshPath != TEXT("None"))
         {
-            if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(*SkeletalMeshPath))
-            {
-                SetSkeletalMesh(MeshToSet);
-                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            }
-            else
+            //if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(*SkeletalMeshPath))
+            //{
+            //    SetSkeletalMesh(MeshToSet);
+            //    UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            //}
+            //else
             {
                 UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
                 SetSkeletalMesh(nullptr);
@@ -122,5 +122,48 @@ void USkeletalMeshComponent::GetUsedMaterials(TArray<UMaterial*>& Out) const
                 Out[MaterialIndex] = OverrideMaterials[MaterialIndex];
             }
         }
+    }
+}
+
+void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
+{
+    if (!SkeletalMesh || SkeletalMesh->GetRenderData()->Bones.Num() == 0)
+    {
+        // No skeletal mesh or bones to process
+        OutBoneMatrices.Add(FMatrix::Identity);
+        return;
+    }
+
+    const FSkeletalMeshRenderData* RenderData = SkeletalMesh->GetRenderData();
+    if (!RenderData)
+    {
+        return;
+    }
+
+    const TArray<FSkeletalMeshBone>& Bones = RenderData->Bones;
+    const TArray<FMatrix>& RefPoseMatrices = RenderData->InverseBindPoseMatrices; // Bind pose matrices
+
+    // Resize the output array to match the bone count
+    OutBoneMatrices.SetNum(Bones.Num());
+
+    // Start calculating bone matrices
+    for (int32 BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
+    {
+        const FSkeletalMeshBone& Bone = Bones[BoneIndex];
+
+        // Combine the bone's local transform with its parent's transform
+        FMatrix BoneMatrix = FMatrix::Identity;
+
+        if (Bone.ParentIndex != -1) // If the bone has a parent
+        {
+            BoneMatrix = OutBoneMatrices[Bone.ParentIndex] * RefPoseMatrices[BoneIndex];
+        }
+        else // Root bone
+        {
+            BoneMatrix = RefPoseMatrices[BoneIndex];
+        }
+
+        // Store the final bone matrix
+        OutBoneMatrices[BoneIndex] = BoneMatrix;
     }
 }

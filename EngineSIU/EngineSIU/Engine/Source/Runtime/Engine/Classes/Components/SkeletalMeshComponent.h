@@ -27,9 +27,12 @@ public:
     USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
     void SetSkeletalMesh(USkeletalMesh* Value);
 
+    void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
+
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
     int SelectedBoneIndex = -1;
     TArray<UMaterial*> OverrideMaterials;
     FBoundingBox AABB = FBoundingBox(FVector::ZeroVector, FVector::ZeroVector);
+
 };

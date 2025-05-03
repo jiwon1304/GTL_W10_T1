@@ -3,6 +3,7 @@
 
 class UStaticMeshComponent;
 class USphereComponent;
+class USkeletalMeshComponent;
 
 class AItemActor : public AActor
 {
@@ -33,7 +34,7 @@ protected:
     (USphereComponent*, SphereComponent, = nullptr)
 
     UPROPERTY
-    (UStaticMeshComponent*, MeshComponent, = nullptr)
+    (USkeletalMeshComponent*, MeshComponent, = nullptr)
 
     void ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 };

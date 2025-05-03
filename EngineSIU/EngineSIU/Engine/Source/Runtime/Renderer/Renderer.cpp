@@ -8,6 +8,7 @@
 #include "D3D11RHI/DXDShaderManager.h"
 #include "RendererHelpers.h"
 #include "StaticMeshRenderPass.h"
+#include "SkeletalMeshRenderPass.h"
 #include "WorldBillboardRenderPass.h"
 #include "EditorBillboardRenderPass.h"
 #include "GizmoRenderPass.h"
@@ -52,6 +53,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     CreateCommonShader();
     
     StaticMeshRenderPass = new FStaticMeshRenderPass();
+    SkeletalMeshRenderPass = new FSkeletalMeshRenderPass();
     WorldBillboardRenderPass = new FWorldBillboardRenderPass();
     EditorBillboardRenderPass = new FEditorBillboardRenderPass();
     GizmoRenderPass = new FGizmoRenderPass();
@@ -77,6 +79,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     ShadowRenderPass->InitializeShadowManager(ShadowManager);
     
     StaticMeshRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
+    SkeletalMeshRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
     StaticMeshRenderPass->InitializeShadowManager(ShadowManager);
     WorldBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
     EditorBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
@@ -103,6 +106,7 @@ void FRenderer::Release()
     delete ShadowManager;
     delete ShadowRenderPass;
 
+    delete SkeletalMeshRenderPass;
     delete StaticMeshRenderPass;
     delete WorldBillboardRenderPass;
     delete EditorBillboardRenderPass;
@@ -169,6 +173,8 @@ void FRenderer::CreateConstantBuffers()
     UINT DiffuseMultiplierSize = sizeof(FDiffuseMultiplier);
     BufferManager->CreateBufferGeneric<FDiffuseMultiplier>("FDiffuseMultiplier", nullptr, DiffuseMultiplierSize, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
+    UINT BoneMatricesSize = sizeof(FBoneMatrices);
+    BufferManager->CreateBufferGeneric<FBoneMatrices>("FBoneMatrices", nullptr, BoneMatricesSize, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     // TODO: 함수로 분리
     ID3D11Buffer* ObjectBuffer = BufferManager->GetConstantBuffer(TEXT("FObjectConstantBuffer"));
@@ -229,6 +235,7 @@ void FRenderer::PrepareRender(FViewportResource* ViewportResource) const
 void FRenderer::PrepareRenderPass() const
 {
     StaticMeshRenderPass->PrepareRenderArr();
+    SkeletalMeshRenderPass->PrepareRenderArr();
     ShadowRenderPass->PrepareRenderArr();
     GizmoRenderPass->PrepareRenderArr();
     WorldBillboardRenderPass->PrepareRenderArr();
@@ -243,6 +250,7 @@ void FRenderer::PrepareRenderPass() const
 void FRenderer::ClearRenderArr() const
 {
     StaticMeshRenderPass->ClearRenderArr();
+    SkeletalMeshRenderPass->ClearRenderArr();
     ShadowRenderPass->ClearRenderArr();
     WorldBillboardRenderPass->ClearRenderArr();
     EditorBillboardRenderPass->ClearRenderArr();
@@ -379,6 +387,11 @@ void FRenderer::RenderWorldScene(const std::shared_ptr<FEditorViewportClient>& V
             QUICK_SCOPE_CYCLE_COUNTER(StaticMeshPass_CPU)
             QUICK_GPU_SCOPE_CYCLE_COUNTER(StaticMeshPass_GPU, *GPUTimingManager)
             StaticMeshRenderPass->Render(Viewport);
+        }
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(SkeletalMeshPass_CPU)
+            QUICK_GPU_SCOPE_CYCLE_COUNTER(SkeletalMeshPass_GPU, *GPUTimingManager)
+            SkeletalMeshRenderPass->Render(Viewport);
         }
     }
     

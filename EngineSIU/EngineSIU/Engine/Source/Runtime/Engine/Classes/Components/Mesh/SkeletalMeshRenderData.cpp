@@ -1,4 +1,4 @@
-#include "SkeletalMeshRenderData.h"
+#include "Components/Mesh/SkeletalMeshRenderData.h"
 #include "UObject/Casts.h"
 #include "UObject/ObjectFactory.h"
 
@@ -8,7 +8,7 @@
 UObject* USkeletalMesh::Duplicate(UObject* InOuter)
 {
     // TODO: Context->CopyResource를 사용해서 Buffer 복사
-    // ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate());
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
     return nullptr;
 }
 

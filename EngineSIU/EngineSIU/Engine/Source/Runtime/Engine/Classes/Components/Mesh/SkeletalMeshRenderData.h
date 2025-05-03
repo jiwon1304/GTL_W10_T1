@@ -25,7 +25,6 @@ public:
     FWString GetObjectName() const;
 
     void SetData(FSkeletalMeshRenderData* InRenderData);
-
 private:
     FSkeletalMeshRenderData* RenderData = nullptr;
     TArray<FSkeletalMaterial*> materials;

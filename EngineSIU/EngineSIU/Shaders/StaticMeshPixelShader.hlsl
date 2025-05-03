@@ -38,6 +38,7 @@ cbuffer DiffuseMultiplierConstants : register(b6)
 
 float4 mainPS(PS_INPUT_StaticMesh Input) : SV_Target
 {
+    return Input.Color;
     // Diffuse
     float3 DiffuseColor = Material.DiffuseColor;
     if (Material.TextureFlag & TEXTURE_FLAG_DIFFUSE)
