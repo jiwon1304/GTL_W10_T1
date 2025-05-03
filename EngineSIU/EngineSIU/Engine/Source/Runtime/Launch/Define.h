@@ -41,9 +41,9 @@ struct FSkeletalMaterial
 {
     class UMaterial* Material;     // Material Resource
     FName MaterialSlotName;        // Slot Name for the Material
-    int32 SectionIndex;            // Index of the Mesh Section
-    bool bRequiresSkinning;        // Whether Skinning is Required for this Material
-    TArray<int32> InfluencedBones; // List of Bones Influencing this Material
+    //int32 SectionIndex;            // Index of the Mesh Section
+    //bool bRequiresSkinning;        // Whether Skinning is Required for this Material
+    //TArray<int32> InfluencedBones; // List of Bones Influencing this Material; 필요없을듯... Vertex별로 다 들어가니까
 };
 
 // OBJ File Raw Data
@@ -105,18 +105,6 @@ struct FFbxInfo
     };
 
     TArray<FMesh> Meshes; // List of Meshes
-
-    // Material Data
-    struct FMaterialInfo
-    {
-        FString MaterialName;            // Material Name
-        FVector DiffuseColor;            // Diffuse Color
-        FVector SpecularColor;           // Specular Color
-        FVector EmissiveColor;           // Emissive Color
-        FString TextureFilePath;         // Texture File Path
-    };
-
-    TArray<FMaterialInfo> Materials; // List of Materials
 
     // Skeleton Data (for skeletal meshes)
     struct FSkeletonBone
@@ -199,27 +187,20 @@ struct FMaterialInfo
     FVector EmissiveColor = FVector::ZeroVector;                   // Ke: Emissive Color
 
     float SpecularExponent = 250.f;                                // Ns: Specular Power
-    float IOR = 1.5f;                                              // Ni: Index of Refraction
+    float IOR = 1.5f;                                              // Ni: Index of Refraction; OBJ only
     float Transparency = 0.f;                                      // d or Tr: Transparency of surface
     float BumpMultiplier = 1.f;                                    // -bm: Bump Multiplier
-    uint32 IlluminanceModel;                                       // illum: illumination Model between 0 and 10.
+    uint32 IlluminanceModel;                                       // illum: illumination Model between 0 and 10; OBJ only
 
+    // OBJ only
     float Metallic = 0.0f;                                 // Metallic
     float Roughness = 0.5f;                                // Roughness
     float AmbientOcclusion = 1.0f;                         // Ambient Occlusion Strength
     float ClearCoat = 0.0f;                                // Clear Coat Layer Strength
     float Sheen = 0.0f;                                    // Sheen Strength
 
-    
     /* Texture */
-    /* Extended PBR Texture Slots */
     TArray<FTextureInfo> TextureInfos;                     // Texture Information
-    FTextureInfo NormalMap;                                // Normal Map
-    FTextureInfo DisplacementMap;                          // Displacement Map
-    FTextureInfo AmbientOcclusionMap;                      // AO Map
-    FTextureInfo RoughnessMap;                             // Roughness Map
-    FTextureInfo MetallicMap;                              // Metallic Map
-    FTextureInfo EmissiveMap;                              // Emissive Map
 };
 
 struct FVertexTexture

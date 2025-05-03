@@ -24,10 +24,11 @@ private:
     static void LoadSceneRecursive(FbxScene* Scene, FSkeletalMeshRenderData& OutRenderData);
     static void LoadNodeRecursive(FbxNode* Node, FSkeletalMeshRenderData& OutRenderData);
 
-    static void ParseMesh(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData);
+    static void ParseMesh(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData, uint32 VertexBase);
+    static void ParseMeshByMaterial(FbxNode* Node, FSkeletalMeshRenderData& OutRenderData);
     static void ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& OutMaterialInfo);
-    static void ParseSkeleton(FbxNode* Node, FSkeletalMeshRenderData& OutRenderData);
-    static void ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData);
+    static void ParseSkeleton(FbxNode* Node, FSkeletalMeshRenderData& OutRenderData, uint32 VertexBase);
+    static void ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData, uint32 VertexBase);
 
     static FbxManager* SDKManager;
     static FbxIOSettings* IoSettings;
