@@ -18,56 +18,12 @@ FString FString::SanitizeFloat(float InFloat)
 
 float FString::ToFloat(const FString& InString)
 {
-    if (InString.IsEmpty())
-    {
-        return 0.0f;
-    }
-
-    const ElementType* const Ptr = *InString;
-    const ElementType* const EndPtr = Ptr + InString.Len();
-    float Value = 0.0f;
-    auto Result = std::from_chars(Ptr, EndPtr, Value); // TCHAR가 char 또는 wchar_t일 때 작동
-
-    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음 (완전히 변환되지 않은 경우 방지)
-    if (Result.ec == std::errc() && Result.ptr != Ptr)
-    {
-        // 선택적: 변환 후 남은 문자가 있는지 확인 (예: "123.45abc")
-        // 완전한 숫자 문자열만 허용하려면 Result.ptr == EndPtr 인지 확인
-        // 여기서는 일단 변환된 부분까지 인정하고 값을 반환 (UE와 유사)
-        return Value;
-    }
-    else
-    {
-        // 변환 실패 또는 부분 변환 시 0 반환
-        return 0.0f;
-    }
+    return FCString::Atof(*InString);
 }
 
 int FString::ToInt(const FString& InString)
 {
-    if (InString.IsEmpty())
-    {
-        return 0;
-    }
-
-    const ElementType* const Ptr = *InString;
-    const ElementType* const EndPtr = Ptr + InString.Len();
-    int Value = 0;
-
-    // 10진수로 변환 시도
-    auto Result = std::from_chars(Ptr, EndPtr, Value, 10);
-
-    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음
-    if (Result.ec == std::errc() && Result.ptr != Ptr)
-    {
-        // 선택적: 변환 후 남은 문자 확인 (위 ToFloat 주석 참조)
-        return Value;
-    }
-    else
-    {
-        // 변환 실패 시 0 반환
-        return 0;
-    }
+    return FCString::Atoi(*InString);
 }
 
 bool FString::ToBool() const
