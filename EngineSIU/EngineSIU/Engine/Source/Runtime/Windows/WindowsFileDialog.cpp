@@ -131,48 +131,134 @@ public:
 
 
 bool FDesktopPlatformWindows::OpenFileDialog(
-    const FString& Title,
+    const FString& DialogTitle,
+    const FString& DefaultPath,
+    const TArray<FFilterItem>& FileTypes,
+    EFileDialogFlag Flag,
+    TArray<FString>& OutFilenames
+) {
+    const void* ParentWindowHandle = nullptr;
+
+    fs::path Directory = DefaultPath.ToWideString();
+    Directory.remove_filename();
+
+    return FileDialogShared(
+        false,
+        ParentWindowHandle,
+        DialogTitle,
+        Directory.generic_wstring(),
+        TEXT(""),
+        FileTypes,
+        Flag,
+        OutFilenames
+    );
+}
+
+bool FDesktopPlatformWindows::SaveFileDialog(
+    const FString& DialogTitle,
     const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filters,
+    const TArray<FFilterItem>& FileTypes,
+    TArray<FString>& OutFilenames
+) {
+    const void* ParentWindowHandle = nullptr;
+
+    fs::path Directory = DefaultPathAndFileName.ToWideString();
+    const fs::path FileName = Directory.filename();
+    Directory.remove_filename();
+
+    return FileDialogShared(
+        true,
+        ParentWindowHandle,
+        DialogTitle,
+        Directory.generic_wstring(),
+        FileName.generic_wstring(),
+        FileTypes,
+        EFileDialogFlag::None,
+        OutFilenames
+    );
+}
+
+bool FDesktopPlatformWindows::SaveFileDialog(
+    const FString& DialogTitle,
+    const FString& DefaultPath,
+    const FString& DefaultFile,
+    const TArray<FFilterItem>& FileTypes,
+    TArray<FString>& OutFilenames
+) {
+    const void* ParentWindowHandle = nullptr;
+
+    fs::path Directory = DefaultPath.ToWideString();
+    Directory.remove_filename();
+    const fs::path FileName = DefaultFile.ToWideString();
+
+    return FileDialogShared(
+        true,
+        ParentWindowHandle,
+        DialogTitle,
+        Directory.generic_wstring(),
+        FileName.generic_wstring(),
+        FileTypes,
+        EFileDialogFlag::None,
+        OutFilenames
+    );
+}
+
+bool FDesktopPlatformWindows::FileDialogShared(
+    bool bSave,
+    const void* ParentWindowHandle,
+    const FString& DialogTitle,
+    const FString& DefaultPath,
+    const FString& DefaultFile,
+    const TArray<FFilterItem>& FileTypes,
     EFileDialogFlag Flag,
     TArray<FString>& OutFilenames
 ) {
     bool bSuccess = false;
-    const void* ParentWindowHandle = nullptr;
 
-    FString SelectedFilePath = TEXT("");
-
-    // IFileOpenDialog 인스턴스 생성
-    TComPtr<IFileOpenDialog> FileOpenDialog;
+    // IFileDialog 인스턴스 생성
+    TComPtr<IFileDialog> FileDialog;
     HRESULT DialogResult = ::CoCreateInstance(
-        CLSID_FileOpenDialog,
+        bSave ? CLSID_FileSaveDialog : CLSID_FileOpenDialog,
         nullptr,
         CLSCTX_ALL,
-        IID_IFileOpenDialog,
-        reinterpret_cast<void**>(&FileOpenDialog)
+        bSave ? IID_IFileSaveDialog : IID_IFileOpenDialog,
+        reinterpret_cast<void**>(&FileDialog)
     );
 
     // 생성 성공 및 포인터 유효 확인
-    if (SUCCEEDED(DialogResult) && FileOpenDialog)
+    if (SUCCEEDED(DialogResult) && FileDialog)
     {
         // 다이얼로그 옵션 설정
         DWORD DialogOptions = 0;
-        if (SUCCEEDED(FileOpenDialog->GetOptions(&DialogOptions)))
+        if (SUCCEEDED(FileDialog->GetOptions(&DialogOptions)))
         {
-            if (Flag == EFileDialogFlag::Multiple)
+            if (bSave)
             {
-                DialogOptions |= FOS_ALLOWMULTISELECT;
+                // FOS_OVERWRITEPROMPT: 같은 이름의 파일이 있을 경우 덮어쓸지 묻습니다.
+                // FOS_PATHMUSTEXIST: 경로가 존재해야 합니다.
+                // FOS_FORCEFILESYSTEM: 파일 시스템 경로만 허용합니다.
+                FileDialog->SetOptions(DialogOptions | FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM);
             }
-            FileOpenDialog->SetOptions(DialogOptions | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM);
+            else
+            {
+                if (SUCCEEDED(FileDialog->GetOptions(&DialogOptions)))
+                {
+                    if (Flag == EFileDialogFlag::Multiple)
+                    {
+                        DialogOptions |= FOS_ALLOWMULTISELECT;
+                    }
+                    FileDialog->SetOptions(DialogOptions | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM);
+                }
+            }
         }
 
         // 필터 설정
         TArray<COMDLG_FILTERSPEC> ComFilterSpecs;
         TArray<std::wstring> WideFilterStrings;
-        ComFilterSpecs.Reserve(Filters.Num());
-        WideFilterStrings.Reserve(Filters.Num() * 2);
+        ComFilterSpecs.Reserve(FileTypes.Num());
+        WideFilterStrings.Reserve(FileTypes.Num() * 2);
 
-        for (const auto& [FilterPattern, Description] : Filters)
+        for (const auto& [FilterPattern, Description] : FileTypes)
         {
             const int32 DescIndex = WideFilterStrings.Emplace(Description.ToWideString());
             const int32 FilterIndex = WideFilterStrings.Emplace(FilterPattern.ToWideString());
@@ -183,64 +269,68 @@ bool FDesktopPlatformWindows::OpenFileDialog(
         }
         if (ComFilterSpecs.Num() > 0)
         {
-            FileOpenDialog->SetFileTypes(static_cast<UINT>(ComFilterSpecs.Num()), ComFilterSpecs.GetData());
+            FileDialog->SetFileTypes(static_cast<UINT>(ComFilterSpecs.Num()), ComFilterSpecs.GetData());
+            FileDialog->SetFileTypeIndex(1);
         }
 
         // 타이틀 설정
-        if (!Title.IsEmpty())
+        if (!DialogTitle.IsEmpty())
         {
-            FileOpenDialog->SetTitle(Title.ToWideString().c_str());
+            FileDialog->SetTitle(DialogTitle.ToWideString().c_str());
         }
 
         // 기본 경로 및 파일 이름 설정
-        if (!DefaultPathAndFileName.IsEmpty())
+        if (bSave && !DefaultFile.IsEmpty())
         {
-            try
-            {
-                const fs::path DefaultInputPath = DefaultPathAndFileName.ToWideString();
-                fs::path DefaultDirectory;
-
-                // 입력 경로가 디렉토리인지 파일인지 확인하여 기본 폴더 결정
-                std::error_code ErrorCode;
-                if (fs::is_directory(DefaultInputPath, ErrorCode) && ErrorCode == std::error_code{})
-                {
-                    DefaultDirectory = DefaultInputPath;
-                }
-                else if (DefaultInputPath.has_parent_path())
-                {
-                    DefaultDirectory = DefaultInputPath.parent_path();
-                    // 파일 이름도 설정하려면 아래 로직 사용 가능 (Open에서는 보통 안 함)
-                    // if (DefaultInputPath.has_filename()) {
-                    //     FileOpenDialog->SetFileName(DefaultInputPath.filename().c_str());
-                    // }
-                }
-
-                // 기본 폴더 설정 시도 (존재하는 경우에만)
-                if (
-                    !DefaultDirectory.empty()
-                    && fs::exists(DefaultDirectory, ErrorCode)
-                    && ErrorCode == std::error_code{}
-                    && fs::is_directory(DefaultDirectory, ErrorCode)
-                    && ErrorCode == std::error_code{}
-                ) {
-                    TComPtr<IShellItem> DefaultFolderItem;
-                    DialogResult = ::SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
-                    if (SUCCEEDED(DialogResult) && DefaultFolderItem)
-                    {
-                        FileOpenDialog->SetFolder(DefaultFolderItem.Get());
-                    }
-                }
-            }
-            catch (const fs::filesystem_error& Error)
-            {
-                // 파일 시스템 오류 로깅 (예: 잘못된 경로 형식)
-                UE_LOG(ELogLevel::Error, "Filesystem error processing default path: %hs", Error.what());
-            }
+            const fs::path DefaultFileName = DefaultFile.ToWideString();
+            FileDialog->SetFileName(DefaultFileName.filename().c_str());
         }
 
-        DialogResult = FileOpenDialog->Show((HWND)ParentWindowHandle);
-        if (SUCCEEDED(DialogResult)) // 사용자가 '열기'를 누름 (취소 아님)
+        if (!DefaultPath.IsEmpty())
         {
+            const fs::path DefaultDirectory = DefaultPath.ToWideString();
+            std::error_code ErrorCode;
+            if (
+                fs::exists(DefaultDirectory, ErrorCode)
+                && ErrorCode == std::error_code{}
+                && fs::is_directory(DefaultDirectory, ErrorCode)
+                && ErrorCode == std::error_code{}
+            ) {
+                TComPtr<IShellItem> DefaultFolderItem;
+                DialogResult = ::SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
+                if (SUCCEEDED(DialogResult) && DefaultFolderItem)
+                {
+                    FileDialog->SetFolder(DefaultFolderItem.Get());
+                }
+            }
+        }
+    }
+
+    // 다이얼로그 표시
+    DialogResult = FileDialog->Show((HWND)ParentWindowHandle);
+    if (SUCCEEDED(DialogResult))
+    {
+        if (bSave)
+        {
+            TComPtr<IShellItem> Result;
+            DialogResult = FileDialog->GetResult(&Result);
+            if (SUCCEEDED(DialogResult) && Result)
+            {
+                PWSTR FilePathPtr = nullptr;
+                DialogResult = Result->GetDisplayName(SIGDN_FILESYSPATH, &FilePathPtr);
+
+                // 선택된 파일 경로 가져오기
+                if (SUCCEEDED(DialogResult))
+                {
+                    bSuccess = true;
+                    OutFilenames.Add(fs::path(FilePathPtr).generic_wstring()); // PWSTR -> FString 변환 필요
+                    ::CoTaskMemFree(FilePathPtr);
+                }
+            }
+        }
+        else
+        {
+            IFileOpenDialog* FileOpenDialog = reinterpret_cast<IFileOpenDialog*>(FileDialog.Get());
             TComPtr<IShellItemArray> Results;
             if (SUCCEEDED(FileOpenDialog->GetResults(&Results)))
             {
@@ -260,160 +350,6 @@ bool FDesktopPlatformWindows::OpenFileDialog(
                             ::CoTaskMemFree(pFilePath);
                         }
                     }
-                }
-            }
-        }
-    }
-    ::CoUninitialize();
-    return bSuccess;
-}
-
-
-bool FDesktopPlatformWindows::SaveFileDialog(
-    const FString& Title,
-    const FString& DefaultPathAndFileName,
-    const TArray<FFilterItem>& Filters,
-    TArray<FString>& OutFilenames
-) {
-    bool bSuccess = false;
-    const void* ParentWindowHandle = nullptr;
-
-    TComPtr<IFileSaveDialog> FileSaveDialog;
-    HRESULT Result = ::CoCreateInstance(
-        CLSID_FileSaveDialog,
-        nullptr,
-        CLSCTX_ALL,
-        IID_IFileSaveDialog,
-        reinterpret_cast<void**>(&FileSaveDialog)
-    );
-
-    if (SUCCEEDED(Result) && FileSaveDialog)
-    {
-        // 다이얼로그 옵션 설정
-        DWORD DialogOptions = 0;
-        if (SUCCEEDED(FileSaveDialog->GetOptions(&DialogOptions)))
-        {
-            // FOS_OVERWRITEPROMPT: 같은 이름의 파일이 있을 경우 덮어쓸지 묻습니다.
-            // FOS_PATHMUSTEXIST: 경로가 존재해야 합니다.
-            // FOS_FORCEFILESYSTEM: 파일 시스템 경로만 허용합니다.
-            FileSaveDialog->SetOptions(DialogOptions | FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM);
-        }
-
-        // 필터 설정
-        TArray<COMDLG_FILTERSPEC> ComFilterSpecs;
-        TArray<std::wstring> WideFilterStrings;
-        ComFilterSpecs.Reserve(Filters.Num());
-        WideFilterStrings.Reserve(Filters.Num() * 2);
-
-        for (const auto& [FilterPattern, Description] : Filters)
-        {
-            const int32 DescIndex = WideFilterStrings.Emplace(Description.ToWideString());
-            const int32 FilterIndex = WideFilterStrings.Emplace(FilterPattern.ToWideString());
-            ComFilterSpecs.Add({
-                .pszName = WideFilterStrings[DescIndex].c_str(),
-                .pszSpec = WideFilterStrings[FilterIndex].c_str()
-            });
-        }
-
-        if (ComFilterSpecs.Num() > 0)
-        {
-            FileSaveDialog->SetFileTypes(static_cast<UINT>(ComFilterSpecs.Num()), ComFilterSpecs.GetData());
-            // 기본 필터 인덱스 설정 (예: 첫 번째 필터)
-            FileSaveDialog->SetFileTypeIndex(1); // 인덱스는 1부터 시작
-        }
-
-        // 타이틀 설정
-        if (!Title.IsEmpty())
-        {
-            FileSaveDialog->SetTitle(Title.ToWideString().c_str());
-        }
-
-        // 기본 경로 및 파일 이름 설정
-        try
-        {
-            const fs::path DefaultInputPath = DefaultPathAndFileName.ToWideString();
-            fs::path DefaultDirectory;
-            fs::path DefaultFileName;
-
-            // 입력 경로에서 디렉토리와 파일명 분리
-            if (DefaultInputPath.has_parent_path())
-            {
-                DefaultDirectory = DefaultInputPath.parent_path();
-            }
-            if (DefaultInputPath.has_filename())
-            {
-                DefaultFileName = DefaultInputPath.filename();
-            }
-
-            // 기본 폴더 설정 (존재하는 경우)
-            std::error_code ErrorCode;
-            if (
-                !DefaultDirectory.empty()
-                && fs::exists(DefaultDirectory, ErrorCode)
-                && ErrorCode == std::error_code{}
-                && fs::is_directory(DefaultDirectory, ErrorCode)
-                && ErrorCode == std::error_code{}
-            ) {
-                TComPtr<IShellItem> DefaultFolderItem;
-                Result = ::SHCreateItemFromParsingName(DefaultDirectory.c_str(), nullptr, IID_PPV_ARGS(&DefaultFolderItem));
-                if (SUCCEEDED(Result) && DefaultFolderItem)
-                {
-                    FileSaveDialog->SetFolder(DefaultFolderItem.Get());
-                }
-            }
-
-            // 기본 파일 이름 설정
-            if (!DefaultFileName.empty())
-            {
-                FileSaveDialog->SetFileName(DefaultFileName.c_str());
-            }
-
-            // 기본 확장자 설정 (std::filesystem::path::extension 사용 가능)
-            // 또는 기존 필터 기반 로직 사용
-            fs::path FileNameForExt = DefaultFileName.empty() ? fs::path(TEXT("file")) : DefaultFileName; // 파일명이 없으면 임시 이름 사용
-            if (!FileNameForExt.has_extension() && Filters.Num() > 0 && !Filters[0].FilterPattern.IsEmpty())
-            {
-                // 기존 로직 활용 (첫 필터에서 확장자 추출)
-                FString FilterPattern = Filters[0].FilterPattern;
-                int32 WildcardIndex = FilterPattern.Find(TEXT("*."), ESearchCase::CaseSensitive); // "*." 위치 찾기
-                if (WildcardIndex != INDEX_NONE)
-                {
-                    FString ExtensionPart = FilterPattern.Mid(WildcardIndex + 2); // "*." 다음부터
-                    int32 SemicolonIndex = ExtensionPart.Find(TEXT(";"));
-                    if (SemicolonIndex != INDEX_NONE)
-                    {
-                        ExtensionPart = ExtensionPart.Left(SemicolonIndex); // 첫 번째 확장자만
-                    }
-                    if (!ExtensionPart.IsEmpty())
-                    {
-                        FileSaveDialog->SetDefaultExtension(ExtensionPart.ToWideString().c_str());
-                    }
-                }
-            }
-        }
-        catch (const fs::filesystem_error& Error)
-        {
-            // 파일 시스템 오류 로깅
-            UE_LOG(ELogLevel::Error, "Filesystem error processing default path/file: %hs", Error.what());
-        }
-
-        // 다이얼로그 표시
-        Result = FileSaveDialog->Show((HWND)ParentWindowHandle);
-        if (SUCCEEDED(Result)) // 사용자가 '저장'을 누름
-        {
-            TComPtr<IShellItem> SelectedItem;
-            Result = FileSaveDialog->GetResult(&SelectedItem);
-            if (SUCCEEDED(Result) && SelectedItem)
-            {
-                PWSTR FilePathPtr = nullptr;
-                Result = SelectedItem->GetDisplayName(SIGDN_FILESYSPATH, &FilePathPtr);
-
-                // 선택된 파일 경로 가져오기
-                if (SUCCEEDED(Result))
-                {
-                    bSuccess = true;
-                    OutFilenames.Add(fs::path(FilePathPtr).generic_wstring()); // PWSTR -> FString 변환 필요
-                    ::CoTaskMemFree(FilePathPtr);
                 }
             }
         }
