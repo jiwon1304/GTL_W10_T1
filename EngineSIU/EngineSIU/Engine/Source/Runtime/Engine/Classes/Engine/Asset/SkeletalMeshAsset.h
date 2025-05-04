@@ -3,17 +3,31 @@
 #include "Hal/PlatformType.h"
 #include "Container/Array.h"
 
+#define SKELETAL_MESH_CPU_SKINNING
+
 struct FSkeletalMeshVertex
 {
     FVector Position;       // Vertex Position (x, y, z)
     FVector4 Color;
     FVector Normal;         // Normal (nx, ny, nz)
     FVector Tangent;        // Tangent (tx, ty, tz)
-    float TangentW;         // Tangent W for Handedness
+    float TangentW = 0;         // Tangent W for Handedness
     FVector2D UV;           // UV Coordinates (u, v)
-    uint32 MaterialIndex;   // Material Index
-    int BoneIndices[4];     // Indices of Skinning Bones
-    float BoneWeights[4];   // Weights for Bone Influence
+    uint32 MaterialIndex = 0;   // Material Index
+    int BoneIndices[4] = { -1,-1,-1,-1 };     // Indices of Skinning Bones
+    float BoneWeights[4] = { 0, 0, 0, 0 };   // Weights for Bone Influence. 0은 빈것으로 취급
+
+    //static const uint32 Stride =
+    //    sizeof(Position) +
+    //    sizeof(Color) +
+    //    sizeof(Normal) +
+    //    sizeof(Tangent) +
+    //    sizeof(TangentW) +
+    //    sizeof(UV) + 
+    //    sizeof(MaterialIndex) +
+    //    sizeof(BoneIndices) +
+    //    sizeof(BoneWeights);
+    //static const uint32 Offset = 0;
 };
 
 struct FSkeletalMeshBone
@@ -28,6 +42,7 @@ struct FSkeletalMeshBone
 
 struct FSkeletalMeshRenderData
 {
+    bool bCPUSkinning = true; // CPU Skinning 여부
     FWString ObjectName;            // FBX파일의 이름(저장, indexing에 이용됨)
     FString DisplayName;           // 보여질 이름
 

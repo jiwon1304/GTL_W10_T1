@@ -138,6 +138,7 @@ HRESULT FDXDBufferManager::CreateVertexBufferInternal(const FString& KeyName, co
     OutVertexInfo.NumVertices = static_cast<uint32>(vertices.Num());
     OutVertexInfo.VertexBuffer = NewBuffer;
     OutVertexInfo.Stride = Stride;
+    OutVertexInfo.Offset = 0;
     VertexBufferPool.Add(KeyName, OutVertexInfo);
 
     return S_OK;
@@ -208,6 +209,7 @@ HRESULT FDXDBufferManager::CreateVertexBufferInternal(const FWString& KeyName, c
     OutVertexInfo.NumVertices = static_cast<uint32>(vertices.Num());
     OutVertexInfo.VertexBuffer = NewBuffer;
     OutVertexInfo.Stride = Stride;
+    OutVertexInfo.Offset = 0;
     TextAtlasVertexBufferPool.Add(KeyName, OutVertexInfo);
 
     return S_OK;

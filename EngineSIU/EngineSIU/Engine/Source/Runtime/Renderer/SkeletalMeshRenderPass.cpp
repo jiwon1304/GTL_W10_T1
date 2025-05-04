@@ -81,27 +81,37 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         if (!SkeletalMeshComponent) continue;
         if (!SkeletalMeshComponent->GetSkeletalMesh()) continue;
 
-        // Calculate bone matrices on the CPU
+        FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
+        if (!RenderData) continue;
+
+        // Bone Matrix는 CPU에서 처리
         TArray<FMatrix> BoneMatrices;
         SkeletalMeshComponent->CalculateBoneMatrices(BoneMatrices);
 
         // Update constant buffers
-        UpdateObjectConstant(SkeletalMeshComponent->GetWorldMatrix(), SkeletalMeshComponent->EncodeUUID() / 255.0f, false);
-        UpdateBoneMatrices(BoneMatrices);
-
-        FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
-        if (!RenderData) continue;
+        UpdateObjectConstant(
+            SkeletalMeshComponent->GetWorldMatrix(), 
+            SkeletalMeshComponent->EncodeUUID() / 255.0f,
+            SkeletalMeshComponent->IsActive(),
+            RenderData->bCPUSkinning
+        );
 
         TArray<FSkeletalMaterial*> Materials = SkeletalMeshComponent->GetSkeletalMesh()->GetMaterials();
         TArray<UMaterial*> OverrideMaterials = SkeletalMeshComponent->GetOverrideMaterials();
 
-        UINT Stride = sizeof(FSkeletalMeshVertex);
-        UINT Offset = 0;
-
         FVertexInfo VertexInfo;
-        BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+        if (RenderData->bCPUSkinning)
+        {
+            BufferManager->CreateDynamicVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+            UpdateVertexBuffer(RenderData, BoneMatrices);
+        }
+        else
+        {
+            BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+            UpdateBoneMatrices(BoneMatrices);
+        }
 
-        Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &Stride, &Offset);
+        Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);
 
         FIndexInfo IndexInfo;
         BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
@@ -134,13 +144,15 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
     }
 }
 
-void FSkeletalMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected) const
+
+void FSkeletalMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected, bool bCPUSkinning) const
 {
     FObjectConstantBuffer ObjectData = {};
     ObjectData.WorldMatrix = WorldMatrix;
     ObjectData.InverseTransposedWorld = FMatrix::Transpose(FMatrix::Inverse(WorldMatrix));
     ObjectData.UUIDColor = UUIDColor;
     ObjectData.bIsSelected = bIsSelected;
+    ObjectData.bCPUSkinning = bCPUSkinning? 1 : 0;
 
     BufferManager->UpdateConstantBuffer(TEXT("FObjectConstantBuffer"), ObjectData);
 }
@@ -157,6 +169,42 @@ void FSkeletalMeshRenderPass::CreateShader()
     {
         return;
     }
+}
+
+void FSkeletalMeshRenderPass::UpdateVertexBuffer(FSkeletalMeshRenderData* RenderData, const TArray<FMatrix>& BoneMatrices)
+{
+    TArray<FSkeletalMeshVertex> NewVertices;
+    NewVertices.Reserve(RenderData->Vertices.Num());
+
+    for (const FSkeletalMeshVertex& Vertex : RenderData->Vertices)
+    {
+        FVector4 SkinnedPosition(0, 0, 0, 0);
+        FVector4 SkinnedNormal(0, 0, 0, 0);
+        FVector4 SkinnedTangent(0, 0, 0, 0);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            if (Vertex.BoneWeights[i] > 0.0f)
+            {
+                //const FMatrix& BoneMatrix = RenderData->InverseBindPoseMatrices[Vertex.BoneIndices[i]];
+                const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[i]];
+
+                //const FMatrix& BoneMatrix = FMatrix::Identity;
+                SkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Vertex.BoneWeights[i];
+                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)).xyz() * Vertex.BoneWeights[i];
+                SkinnedTangent += BoneMatrix.TransformFVector4(FVector4(Vertex.Tangent, Vertex.TangentW)).xyz() * Vertex.BoneWeights[i];
+            }
+        }
+        FSkeletalMeshVertex NewVertex = Vertex;
+        NewVertex.Position = SkinnedPosition.Pos();
+        NewVertex.Normal = SkinnedNormal.Pos();
+        NewVertex.Tangent = SkinnedTangent.xyz();
+        NewVertex.TangentW = SkinnedTangent.W;
+
+        NewVertices.Add(NewVertex);
+    }
+
+    BufferManager->UpdateDynamicVertexBuffer(RenderData->ObjectName, NewVertices);
 }
 
 

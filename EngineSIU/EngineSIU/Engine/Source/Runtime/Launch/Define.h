@@ -460,7 +460,9 @@ struct FObjectConstantBuffer
     FVector4 UUIDColor;
     
     int bIsSelected;
-    FVector pad;
+    int bCPUSkinning;
+    float Padding0;
+    float Padding1;
 };
 
 struct FCameraConstantBuffer
@@ -537,6 +539,7 @@ struct FVertexInfo
 {
     uint32_t NumVertices;
     uint32_t Stride;
+    uint32_t Offset;
     ID3D11Buffer* VertexBuffer;
 };
 

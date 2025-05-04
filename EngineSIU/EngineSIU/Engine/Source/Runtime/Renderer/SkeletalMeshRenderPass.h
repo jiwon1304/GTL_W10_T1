@@ -30,11 +30,13 @@ public:
 
     void RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
-    void UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected) const;
+    void UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected, bool bCPUSkinning) const;
     void UpdateBoneMatrices(const TArray<FMatrix>& BoneMatrices) const;
 
 private:
     void CreateShader();
+
+    void UpdateVertexBuffer(FSkeletalMeshRenderData* RenderData, const TArray<FMatrix>& BoneMatrices);
 protected:
     TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
 

@@ -154,6 +154,12 @@ void FFbxLoader::LoadNodeRecursive(FbxNode* Node, FSkeletalMeshRenderData& OutRe
         }
 
     //}
+
+    // 현재 최대 64개만 받음
+    if (OutRenderData.Bones.Num() > 64)
+    {
+            OutRenderData.bCPUSkinning = true;
+    }
 }
 
 /// <summary>
@@ -480,40 +486,89 @@ void FFbxLoader::ParseMeshByMaterial(FbxNode* Node, FSkeletalMeshRenderData& Out
         // Control Point Vertex : 위치 정보만을 가진 버텍스
         // Polygon Vertex : Control Point Vertex + UV, Normal, Tangent 등
         // 저장해야 할 것은 Polygon Vertex
-        if (MaterialLayer && MaterialLayer->GetMappingMode() == FbxGeometryElement::eByPolygon)
+        switch (MaterialLayer->GetMappingMode())
+        {
+        case FbxGeometryElement::eByPolygon:
         {
             for (int PolygonIndex = 0; PolygonIndex < PolygonCount; ++PolygonIndex)
             {
                 int MaterialIndex = MaterialLayer->GetIndexArray().GetAt(PolygonIndex);
-
                 for (int VertexIndex = 0; VertexIndex < Mesh->GetPolygonSize(PolygonIndex); ++VertexIndex)
                 {
                     int ControlPointIndex = Mesh->GetPolygonVertex(PolygonIndex, VertexIndex);
-                    // 반드시 Unique Vertex Buffer를 써서, Attribute 조합별로 Index를 만들어야 함 (실무 코드 참고)
+                    // TODO: 반드시 Unique Vertex Buffer 사용
                     MaterialToIndexBuffer.FindOrAdd(MaterialIndex).Add(ControlPointIndex);
                 }
             }
-
-            int IndexStart = 0;
-            for (auto& Pair : MaterialToIndexBuffer)
+            break;
+        }
+        case FbxGeometryElement::eByControlPoint:
+        {
+            for (int PolygonIndex = 0; PolygonIndex < PolygonCount; ++PolygonIndex)
             {
-                int MatIndex = Pair.Key;
-                const TArray<int32>& Indices = Pair.Value;
-
-                FMaterialSubset NewSubset;
-                NewSubset.MaterialIndex = MatIndex;
-                NewSubset.IndexStart = IndexStart;
-                NewSubset.IndexCount = Indices.Num();
-                NewSubset.MaterialName = OutRenderData.Materials.IsValidIndex(MatIndex)
-                    ? OutRenderData.Materials[MatIndex].MaterialName
-                    : FString::Printf(TEXT("Material_%d"), MatIndex);
-
-                // 전체 IndexBuffer에 머티리얼별로 차례로 추가
-                OutRenderData.Indices.operator+(Indices);
-                OutRenderData.MaterialSubsets.Add(NewSubset);
-
-                IndexStart += Indices.Num();
+                for (int VertexIndex = 0; VertexIndex < Mesh->GetPolygonSize(PolygonIndex); ++VertexIndex)
+                {
+                    int ControlPointIndex = Mesh->GetPolygonVertex(PolygonIndex, VertexIndex);
+                    int MaterialIndex = MaterialLayer->GetIndexArray().GetAt(ControlPointIndex);
+                    // TODO: 반드시 Unique Vertex Buffer 사용
+                    MaterialToIndexBuffer.FindOrAdd(MaterialIndex).Add(ControlPointIndex);
+                }
             }
+            break;
+        }
+        case FbxGeometryElement::eByPolygonVertex:
+        {
+            int VertexCounter = 0;
+            for (int PolygonIndex = 0; PolygonIndex < PolygonCount; ++PolygonIndex)
+            {
+                for (int VertexIndex = 0; VertexIndex < Mesh->GetPolygonSize(PolygonIndex); ++VertexIndex, ++VertexCounter)
+                {
+                    int ControlPointIndex = Mesh->GetPolygonVertex(PolygonIndex, VertexIndex);
+                    int MaterialIndex = MaterialLayer->GetIndexArray().GetAt(VertexCounter);
+                    // TODO: 반드시 Unique Vertex Buffer 사용
+                    MaterialToIndexBuffer.FindOrAdd(MaterialIndex).Add(ControlPointIndex);
+                }
+            }
+            break;
+        }
+        case FbxGeometryElement::eAllSame:
+        {
+            int MaterialIndex = MaterialLayer->GetIndexArray().GetAt(0);
+            for (int PolygonIndex = 0; PolygonIndex < PolygonCount; ++PolygonIndex)
+            {
+                for (int VertexIndex = 0; VertexIndex < Mesh->GetPolygonSize(PolygonIndex); ++VertexIndex)
+                {
+                    int ControlPointIndex = Mesh->GetPolygonVertex(PolygonIndex, VertexIndex);
+                    // TODO: 반드시 Unique Vertex Buffer 사용
+                    MaterialToIndexBuffer.FindOrAdd(MaterialIndex).Add(ControlPointIndex);
+                }
+            }
+            break;
+        }
+        default:
+            // 다른 매핑 방식은 필요에 따라 구현
+            break;
+        }
+
+        // 이후 머티리얼 서브셋 생성 (이전 코드와 동일)
+        int IndexStart = 0;
+        for (auto& Pair : MaterialToIndexBuffer)
+        {
+            int MatIndex = Pair.Key;
+            const TArray<int32>& Indices = Pair.Value;
+
+            FMaterialSubset NewSubset;
+            NewSubset.MaterialIndex = MatIndex;
+            NewSubset.IndexStart = IndexStart;
+            NewSubset.IndexCount = Indices.Num();
+            NewSubset.MaterialName = OutRenderData.Materials.IsValidIndex(MatIndex)
+                ? OutRenderData.Materials[MatIndex].MaterialName
+                : FString::Printf(TEXT("Material_%d"), MatIndex);
+
+            OutRenderData.Indices + (Indices);
+            OutRenderData.MaterialSubsets.Add(NewSubset);
+
+            IndexStart += Indices.Num();
         }
     }
 }
@@ -530,10 +585,10 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
 
         // ClusterCount만큼 Matrix를 추가
         int NumMatrices = OutRenderData.InverseBindPoseMatrices.Num();
-        OutRenderData.InverseBindPoseMatrices.SetNum(NumMatrices + ClusterCount);
-        OutRenderData.Bones.SetNum(NumMatrices + ClusterCount);
+        //OutRenderData.InverseBindPoseMatrices.SetNum(NumMatrices + ClusterCount);
+        //OutRenderData.Bones.SetNum(NumMatrices + ClusterCount);
 
-        for (int ClusterIndex = 0; ClusterIndex < Skin->GetClusterCount(); ++ClusterIndex)
+        for (int ClusterIndex = 0; ClusterIndex < ClusterCount; ++ClusterIndex)
         { 
             FbxCluster* Cluster = Skin->GetCluster(ClusterIndex); // Bone
             FbxNode* BoneNode = Cluster->GetLink(); // Bone이 속한 Node
@@ -647,6 +702,8 @@ FSkeletalMeshRenderData* FFbxManager::LoadFbxSkeletalMeshAsset(const FWString& P
     //        return NewSkeletalMesh;
     //    }
     //}
+
+    ///
 
     FSkeletalMeshRenderData RenderData;
     if (FFbxLoader::ParseFBX(PathFileName, RenderData))

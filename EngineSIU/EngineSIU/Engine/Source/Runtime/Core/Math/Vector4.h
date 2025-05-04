@@ -29,7 +29,27 @@ public:
     FVector4 operator+(const FVector4& Other) const;
     FVector4 operator-(const FVector4& Other) const;
 
+    FVector4 operator+=(const FVector4& Other);
+
     FVector4 operator/(float Scalar) const;
+
+    FVector xyz() const
+    {
+        return FVector(X, Y, Z);
+    }
+
+    FVector Pos() const
+    {
+        if (W == 0)
+        {
+            return FVector(X, Y, Z);
+        }
+        else
+        {
+            return FVector(X, Y, Z) / W;
+        }
+    }
+
 
     FString ToString() const;
     bool InitFromString(const FString& InSourceString);
@@ -53,6 +73,15 @@ inline FVector4 FVector4::operator+(const FVector4& Other) const
         Z + Other.Z,
         W + Other.W
     };
+}
+
+inline FVector4 FVector4::operator+=(const FVector4& Other)
+{
+    X += Other.X;
+    Y += Other.Y;
+    Z += Other.Z;
+    W += Other.W;
+    return *this;
 }
 
 inline FVector4 FVector4::operator/(float Scalar) const

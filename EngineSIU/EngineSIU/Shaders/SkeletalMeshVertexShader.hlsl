@@ -49,29 +49,32 @@ PS_INPUT_SkeletalMesh mainVS(VS_INPUT_SkeletalMesh Input, uint id: SV_VertexID)
     float4 SkinnedPosition = float4(0.0, 0.0, 0.0, 0.0);
     float3 SkinnedNormal = float3(0.0, 0.0, 0.0);
     float4 SkinnedTangent = float4(0.0, 0.0, 0.0, 0.0);
-    
-    for (int i = 0; i < 4; i++)
+    if (!bCPUSkinning)
     {
-        if (Input.BoneWeights[i] > 0.0f)
-        {
-            matrix BoneMatrix = BoneMatrixArray[Input.BoneIndices[i]];
-            BoneMatrix = float4x4(  1, 0, 0, 0,
-                                    0, 1, 0, 0,
-                                    0, 0, 1, 0, 
-                                    0, 0, 0, 1
-                                    );
-            //SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights[i];
-            SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights[i];
-            SkinnedNormal += mul(Input.Normal, (float3x3) BoneMatrix) * Input.BoneWeights[i];
-            SkinnedTangent.xyz += mul(Input.Tangent.xyz, (float3x3) BoneMatrix) * Input.BoneWeights[i];
-        }
-    }
     
-    SkinnedPosition = float4(Input.Position, 1) + float4(0, 0, 0, 0);
+        for (int i = 0; i < 4; i++)
+        {
+            if (Input.BoneWeights[i] > 0.0f)
+            {
+                matrix BoneMatrix = BoneMatrixArray[Input.BoneIndices[i]];
+                SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights[i];
+                SkinnedNormal += mul(Input.Normal, (float3x3) BoneMatrix) * Input.BoneWeights[i];
+                SkinnedTangent.xyz += mul(Input.Tangent.xyz, (float3x3) BoneMatrix) * Input.BoneWeights[i];
+            }
+        }
+        //SkinnedPosition = float4(Input.Position, 1) + float4(0, 0, 0, 0);
 
-    SkinnedNormal = normalize(SkinnedNormal);
-    SkinnedTangent.xyz = normalize(SkinnedTangent.xyz);
-    SkinnedTangent.w = Input.Tangent.w;
+        SkinnedNormal = normalize(SkinnedNormal);
+        SkinnedTangent.xyz = normalize(SkinnedTangent.xyz);
+        SkinnedTangent.w = Input.Tangent.w;
+
+    }
+    else
+    {
+        SkinnedPosition = float4(Input.Position, 1.f);
+        SkinnedNormal = normalize(Input.Normal);
+        SkinnedTangent = Input.Tangent;
+    }
 
     // Transform position to world space
     Output.Position = SkinnedPosition;

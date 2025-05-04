@@ -106,7 +106,8 @@ cbuffer ObjectBuffer : register(b12)
     float4 UUID;
     
     bool bIsSelected;
-    float3 ObjectPadding;
+    int bCPUSkinning; // SkeletalMesh 전용
+    float2 ObjectPadding;
 };
 
 /**
