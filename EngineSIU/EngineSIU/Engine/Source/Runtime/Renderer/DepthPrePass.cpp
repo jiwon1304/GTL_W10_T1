@@ -19,26 +19,29 @@ FDepthPrePass::~FDepthPrePass()
 
 void FDepthPrePass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
 {
-    __super::Initialize(InBufferManager, InGraphics, InShaderManage);
+    FStaticMeshRenderPass::Initialize(InBufferManager, InGraphics, InShaderManage);
+    FSkeletalMeshRenderPass::Initialize(InBufferManager, InGraphics, InShaderManage);
 }
 
 void FDepthPrePass::PrepareRenderArr()
 {
-    __super::PrepareRenderArr();
+    
+    //FStaticMeshRenderPass::PrepareRenderArr();
+    //FSkeletalMeshRenderPass::PrepareRenderArr();
 }
 
 void FDepthPrePass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
     PrepareRenderState(Viewport);
-    __super::RenderAllStaticMeshes(Viewport);
-
+    FStaticMeshRenderPass::RenderAllStaticMeshes(Viewport);
+    FSkeletalMeshRenderPass::Render(Viewport);
     // 렌더 타겟 해제
-    Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    FStaticMeshRenderPass::Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 void FDepthPrePass::ClearRenderArr()
 {
-    __super::ClearRenderArr();
+    //FStaticMeshRenderPass::ClearRenderArr();
 }
 
 void FDepthPrePass::PrepareRenderState(const std::shared_ptr<FEditorViewportClient>& Viewport)
@@ -57,23 +60,23 @@ void FDepthPrePass::PrepareRenderState(const std::shared_ptr<FEditorViewportClie
     Graphics->DeviceContext->OMSetRenderTargets(1, &nullRTV, DepthStencilView); // ← 깊이 전용
     */
     
-    ID3D11VertexShader* VertexShader = ShaderManager->GetVertexShaderByKey(L"StaticMeshVertexShader");
-    ID3D11InputLayout* InputLayout = ShaderManager->GetInputLayoutByKey(L"StaticMeshVertexShader");
+    ID3D11VertexShader* VertexShader = FStaticMeshRenderPass::ShaderManager->GetVertexShaderByKey(L"StaticMeshVertexShader");
+    ID3D11InputLayout* InputLayout = FStaticMeshRenderPass::ShaderManager->GetInputLayoutByKey(L"StaticMeshVertexShader");
     
-    Graphics->DeviceContext->VSSetShader(VertexShader, nullptr, 0);
-    Graphics->DeviceContext->IASetInputLayout(InputLayout);
+    FStaticMeshRenderPass::Graphics->DeviceContext->VSSetShader(VertexShader, nullptr, 0);
+    FStaticMeshRenderPass::Graphics->DeviceContext->IASetInputLayout(InputLayout);
 
     // 뎁스만 필요하므로, 픽셀 쉐이더는 지정 안함.
-    Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0);
+    FStaticMeshRenderPass::Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0);
 
-    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    FStaticMeshRenderPass::Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    Graphics->DeviceContext->RSSetState(Graphics->RasterizerSolidBack);
+    FStaticMeshRenderPass::Graphics->DeviceContext->RSSetState(FStaticMeshRenderPass::Graphics->RasterizerSolidBack);
 
-    Graphics->DeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+    FStaticMeshRenderPass::Graphics->DeviceContext->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
 
     FViewportResource* ViewportResource = Viewport->GetViewportResource();
     FDepthStencilRHI* DepthStencilRHI = ViewportResource->GetDepthStencil(EResourceType::ERT_Debug);
 
-    Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, DepthStencilRHI->DSV); // ← 깊이 전용
+    FStaticMeshRenderPass::Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, DepthStencilRHI->DSV); // ← 깊이 전용
 }

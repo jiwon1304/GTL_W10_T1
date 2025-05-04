@@ -9,8 +9,9 @@
 
 AItemActor::AItemActor()
 {
-    FFbxManager::CreateSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
+    //FFbxManager::CreateSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
     FFbxManager::CreateSkeletalMesh(L"Contents/suzanne.fbx");
+    //FFbxManager::CreateSkeletalMesh(L"Contents/girl.fbx");
 
 }
 
@@ -22,8 +23,9 @@ void AItemActor::PostSpawnInitialize()
     SetRootComponent(SphereComponent);
 
     MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
-    MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
-    //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/suzanne.fbx"));
+    //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
+    //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/hand/girl.fbx"));
+    MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/suzanne.fbx"));
     MeshComponent->SetupAttachment(RootComponent);
 }
 

@@ -36,12 +36,12 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
     {
         if (*SkeletalMeshPath != TEXT("None"))
         {
-            //if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(*SkeletalMeshPath))
-            //{
-            //    SetSkeletalMesh(MeshToSet);
-            //    UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            //}
-            //else
+            if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(StringToWString(SkeletalMeshPath->ToAnsiString())))
+            {
+                SetSkeletalMesh(MeshToSet);
+                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            }
+            else
             {
                 UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
                 SetSkeletalMesh(nullptr);
@@ -147,6 +147,7 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
     OutBoneMatrices.SetNum(Bones.Num());
 
     // Start calculating bone matrices
+    // 저장할 때 부모의 node부터 Bone array에 저장되므로 iteration으로 처리 가능.
     for (int32 BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
     {
         const FSkeletalMeshBone& Bone = Bones[BoneIndex];

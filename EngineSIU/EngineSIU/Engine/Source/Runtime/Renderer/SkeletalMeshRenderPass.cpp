@@ -43,23 +43,43 @@ void FSkeletalMeshRenderPass::PrepareRenderArr()
 
 void FSkeletalMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
-     PrepareRenderArr();
-
      ShaderManager->SetVertexShaderAndInputLayout(L"SkeletalMeshVertexShader", Graphics->DeviceContext);
      BufferManager->BindConstantBuffer("FBoneMatrices", 11, EShaderStage::Vertex);
 
+    //for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+    //{
+    //    if (!SkeletalMeshComponent || !SkeletalMeshComponent->GetSkeletalMesh())
+    //    {
+    //        continue;
+    //    }
+
+    //    FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
+    //    if (!RenderData)
+    //    {
+    //        continue;
+    //    }
+
+    //    // Calculate bone matrices on the CPU
+    //    TArray<FMatrix> BoneMatrices;
+    //    SkeletalMeshComponent->CalculateBoneMatrices(BoneMatrices);
+
+    //    // Update constant buffers
+    //    UpdateObjectConstant(SkeletalMeshComponent->GetWorldMatrix(), SkeletalMeshComponent->EncodeUUID() / 255.0f, false);
+    //    UpdateBoneMatrices(BoneMatrices);
+
+    //    // Render the skeletal mesh
+    //}
+    RenderAllSkeletalMeshes(Viewport);
+
+    //ClearRenderArr();
+}
+
+void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+{
     for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
     {
-        if (!SkeletalMeshComponent || !SkeletalMeshComponent->GetSkeletalMesh())
-        {
-            continue;
-        }
-
-        FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
-        if (!RenderData)
-        {
-            continue;
-        }
+        if (!SkeletalMeshComponent) continue;
+        if (!SkeletalMeshComponent->GetSkeletalMesh()) continue;
 
         // Calculate bone matrices on the CPU
         TArray<FMatrix> BoneMatrices;
@@ -69,17 +89,6 @@ void FSkeletalMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient
         UpdateObjectConstant(SkeletalMeshComponent->GetWorldMatrix(), SkeletalMeshComponent->EncodeUUID() / 255.0f, false);
         UpdateBoneMatrices(BoneMatrices);
 
-        // Render the skeletal mesh
-        RenderAllSkeletalMeshes(Viewport);
-    }
-
-    ClearRenderArr();
-}
-
-void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
-{
-    for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
-    {
         FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
         if (!RenderData) continue;
 
@@ -96,10 +105,14 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
 
         FIndexInfo IndexInfo;
         BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
+        if (IndexInfo.IndexBuffer)
+        {
+            Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+        }
 
-        Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-        Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
+        
+        // 이제 기본 subset이 있음
+        //Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
 
         for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
         {

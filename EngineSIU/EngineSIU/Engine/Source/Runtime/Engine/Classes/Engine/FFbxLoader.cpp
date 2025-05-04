@@ -98,7 +98,7 @@ void FFbxLoader::LoadTexture(FbxScene* Scene, const FWString FilePath)
     {
         FbxTexture* Texture = Scene->GetTexture(TextureIndex);
         fbxsdk::FbxFileTexture* FileTexture = FbxCast<fbxsdk::FbxFileTexture>(Texture);
-        if (FileTexture && FileTexture->GetUserDataPtr())
+        if (FileTexture/* && FileTexture->GetUserDataPtr()*/)
         {
             // !!! 접근할 때에는 항싱 FbxTexture::GetFileName()으로 가져와야 함.
             const FbxString TextureFileName = FileTexture->GetFileName(); // 절대경로
@@ -600,6 +600,7 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
             }
         }
     }
+    // TODO : StaticMesh6로 넘기기
     // Bone이 없는 경우
     else
     {

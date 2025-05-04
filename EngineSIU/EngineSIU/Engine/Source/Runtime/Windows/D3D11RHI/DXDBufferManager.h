@@ -80,6 +80,9 @@ public:
     template<typename T>
     static void SafeRelease(T*& comObject);
 
+    // Device Context에 버퍼 바인딩
+    void SetVertexBuffer(const FString& InName, ID3D11DeviceContext* DeviceContext = nullptr);
+    void SetIndexBuffer(const FString& InName, ID3D11DeviceContext* DeviceContext = nullptr);
 
     FVertexInfo GetVertexBuffer(const FString& InName) const;
     FIndexInfo GetIndexBuffer(const FString& InName) const;
