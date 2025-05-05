@@ -28,7 +28,6 @@ public:
     void RegisterEditorInputDelegates();
     void RegisterPIEInputDelegates();
 
-private:
     // SSplitterH* HSplitter; // Replaced
     // SSplitterV* VSplitter; // Replaced
     /*
@@ -44,6 +43,7 @@ private:
     SSplitterH* EditorHSplitter;
     SSplitterV* ViewportVSplitter;
     SSplitterH* ViewportHSplitter;
+private:
 
     std::shared_ptr<FEditorViewportClient> ViewportClients[4];
     std::shared_ptr<FEditorViewportClient> ActiveViewportClient;

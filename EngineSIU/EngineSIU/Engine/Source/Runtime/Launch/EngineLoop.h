@@ -69,4 +69,6 @@ public:
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
 
     FSlateAppMessageHandler* GetAppMessageHandler() const { return AppMessageHandler.get(); }
+
+    void TempRenderDebugImGui();
 };

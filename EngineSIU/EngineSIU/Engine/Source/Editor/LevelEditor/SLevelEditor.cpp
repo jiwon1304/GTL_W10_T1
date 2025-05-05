@@ -142,7 +142,12 @@ void SLevelEditor::ResizeEditor(const uint32 InEditorWidth, const uint32 InEdito
             ViewportVSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
             ViewportHSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
         }
-        // @todo EditorHSplitter도 리사이즈 전파 필요
+
+        FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
+        if (EditorHSplitter)
+        {
+            EditorHSplitter->OnResize(static_cast<uint32>(PanelAreaRect.Width), static_cast<uint32>(PanelAreaRect.Height));
+        }
 
         ResizeViewports();
     }
@@ -494,12 +499,31 @@ void SLevelEditor::RegisterEditorInputDelegates()
 
                 if (bIsSplitterDragging)
                 {
+                    // Explicitly resize child splitters based on the new MainVSplitter areas
+                    if (MainVSplitter)
+                    {
+                        FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
+                        if (ViewportVSplitter && ViewportHSplitter)
+                        {
+                            ViewportVSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
+                            ViewportHSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
+                        }
+
+                        FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
+                        if (EditorHSplitter)
+                        {
+                            EditorHSplitter->OnResize(static_cast<uint32>(PanelAreaRect.Width), static_cast<uint32>(PanelAreaRect.Height));
+                        }
+                    }
+
                     // 드래그 발생 시, 메인 스플리터부터 업데이트 전파
                     if (MainVSplitter)      MainVSplitter->UpdateChildRects();
-                    if (EditorHSplitter)    EditorHSplitter->UpdateChildRects();
-                    if (ViewportHSplitter)  ViewportHSplitter->UpdateChildRects();
-                    if (ViewportVSplitter)  ViewportVSplitter->UpdateChildRects();
-                    ResizeViewports(); // 최종 뷰포트 크기 적용
+                    if (EditorHSplitter)    EditorHSplitter->UpdateChildRects(); // Update internal split based on current size
+                    if (ViewportHSplitter)  ViewportHSplitter->UpdateChildRects(); // Update internal split based on current size
+                    if (ViewportVSplitter)  ViewportVSplitter->UpdateChildRects(); // Update internal split based on current size
+
+
+                    ResizeViewports(); // 최종 뷰포트 크기 적용 (이제 부모 스플리터 크기가 올바름)
                 }
             }
 

@@ -179,6 +179,8 @@ void FEngineLoop::Tick()
         FConsole::GetInstance().Draw();
         EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
 
+        TempRenderDebugImGui();
+
         UIMgr->EndFrame();
 
         // Pending 처리된 오브젝트 제거
@@ -298,4 +300,66 @@ void FEngineLoop::UpdateUI()
         GEngineLoop.GetUnrealEditor()->OnResize(AppWnd);
     }
     ViewportTypePanel::GetInstance().OnResize(AppWnd);
+}
+
+void FEngineLoop::TempRenderDebugImGui()
+{
+    // ImGui 디버그 정보 표시
+    ImGui::Begin("Splitter Debug Info");
+
+    // 마우스 커서 위치 가져오기
+    POINT MousePos;
+    GetCursorPos(&MousePos);
+    ScreenToClient(GEngineLoop.AppWnd, &MousePos);
+    FVector2D ClientPos = FVector2D{ static_cast<float>(MousePos.x), static_cast<float>(MousePos.y) };
+
+    ImGui::Text("Mouse Position: (%.1ld, %.1ld)", MousePos.x, MousePos.y);
+    ImGui::Text("Client Position: (%.1f, %.1f)", ClientPos.X, ClientPos.Y);
+
+    FRect Rect = LevelEditor->GetActiveViewportClient()->GetViewport()->GetRect();
+
+    // 현재 Splitter의 Rect 정보 표시
+    ImGui::Text("Selected Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Splitters");
+    Rect = LevelEditor->MainVSplitter->GetRect();
+    ImGui::Text("MainSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->MainVSplitter->SideLT->GetRect();
+    ImGui::Text("- MainSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->MainVSplitter->SideRB->GetRect();
+    ImGui::Text("- MainSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->GetRect();
+    ImGui::Text("EditorSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->ViewportVSplitter->GetRect();
+    ImGui::Text("ViewportVSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->ViewportHSplitter->GetRect();
+    ImGui::Text("ViewportHSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Viewports");
+    for (int i = 0; i < 4; ++i)
+    {
+        auto ViewportClient = LevelEditor->GetViewports()[i];
+        if (ViewportClient)
+        {
+            auto Viewport = ViewportClient->GetViewport();
+            bool bIsSelected = Viewport == LevelEditor->GetActiveViewportClient()->GetViewport();
+            ImGui::Text("Viewport Rect[%s]: Pos(%.1f, %.1f) Size(%.1f, %.1f)", bIsSelected ? "O" : "X", Viewport->GetRect().TopLeftX, Viewport->GetRect().TopLeftY, Viewport->GetRect().TopLeftX + Viewport->GetRect().Width, Viewport->GetRect().TopLeftY + Viewport->GetRect().Height);
+        }
+    }
+    // IsSplitterHovered 상태 표시
+    // IsSplitterHovered 함수는 const가 아니므로 const_cast 사용 또는 함수를 const로 변경 필요.
+    // 여기서는 const_cast를 사용합니다.
+    // FPoint 생성자에 float 대신 int32를 사용하도록 수정
+    bool bIsMainHovered = LevelEditor->MainVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsEditorHovered = LevelEditor->EditorHSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsViewportVHovered = LevelEditor->ViewportVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsViewportHHovered = LevelEditor->ViewportHSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+
+    ImGui::SeparatorText("Hovered");
+    ImGui::Text("IsSplitterHovered: %s", bIsMainHovered ? "true" : "false");
+    ImGui::Text("IsEditorHovered: %s", bIsEditorHovered ? "true" : "false");
+    ImGui::Text("IsViewportVHovered: %s", bIsViewportVHovered ? "true" : "false");
+    ImGui::Text("IsViewportHHovered: %s", bIsViewportHHovered ? "true" : "false");
+
+    ImGui::End();
 }
