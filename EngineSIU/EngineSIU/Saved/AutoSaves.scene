@@ -81,7 +81,7 @@
                         "ComponentOwner": "AItemActor_135",
                         "ComponentOwnerClass": "AItemActor",
                         "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
-                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
                         "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
                         "bAutoActive": "true",
                         "bIsActive": "true"
@@ -119,7 +119,7 @@
                         "ComponentOwner": "AItemActor_135",
                         "ComponentOwnerClass": "AItemActor",
                         "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
-                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
                         "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
                         "SkeletalMeshPath": "Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx",
                         "bAutoActive": "true",

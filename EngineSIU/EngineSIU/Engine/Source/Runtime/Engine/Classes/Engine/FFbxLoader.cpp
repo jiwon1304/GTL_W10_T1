@@ -614,7 +614,9 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
 
             // Parse Bind Pose Matrix
             FbxAMatrix BindPoseMatrix;
-            Cluster->GetTransformLinkMatrix(BindPoseMatrix);
+            Cluster->GetTransformLinkMatrix(BindPoseMatrix); // 부모까지 
+            FbxAMatrix GlobalBindPoseMatrix;
+            Cluster->GetTransformMatrix(GlobalBindPoseMatrix); // 나까지 포함됨
 
             FMatrix ConvertedMatrix = {
                 BindPoseMatrix.Get(0, 0), BindPoseMatrix.Get(0,1), BindPoseMatrix.Get(0, 2), BindPoseMatrix.Get(0, 3),
@@ -623,7 +625,14 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
                 BindPoseMatrix.Get(3, 0), BindPoseMatrix.Get(3, 1), BindPoseMatrix.Get(3, 2), BindPoseMatrix.Get(3, 3)
             };
 
-            Bone.BindPoseMatrix = ConvertedMatrix;
+            FMatrix ConvertedGlobalMatrix = {
+                GlobalBindPoseMatrix.Get(0, 0), GlobalBindPoseMatrix.Get(0, 1), GlobalBindPoseMatrix.Get(0, 2), GlobalBindPoseMatrix.Get(0, 3),
+                GlobalBindPoseMatrix.Get(1, 0), GlobalBindPoseMatrix.Get(1, 1), GlobalBindPoseMatrix.Get(1, 2), GlobalBindPoseMatrix.Get(1, 3),
+                GlobalBindPoseMatrix.Get(2, 0), GlobalBindPoseMatrix.Get(2, 1), GlobalBindPoseMatrix.Get(2, 2), GlobalBindPoseMatrix.Get(2, 3),
+                GlobalBindPoseMatrix.Get(3, 0), GlobalBindPoseMatrix.Get(3, 1), GlobalBindPoseMatrix.Get(3, 2), GlobalBindPoseMatrix.Get(3, 3)
+            };
+
+            Bone.BindPoseMatrix = FMatrix::Inverse(ConvertedMatrix) * ConvertedGlobalMatrix;
             OutRenderData.Bones.Add(Bone);
 
             // Store the inverse bind pose matrix
@@ -641,13 +650,22 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
                 int GlobalIndex = VertexBase + ControlPointIndex;
 
                 // Add bone influence to vertex
-                for (int j = 0; j < 4; ++j)
+                for (int j = 0; j < 8; ++j)
                 {
                     // 
                     // 비어있는 인덱스에 저장
+                    if (OutRenderData.Vertices[GlobalIndex].BoneWeights[3] != 0.0f)
+                    {
+                        int asdf = 0;
+                    }
                     if (OutRenderData.Vertices[GlobalIndex].BoneWeights[j] == 0.0f)
                     {
+                        if (OutRenderData.Bones.Num() - 1 == 1 && GlobalIndex > 10000)
+                        {
+                            int asdf = 0;
+                        }
                         OutRenderData.Vertices[GlobalIndex].BoneIndices[j] = OutRenderData.Bones.Num() - 1;
+                        //assert(OutRenderData.Bones.Num() - 1 != 1 && GlobalIndex > 10000);
                         OutRenderData.Vertices[GlobalIndex].BoneWeights[j] = Weight;
                         break;
                     }
@@ -676,7 +694,7 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
         {
             OutRenderData.Vertices[i].BoneIndices[0] = BoneIndex;
             OutRenderData.Vertices[i].BoneWeights[0] = 1.0f;
-            for (int j = 1; j < 4; ++j)
+            for (int j = 1; j < 8; ++j)
             {
                 OutRenderData.Vertices[i].BoneIndices[j] = 0;
                 OutRenderData.Vertices[i].BoneWeights[j] = 0.0f;

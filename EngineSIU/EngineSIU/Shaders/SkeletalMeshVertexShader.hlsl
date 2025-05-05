@@ -26,8 +26,10 @@ struct VS_INPUT_SkeletalMesh
     float4 Tangent : TANGENT;
     float2 UV : TEXCOORD;
     uint MaterialIndex : MATERIAL_INDEX;
-    int4 BoneIndices : BONE_INDICES;
-    float4 BoneWeights : BONE_WEIGHTS;
+    int4 BoneIndices0 : BONE_INDICES0;
+    int4 BoneIndices1 : BONE_INDICES1;
+    float4 BoneWeights0 : BONE_WEIGHTS0;
+    float4 BoneWeights1 : BONE_WEIGHTS1;
 };
 
 struct PS_INPUT_SkeletalMesh
@@ -54,12 +56,22 @@ PS_INPUT_SkeletalMesh mainVS(VS_INPUT_SkeletalMesh Input, uint id: SV_VertexID)
     
         for (int i = 0; i < 4; i++)
         {
-            if (Input.BoneWeights[i] > 0.0f)
+            if (Input.BoneWeights0[i] > 0.0f)
             {
-                matrix BoneMatrix = BoneMatrixArray[Input.BoneIndices[i]];
-                SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights[i];
-                SkinnedNormal += mul(Input.Normal, (float3x3) BoneMatrix) * Input.BoneWeights[i];
-                SkinnedTangent.xyz += mul(Input.Tangent.xyz, (float3x3) BoneMatrix) * Input.BoneWeights[i];
+                matrix BoneMatrix = BoneMatrixArray[Input.BoneIndices0[i]];
+                SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights0[i];
+                SkinnedNormal += mul(Input.Normal, (float3x3) BoneMatrix) * Input.BoneWeights0[i];
+                SkinnedTangent.xyz += mul(Input.Tangent.xyz, (float3x3) BoneMatrix) * Input.BoneWeights0[i];
+            }
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            if (Input.BoneWeights1[i] > 0.0f)
+            {
+                matrix BoneMatrix = BoneMatrixArray[Input.BoneIndices1[i]];
+                SkinnedPosition += mul(float4(Input.Position, 1.0), BoneMatrix) * Input.BoneWeights1[i];
+                SkinnedNormal += mul(Input.Normal, (float3x3) BoneMatrix) * Input.BoneWeights1[i];
+                SkinnedTangent.xyz += mul(Input.Tangent.xyz, (float3x3) BoneMatrix) * Input.BoneWeights1[i];
             }
         }
         //SkinnedPosition = float4(Input.Position, 1) + float4(0, 0, 0, 0);

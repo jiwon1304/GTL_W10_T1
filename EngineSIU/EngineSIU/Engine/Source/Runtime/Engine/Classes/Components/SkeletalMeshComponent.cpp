@@ -124,13 +124,65 @@ void USkeletalMeshComponent::GetUsedMaterials(TArray<UMaterial*>& Out) const
         }
     }
 }
+//
+//void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
+//{
+//    if (!SkeletalMesh || SkeletalMesh->GetRenderData()->Bones.Num() == 0)
+//    {
+//        // No skeletal mesh or bones to process
+//        // 이제 무조건 Bone을 하나 붙여주고 있어서 안들어올듯...
+//        OutBoneMatrices.Add(FMatrix::Identity);
+//        return;
+//    }
+//
+//    const FSkeletalMeshRenderData* RenderData = SkeletalMesh->GetRenderData();
+//    if (!RenderData)
+//    {
+//        return;
+//    }
+//
+//    const TArray<FSkeletalMeshBone>& Bones = RenderData->Bones;
+//    const TArray<FMatrix>& InverseMatrices = RenderData->InverseBindPoseMatrices;
+//
+//    OutBoneMatrices.SetNum(Bones.Num());
+//
+//    for (int BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
+//    {
+//        const FSkeletalMeshBone& Bone = Bones[BoneIndex];
+//
+//        // model space -> Bone Space
+//        FMatrix ModelToBone = FMatrix::Identity;
+//
+//        if (Bone.ParentIndex != -1)
+//        {
+//            // model -> 부모 bone의 space -> 내 bone의 space
+//            // 원래 버텍스는 model space 기준 -> bone의 space로 변환
+//            ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
+//            if (BoneIndex == 14)
+//            {
+//                static float rad = 0;
+//                rad += 1.f;
+//            
+//                ModelToBone = Bone.BindPoseMatrix * FMatrix::CreateRotationMatrix(rad, 0, 0) * OutBoneMatrices[Bone.ParentIndex];
+//            }
+//        }
+//        else
+//        {
+//            ModelToBone = Bone.BindPoseMatrix;
+//        }
+//
+//
+//        // Step 3: 스킨 매트릭스 계산: 현재 Pose * Inverse Bind Pose
+//        // 
+//        const FMatrix& InverseBindPose = InverseMatrices[BoneIndex];
+//        OutBoneMatrices[BoneIndex] = ModelToBone * InverseBindPose;
+//    }
+//}
 
 void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
 {
     if (!SkeletalMesh || SkeletalMesh->GetRenderData()->Bones.Num() == 0)
     {
-        // No skeletal mesh or bones to process
-        // 이제 무조건 Bone을 하나 붙여주고 있어서 안들어올듯...
         OutBoneMatrices.Add(FMatrix::Identity);
         return;
     }
@@ -150,65 +202,31 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
     {
         const FSkeletalMeshBone& Bone = Bones[BoneIndex];
 
-        // model space -> Bone Space
-        FMatrix GlobalPoseMatrix = FMatrix::Identity;
-        //// TEST
-        if (BoneIndex == -3123)
-        {
-            static float rad = 0.f;
-            rad += 0.01f;
-            FMatrix Rot = FMatrix::CreateRotationMatrix(rad, 0, 0);
-            GlobalPoseMatrix = Rot * GlobalPoseMatrix;
-        }
+        FMatrix ModelToBone = FMatrix::Identity;
 
         if (Bone.ParentIndex != -1)
         {
-            // model -> 부모 bone의 space -> 내 bone의 space
-            GlobalPoseMatrix = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
+            // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
+            ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
+
+            if (BoneIndex == -14)
+            {
+                static float deg = 0;
+                deg += 1.f;
+
+                // 어깨의 로컬축에서 회전(Rot * BindPoseMatrix)
+                FMatrix Rot = FMatrix::CreateRotationMatrix(0, deg, 90);
+
+                ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Rot * ( Bone.BindPoseMatrix);
+            }
         }
         else
         {
-            GlobalPoseMatrix = Bone.BindPoseMatrix;
+            ModelToBone = Bone.BindPoseMatrix;
         }
 
-        // Step 3: 스킨 매트릭스 계산: 현재 Pose × Inverse Bind Pose
+        // 스키닝 행렬: ModelToBone * InverseBindPose (row-vector convention)
         const FMatrix& InverseBindPose = InverseMatrices[BoneIndex];
-        OutBoneMatrices[BoneIndex] = InverseBindPose * GlobalPoseMatrix;
+        OutBoneMatrices[BoneIndex] = ModelToBone * InverseBindPose;
     }
-
-    //const TArray<FSkeletalMeshBone>& Bones = RenderData->Bones;
-    //const TArray<FMatrix>& RefPoseMatrices = RenderData->InverseBindPoseMatrices; // Bind pose matrices
-
-    //// Resize the output array to match the bone count
-    //OutBoneMatrices.SetNum(Bones.Num());
-
-    //// Start calculating bone matrices
-    //// 저장할 때 부모의 node부터 Bone array에 저장되므로 iteration으로 처리 가능.
-    //for (int32 BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
-    //{
-    //    const FSkeletalMeshBone& Bone = Bones[BoneIndex];
-
-    //    // Combine the bone's local transform with its parent's transform
-    //    FMatrix BoneMatrix = FMatrix::Identity;
-    //    if (Bone.ParentIndex != -1) // If the bone has a parent
-    //    {
-    //        BoneMatrix = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
-    //    }
-    //    else // Root bone
-    //    {
-    //        BoneMatrix = Bone.BindPoseMatrix;
-    //    }
-    //    
-    //    //// TEST
-    //    if (BoneIndex == -3123)
-    //    {
-    //        static float rad = 0.f;
-    //        rad += 0.00f;
-    //        FMatrix Rot = FMatrix::CreateRotationMatrix(0, 0, 0);
-    //        BoneMatrix = Rot * BoneMatrix;
-    //    }
-
-    //    // Store the final bone matrix
-    //    OutBoneMatrices[BoneIndex] = BoneMatrix;
-    //}
 }

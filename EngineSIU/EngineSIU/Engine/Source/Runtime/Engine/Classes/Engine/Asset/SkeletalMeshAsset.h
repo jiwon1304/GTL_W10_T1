@@ -14,8 +14,8 @@ struct FSkeletalMeshVertex
     float TangentW = 0;         // Tangent W for Handedness
     FVector2D UV;           // UV Coordinates (u, v)
     uint32 MaterialIndex = 0;   // Material Index
-    int BoneIndices[4] = { -1,-1,-1,-1 };     // Indices of Skinning Bones
-    float BoneWeights[4] = { 0, 0, 0, 0 };   // Weights for Bone Influence. 0은 빈것으로 취급
+    int BoneIndices[8] = { -1,-1,-1,-1,-1,-1,-1,-1 };     // Indices of Skinning Bones
+    float BoneWeights[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };   // Weights for Bone Influence. 0은 빈것으로 취급
 
     //static const uint32 Stride =
     //    sizeof(Position) +
@@ -72,8 +72,10 @@ struct FSkeletalMeshRenderData
         {"TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"BONE_INDICES", 0, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"BONE_WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_INDICES0", 0, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_INDICES1", 0, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_WEIGHTS0", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_WEIGHTS1", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
 };
