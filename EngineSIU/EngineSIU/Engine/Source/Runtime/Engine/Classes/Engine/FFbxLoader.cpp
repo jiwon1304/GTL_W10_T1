@@ -1,4 +1,4 @@
-﻿#include "FFbxLoader.h"
+#include "FFbxLoader.h"
 
 #include <sstream>
 
@@ -47,6 +47,9 @@ FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         return nullptr;   
     }
     
+    FbxGeometryConverter converter(GetFbxManager());
+    converter.Triangulate(scene, true);
+
     FSkinnedMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
@@ -342,6 +345,8 @@ void FFbxLoader::LoadFBXMesh(
     
     fbxObject->AABBmin = AABBmin;
     fbxObject->AABBmax = AABBmax;
+
+    fbxObject->mesh.Add(meshData);
 }
 
 void FFbxLoader::LoadFBXMaterials(

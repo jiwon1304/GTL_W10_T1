@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/FObjLoader.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "Engine/FFbxLoader.h"
 
 AItemActor::AItemActor()
@@ -22,7 +23,10 @@ void AItemActor::PostSpawnInitialize()
     SphereComponent = AddComponent<USphereComponent>(FName("SphereComponent_0"));
     SetRootComponent(SphereComponent);
 
-    MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
+    MeshComponent = AddComponent<USkinnedMeshComponent>(FName("MeshComponent_0"));
+    FFbxLoader::ParseFBX("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
+    auto mesh = FFbxLoader::GetFbxObject("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
+    MeshComponent->SetSkinnedMesh(mesh);
     // MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
     //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/hand/girl.fbx"));
     //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/suzanne.fbx"));

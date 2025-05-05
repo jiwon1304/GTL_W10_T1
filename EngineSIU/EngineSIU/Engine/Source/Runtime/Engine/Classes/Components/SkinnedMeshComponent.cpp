@@ -1,4 +1,4 @@
-﻿#include "SkinnedMeshComponent.h"
+#include "SkinnedMeshComponent.h"
 #include "Engine/FbxObject.h"
 
 UObject* USkinnedMeshComponent::Duplicate(UObject* InOuter)
@@ -50,7 +50,7 @@ void USkinnedMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatric
             // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
             ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose;
 
-            if (jointIndex ==  14)
+            if (jointIndex == -14)
             {
                 static float deg = 0;
                 deg += 5.f;
