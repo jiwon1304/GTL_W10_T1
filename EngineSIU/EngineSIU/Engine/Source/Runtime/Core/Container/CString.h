@@ -420,7 +420,7 @@ public:
     static int Atoi(const CharType* str)
     {
         if (!str) return 0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::strtol(str); }
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtol(str, nullptr, 10); }
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return static_cast<int>(std::wcstol(str, nullptr, 10)); } // wcstol 사용 및 캐스팅
         else
         {
@@ -433,7 +433,7 @@ public:
     static long long Atoll(const CharType* str)
     {
         if (!str) return 0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::strtoll(str); }
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtoll(str, nullptr, 10); }
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return std::wcstoll(str, nullptr, 10); }
         else
         {
@@ -446,7 +446,7 @@ public:
     static double Atod(const CharType* str)
     {
         if (!str) return 0.0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::strtod(str); } // atof는 double 반환
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtod(str, nullptr); } // atof는 double 반환
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return std::wcstod(str, nullptr); }
         else
         {
