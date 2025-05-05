@@ -59,7 +59,6 @@ public:
     virtual ~SSplitter() = default;
 };
 
-
 class SSplitterV : public SSplitter
 {
 public:
@@ -78,6 +77,8 @@ public:
     virtual void OnDrag(const FPoint& Delta) override;
 
     virtual void UpdateChildRects() override;
+
+    virtual bool IsSplitterHovered(const FPoint& InPoint) override;
 };
 
 class SSplitterH : public SSplitter
@@ -98,4 +99,6 @@ public:
     virtual void OnDrag(const FPoint& Delta) override;
 
     virtual void UpdateChildRects() override;
+
+    virtual bool IsSplitterHovered(const FPoint& InPoint) override;
 };

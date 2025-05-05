@@ -50,18 +50,26 @@ bool SSplitter::OnReleased()
 
 bool SSplitter::IsSplitterHovered(const FPoint& InPoint)
 {
-    if (IsHover(InPoint))
-    {
-        if (SideLT && SideLT->IsHover(InPoint))
-        {
-            return false;
-        }
-        if (SideRB && SideRB->IsHover(InPoint))
-        {
-            return false;
-        }
-    }
-    return true;
+    // 기본 구현: 항상 false, 실제 판정은 SSplitterV/H에서 override
+    return false;
+}
+
+// 수직 스플리터: 수평 방향으로 Splitter 바 영역 판정
+bool SSplitterV::IsSplitterHovered(const FPoint& InPoint)
+{
+    float centerX = GetSplitterLTCenter();
+    float minX = centerX - SplitterHalfThickness;
+    float maxX = centerX + SplitterHalfThickness;
+    return (InPoint.x >= minX && InPoint.x <= maxX);
+}
+
+// 수평 스플리터: 수직 방향으로 Splitter 바 영역 판정
+bool SSplitterH::IsSplitterHovered(const FPoint& InPoint)
+{
+    float centerY = GetSplitterLTCenter();
+    float minY = centerY - SplitterHalfThickness;
+    float maxY = centerY + SplitterHalfThickness;
+    return (InPoint.y >= minY && InPoint.y <= maxY);
 }
 
 void SSplitter::LoadConfig(const TMap<FString, FString>& Config, FString Key, float DefaultValue) {}
