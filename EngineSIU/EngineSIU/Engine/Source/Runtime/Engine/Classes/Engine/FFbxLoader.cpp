@@ -5,6 +5,12 @@
 #include "FbxObject.h"
 #include "UObject/ObjectFactory.h"
 
+struct BoneWeights
+{
+    int jointIndex;
+    float weight;
+};
+
 FFbxObject* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     if (fbxMap.Contains(FBXFilePath))
@@ -49,67 +55,56 @@ FFbxObject* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 FFbxObject* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
     FFbxObject* result = new FFbxObject();
-    std::function<void(FbxNode*)> Traverse = [&result, &Traverse](FbxNode* Node)
+
+    TMap<int, TArray<BoneWeights>> weightMap;
+    TMap<FString, int> boneNameToIndex;
+
+    TArray<FbxNode*> skeletons;
+    TArray<FbxNode*> meshes;
+    
+    std::function<void(FbxNode*)> Traverse = [&](FbxNode* Node)
     {   if (!Node) return;
         FbxNodeAttribute* attr = Node->GetNodeAttribute();
         if (attr)
         {
             switch (attr->GetAttributeType())
             {
-            case FbxNodeAttribute::eUnknown:
-                break;
-            case FbxNodeAttribute::eNull:
-                break;
-            case FbxNodeAttribute::eMarker:
-                break;
             case FbxNodeAttribute::eSkeleton:
+                skeletons.Add(Node);
                 break;
             case FbxNodeAttribute::eMesh:
-                LoadFBXMesh(result, Node);
+                meshes.Add(Node);
                 break;
-            case FbxNodeAttribute::eNurbs:
-                break;
-            case FbxNodeAttribute::ePatch:
-                break;
-            case FbxNodeAttribute::eCamera:
-                break;
-            case FbxNodeAttribute::eCameraStereo:
-                break;
-            case FbxNodeAttribute::eCameraSwitcher:
-                break;
-            case FbxNodeAttribute::eLight:
-                break;
-            case FbxNodeAttribute::eOpticalReference:
-                break;
-            case FbxNodeAttribute::eOpticalMarker:
-                break;
-            case FbxNodeAttribute::eNurbsCurve:
-                break;
-            case FbxNodeAttribute::eTrimNurbsSurface:
-                break;
-            case FbxNodeAttribute::eBoundary:
-                break;
-            case FbxNodeAttribute::eNurbsSurface:
-                break;
-            case FbxNodeAttribute::eShape:
-                break;
-            case FbxNodeAttribute::eLODGroup:
-                break;
-            case FbxNodeAttribute::eSubDiv:
-                break;
-            case FbxNodeAttribute::eCachedEffect:
-                break;
-            case FbxNodeAttribute::eLine:
+            default:
                 break;
             }
         }
-
         for (int i = 0; i < Node->GetChildCount(); ++i)
         {
             Traverse(Node->GetChild(i));
         }
     };
+    
     Traverse(InFbxInfo->GetRootNode());
+
+    // parse bones
+    for (auto& node : skeletons)
+    {
+        LoadFbxSkeleton(result, node, boneNameToIndex, -1);
+    }
+
+    // parse skins
+    for (auto& node: meshes)
+    {
+        LoadSkinWeights(node, boneNameToIndex, weightMap);
+    }
+
+    // parse meshes
+    for (auto& node: meshes)
+    {
+        LoadFBXMesh(result, node, boneNameToIndex, weightMap);
+    }
+    
     return result;
 }
 
@@ -128,7 +123,99 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
     return GetFbxManager()->GetIOSettings();
 }
 
-void FFbxLoader::LoadFBXMesh(FFbxObject* fbxObject, FbxNode* node)
+
+void FFbxLoader::LoadFbxSkeleton(
+    FFbxObject* fbxObject,
+    FbxNode* node,
+    TMap<FString, int>& boneNameToIndex,
+    int parentIndex = -1
+)
+{
+    if (!node)
+        return;
+
+    if (boneNameToIndex.Contains(node->GetName()))
+        return;
+    
+    FbxNodeAttribute* attr = node->GetNodeAttribute();
+    if (!attr || attr->GetAttributeType() != FbxNodeAttribute::eSkeleton)
+    {
+        for (int i = 0; i < node->GetChildCount(); ++i)
+        {
+            LoadFbxSkeleton(fbxObject, node->GetChild(i), boneNameToIndex, parentIndex);
+        }
+        return;
+    }
+
+    FFbxJoint joint;
+    joint.name = node->GetName();
+    joint.parentIndex = parentIndex;
+
+    FbxAMatrix m = node->EvaluateGlobalTransform();
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+        {
+            joint.localBindPose.M[i][j] = m[i][j];
+        }
+    }
+    joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
+
+    int thisIndex = fbxObject->skeleton.joints.Num();
+    
+    fbxObject->skeleton.joints.Add(joint);
+    boneNameToIndex.Add(joint.name, thisIndex);
+    
+    for (int i = 0; i < node->GetChildCount(); ++i)
+    {
+        LoadFbxSkeleton(fbxObject, node->GetChild(i), boneNameToIndex, thisIndex);
+    }
+}
+
+void FFbxLoader::LoadSkinWeights(
+    FbxNode* node,
+    const TMap<FString, int>& boneNameToIndex,
+    TMap<int, TArray<BoneWeights>>& OutBoneWeights
+)
+{
+    FbxMesh* mesh = node->GetMesh();
+    if (!mesh) return;
+    
+    int skinCount = mesh->GetDeformerCount(FbxDeformer::eSkin);
+    for (int s = 0; s < skinCount; ++s)
+    {
+        FbxSkin* skin = static_cast<FbxSkin*>(mesh->GetDeformer(s, FbxDeformer::eSkin));
+        int clustureCount = skin->GetClusterCount();
+        for (int c = 0; c < clustureCount; ++c)
+        {
+            FbxCluster* cluster = skin->GetCluster(c);
+            FbxNode* linkedBone = cluster->GetLink();
+            if (!linkedBone)
+                continue;
+
+            FString boneName = linkedBone->GetName();
+            int boneIndex = boneNameToIndex[boneName];
+
+            int* indices = cluster->GetControlPointIndices();
+            double* weights = cluster->GetControlPointWeights();
+            int count = cluster->GetControlPointIndicesCount();
+            for (int i = 0; i < count; ++i)
+            {
+                int ctrlIdx = indices[i];
+                float weight = static_cast<float>(weights[i]);
+                OutBoneWeights[ctrlIdx].Add({boneIndex, weight});
+            }
+            
+        }
+    } 
+}
+
+void FFbxLoader::LoadFBXMesh(
+    FFbxObject* fbxObject,
+    FbxNode* node,
+    TMap<FString, int>& boneNameToIndex,
+    TMap<int, TArray<BoneWeights>>& boneWeight
+)
 {
     FbxMesh* mesh = node->GetMesh();
     if (!mesh) return;
@@ -144,10 +231,13 @@ void FFbxLoader::LoadFBXMesh(FFbxObject* fbxObject, FbxNode* node)
     {
         for (int vertexIndex = 0; vertexIndex < 3; ++vertexIndex)
         {
+            FFbxVertex v;
+            
             // vertex
             int controlPointIndex = mesh->GetPolygonVertex(polygonIndex, vertexIndex);
             FbxVector4 pos = controlPoints[controlPointIndex];
             FVector convertPos(pos[0], pos[1], pos[2]);
+            v.vertex = convertPos;
             
             // Normal
             FbxVector4 normal = {0, 0, 0};
@@ -158,6 +248,7 @@ void FFbxLoader::LoadFBXMesh(FFbxObject* fbxObject, FbxNode* node)
                 normal = normalElement->GetDirectArray().GetAt(normIdx);
             }
             FVector convertNormal(normal[0], normal[1], normal[2]);
+            v.normal = convertNormal;
 
             // UV
             FbxVector2 uv = {0, 0};
@@ -166,6 +257,33 @@ void FFbxLoader::LoadFBXMesh(FFbxObject* fbxObject, FbxNode* node)
                 uv = uvElement->GetDirectArray().GetAt(uvIdx);
             }
             FVector2D convertUV(uv[0], uv[1]);
+            v.uv = convertUV;
+
+            // Skin
+            TArray<BoneWeights>* weights = boneWeight.Find(controlPointIndex);
+            if (weights)
+            {
+                std::sort(weights->begin(), weights->end(), [](auto& a, auto& b)
+                {
+                    return a.weight > b.weight;
+                });
+
+                float total = 0.0f;
+                for (int i = 0; i < 4 && i < weights->Num(); ++i)
+                {
+                    v.boneIndices[i] = (*weights)[i].jointIndex;
+                    v.boneWeights[i] = (*weights)[i].weight;
+                    total += (*weights)[i].weight;
+                }
+
+
+                // Normalize
+                if (total > 0.f)
+                {
+                    for (int i = 0; i < 4; ++i)
+                        v.boneWeights[i] /= total;
+                }
+            }
 
             // indices process
             std::stringstream ss;
@@ -175,9 +293,7 @@ void FFbxLoader::LoadFBXMesh(FFbxObject* fbxObject, FbxNode* node)
             if (!indexMap.contains(key))
             {
                 index = fbxObject->mesh.vertices.Num();
-                fbxObject->mesh.vertices.Add(convertPos);
-                fbxObject->mesh.normals.Add(convertNormal);
-                fbxObject->mesh.uvs.Add(convertUV);
+                fbxObject->mesh.vertices.Add(v);
                 indexMap[key] = index;
             } else
             {

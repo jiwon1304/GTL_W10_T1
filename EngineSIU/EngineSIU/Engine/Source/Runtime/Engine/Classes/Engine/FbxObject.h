@@ -2,11 +2,20 @@
 #include "UObject/Object.h"
 #include "UObject/ObjectMacros.h"
 
+struct FFbxVertex
+{
+    FVector vertex;
+    FVector normal;
+    FVector2D uv;
+    uint8 boneIndices[4] = { 255, 255, 255, 255 };
+    float boneWeights[4];
+};
 struct FFbxMeshData
 {
-    TArray<FVector> vertices;
-    TArray<FVector> normals;
-    TArray<FVector2D> uvs;
+    // TArray<FVector> vertices;
+    // TArray<FVector> normals;
+    // TArray<FVector2D> uvs;
+    TArray<FFbxVertex> vertices;
     TArray<uint32> indices;
     FString name;
 };
