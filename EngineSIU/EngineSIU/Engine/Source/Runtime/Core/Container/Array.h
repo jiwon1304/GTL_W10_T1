@@ -68,7 +68,7 @@ public:
     bool IsEmpty() const;
 
     /** Array를 비웁니다 */
-    void Empty();
+    void Empty(SizeType Slack = 0);
 
     /** Item과 일치하는 모든 요소를 제거합니다. */
     SizeType Remove(const T& Item);
@@ -132,7 +132,7 @@ public:
     SizeType Num() const;
 
     /** Array의 Capacity를 가져옵니다. */
-    SizeType Len() const;
+    SizeType Max() const;
 
     /** Array의 Size를 Number로 설정합니다. */
     void SetNum(SizeType Number);
@@ -143,13 +143,16 @@ public:
     /** Count만큼 초기화되지 않은 공간을 확장합니다. */
     SizeType AddUninitialized(SizeType Count);
 
+    /** Array의 capacity를 현재 size에 맞게 축소하여 메모리를 최적화합니다. */
+    void Shrink();
+
     void Sort();
     template <typename Compare>
         requires std::is_invocable_r_v<bool, Compare, const T&, const T&>
     void Sort(const Compare& CompFn);
 
     bool IsValidIndex(uint32 ElementIndex) const {
-        if (ElementIndex < 0 || ElementIndex >= Len()) return false;
+        if (ElementIndex < 0 || ElementIndex >= Max()) return false;
 
         return true;
     }
@@ -263,9 +266,22 @@ bool TArray<T, Allocator>::IsEmpty() const
 }
 
 template <typename T, typename Allocator>
-void TArray<T, Allocator>::Empty()
+void TArray<T, Allocator>::Empty(SizeType Slack)
 {
     ContainerPrivate.clear();
+
+    if (Slack > 0)
+    {
+        // 현재 capacity가 Slack보다 작으면 늘림
+        if (Max() < Slack)
+        {
+            ContainerPrivate.reserve(Slack);
+        }
+    }
+    else // Slack이 0이면 가능하면 메모리 해제 시도
+    {
+        Shrink();
+    }
 }
 
 template <typename T, typename Allocator>
@@ -353,7 +369,7 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Num() const
 }
 
 template <typename T, typename Allocator>
-typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Len() const
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Max() const
 {
     return ContainerPrivate.capacity();
 }
@@ -386,6 +402,12 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddUninitialized(S
 
     // 새 크기를 반환
     return OldSize;
+}
+
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Shrink()
+{
+    ContainerPrivate.shrink_to_fit();
 }
 
 template <typename T, typename Allocator>
