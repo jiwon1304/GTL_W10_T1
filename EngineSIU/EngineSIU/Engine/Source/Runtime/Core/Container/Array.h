@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <cassert>
 
 #include "ContainerAllocator.h"
 #include "Serialization/Archive.h"
@@ -64,6 +65,19 @@ public:
 
     template <typename... Args>
     SizeType Emplace(Args&&... Item);
+
+    /**
+     * 다른 TArray의 모든 요소를 이 배열의 끝에 추가합니다.
+     * @param Source 다른 TArray 객체
+     */
+    void Append(const TArray& Source);
+
+    /**
+     * 포인터가 가리키는 C-스타일 배열의 요소들을 이 배열의 끝에 추가합니다.
+     * @param Ptr 추가할 요소 배열의 시작 포인터
+     * @param Count 추가할 요소의 개수
+     */
+    void Append(const ElementType* Ptr, SizeType Count);
 
     /** Array가 비어있는지 확인합니다. */
     bool IsEmpty() const;
@@ -278,6 +292,64 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Emplace(Args&&... 
 {
     ContainerPrivate.emplace_back(std::forward<Args>(Item)...);
     return Num()-1;
+}
+
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Append(const TArray& Source)
+{
+    // 추가할 요소가 없으면 바로 반환
+    if (Source.IsEmpty())
+    {
+        return;
+    }
+
+    // 최적화: 필요한 경우 미리 메모리를 할당하여 여러 번의 재할당 방지
+    const SizeType OldSize = Num();
+    const SizeType NumToAdd = Source.Num();
+    const SizeType NewSize = OldSize + NumToAdd;
+    if (Max() < NewSize)
+    {
+        Reserve(NewSize); // 필요한 만큼 (또는 그 이상) 용량 확보
+    }
+
+    // std::vector::insert를 사용하여 Source의 모든 요소를 현재 벡터의 끝(end())에 삽입
+    ContainerPrivate.insert(
+        ContainerPrivate.end(),          // 삽입 위치: 현재 벡터의 끝
+        Source.ContainerPrivate.begin(), // 복사할 시작 이터레이터
+        Source.ContainerPrivate.end()    // 복사할 끝 이터레이터
+    );
+}
+
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Append(const ElementType* Ptr, SizeType Count)
+{
+    // 추가할 요소가 없거나 포인터가 유효하지 않으면 바로 반환
+    if (Count <= 0)
+    {
+        return;
+    }
+    // Count가 0보다 클 때 Ptr이 nullptr이면 문제가 발생하므로 확인 (assert 또는 예외 처리 등)
+    assert(Ptr != nullptr && "TArray::Append trying to append from null pointer with Count > 0");
+    if (Ptr == nullptr) {
+        // 실제 엔진이라면 로그를 남기거나 할 수 있음
+        return;
+    }
+
+
+    // 최적화: 필요한 경우 미리 메모리를 할당
+    const SizeType OldSize = Num();
+    const SizeType NewSize = OldSize + Count;
+    if (Max() < NewSize)
+    {
+        Reserve(NewSize);
+    }
+
+    // std::vector::insert는 포인터를 이터레이터처럼 사용할 수 있음
+    ContainerPrivate.insert(
+        ContainerPrivate.end(), // 삽입 위치: 현재 벡터의 끝
+        Ptr,                  // 복사할 시작 포인터 (이터레이터 역할)
+        Ptr + Count           // 복사할 끝 포인터 (이터레이터 역할)
+    );
 }
 
 template <typename T, typename Allocator>
