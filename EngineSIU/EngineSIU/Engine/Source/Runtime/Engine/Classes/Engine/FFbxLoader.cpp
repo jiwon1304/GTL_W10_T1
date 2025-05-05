@@ -11,7 +11,7 @@ struct BoneWeights
     float weight;
 };
 
-FFbxObject* FFbxLoader::ParseFBX(const FString& FBXFilePath)
+FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     if (fbxMap.Contains(FBXFilePath))
         return fbxMap[FBXFilePath];
@@ -46,15 +46,15 @@ FFbxObject* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         return nullptr;   
     }
     
-    FFbxObject* result = LoadFBXObject(scene);
+    FSkinnedMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     fbxMap[FBXFilePath] = result;
     return result;
 }
 
-FFbxObject* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
+FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
-    FFbxObject* result = new FFbxObject();
+    FSkinnedMesh* result = new FSkinnedMesh();
 
     TMap<int, TArray<BoneWeights>> weightMap;
     TMap<FString, int> boneNameToIndex;
@@ -131,7 +131,7 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
 
 
 void FFbxLoader::LoadFbxSkeleton(
-    FFbxObject* fbxObject,
+    FSkinnedMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     int parentIndex = -1
@@ -217,7 +217,7 @@ void FFbxLoader::LoadSkinWeights(
 }
 
 void FFbxLoader::LoadFBXMesh(
-    FFbxObject* fbxObject,
+    FSkinnedMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& boneWeight
@@ -233,6 +233,8 @@ void FFbxLoader::LoadFBXMesh(
     FbxLayerElementUV* uvElement = mesh->GetElementUV();
     FbxLayerElementMaterial* materialElement = mesh->GetElementMaterial();
 
+    FVector AABBmin(FLT_MAX, FLT_MAX, FLT_MAX);
+    FVector AABBmax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
     std::unordered_map<std::string, uint32> indexMap;
 
     for (int polygonIndex = 0; polygonIndex < polygonCount; ++polygonIndex)
@@ -246,6 +248,13 @@ void FFbxLoader::LoadFBXMesh(
             FbxVector4 pos = controlPoints[controlPointIndex];
             FVector convertPos(pos[0], pos[1], pos[2]);
             v.vertex = convertPos;
+            
+            AABBmin.X = std::min(AABBmin.X, v.vertex.X);
+            AABBmin.Y = std::min(AABBmin.Y, v.vertex.Y);
+            AABBmin.Z = std::min(AABBmin.Z, v.vertex.Z);
+            AABBmax.X = std::max(AABBmax.X, v.vertex.X);
+            AABBmax.Y = std::max(AABBmax.Y, v.vertex.Y);
+            AABBmax.Z = std::max(AABBmax.Z, v.vertex.Z);
             
             // Normal
             FbxVector4 normal = {0, 0, 0};
@@ -325,10 +334,13 @@ void FFbxLoader::LoadFBXMesh(
             fbxObject->mesh.indices.Add(index);
         }
     }
+    
+    fbxObject->AABBmin = AABBmin;
+    fbxObject->AABBmax = AABBmax;
 }
 
 void FFbxLoader::LoadFBXMaterials(
-    FFbxObject* fbxObject,
+    FSkinnedMesh* fbxObject,
     FbxNode* node
 )
 {

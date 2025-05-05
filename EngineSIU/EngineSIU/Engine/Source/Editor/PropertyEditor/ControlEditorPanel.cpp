@@ -233,7 +233,7 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                     const FString FileName = FileNames.Pop();
                     UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
 
-                    FFbxObject* fbx = FFbxLoader::ParseFBX(FileName);
+                    FSkinnedMesh* fbx = FFbxLoader::ParseFBX(FileName);
                     if (fbx == nullptr)
                     {
                         tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);

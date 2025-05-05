@@ -5,19 +5,19 @@
 #include "Container/Map.h"
 #include "Container/String.h"
 
-struct FFbxObject;
+struct FSkinnedMesh;
 struct BoneWeights;
 
 struct FFbxLoader
 {
-    static FFbxObject* ParseFBX(const FString& FBXFilePath);
-    static FFbxObject* GetFbxObject(const FString& filename) { return fbxMap[filename]; }
+    static FSkinnedMesh* ParseFBX(const FString& FBXFilePath);
+    static FSkinnedMesh* GetFbxObject(const FString& filename) { return fbxMap[filename]; }
 private:
     static FbxManager* GetFbxManager();
     static FbxIOSettings* GetFbxIOSettings();
-    static FFbxObject* LoadFBXObject(FbxScene* InFbxInfo);
+    static FSkinnedMesh* LoadFBXObject(FbxScene* InFbxInfo);
     static void LoadFbxSkeleton(
-        FFbxObject* fbxObject,
+        FSkinnedMesh* fbxObject,
         FbxNode* node,
         TMap<FString, int>& boneNameToIndex,
         int parentIndex
@@ -28,15 +28,15 @@ private:
         TMap<int, TArray<BoneWeights>>& OutBoneWeights
     );
     static void LoadFBXMesh(
-        FFbxObject* fbxObject,
+        FSkinnedMesh* fbxObject,
         FbxNode* node,
         TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& boneWeight
     );
     static void LoadFBXMaterials(
-        FFbxObject* fbxObject,
+        FSkinnedMesh* fbxObject,
         FbxNode* node
     );
-    inline static TMap<FString, FFbxObject*> fbxMap;
+    inline static TMap<FString, FSkinnedMesh*> fbxMap;
 };
 

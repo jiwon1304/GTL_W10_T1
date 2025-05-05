@@ -46,8 +46,9 @@ struct FFbxMaterialPhong
     float transparencyFactor;
 };
 
-struct FFbxObject {
+struct FSkinnedMesh {
     FFbxMeshData mesh;
     FFbxSkeletonData skeleton;
     TArray<FFbxMaterialPhong> material;
+    FVector AABBmin, AABBmax;
 };

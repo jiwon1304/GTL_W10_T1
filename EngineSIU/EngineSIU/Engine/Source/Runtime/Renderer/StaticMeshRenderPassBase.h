@@ -3,6 +3,7 @@
 #include "RendererHelpers.h"
 #include "Container/Array.h"
 
+class USkinnedMeshComponent;
 class UStaticMeshComponent;
 class UMaterial;
 
@@ -38,6 +39,7 @@ protected:
     virtual void Render_Internal(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderAllStaticMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    void RenderAllSkinnedMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderPrimitive(FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex) const;
 
@@ -52,6 +54,9 @@ protected:
     FDXDShaderManager* ShaderManager;
 
     TArray<UStaticMeshComponent*> StaticMeshComponents;
+
+    // TODO: SkinnedMesh RenderPass로 따로 분리하기?
+    TArray<USkinnedMeshComponent*> SkinnedMeshComponents;
     ID3D11ShaderResourceView* SpotShadowArraySRV = nullptr;
 };
 

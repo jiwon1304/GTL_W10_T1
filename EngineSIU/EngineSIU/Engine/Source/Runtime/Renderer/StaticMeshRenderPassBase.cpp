@@ -5,6 +5,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Components/StaticMeshComponent.h"
 #include "BaseGizmos/GizmoBaseComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "Engine/EditorEngine.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UObject/Casts.h"
@@ -41,6 +42,14 @@ void FStaticMeshRenderPassBase::PrepareRenderArr()
         }
         StaticMeshComponents.Add(iter);
     }
+    for (const auto iter : TObjectRange<USkinnedMeshComponent>())
+    {
+        if (iter->GetWorld() != GEngine->ActiveWorld)
+        {
+            continue;
+        }
+        SkinnedMeshComponents.Add(iter);
+    }
 }
 
 void FStaticMeshRenderPassBase::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
@@ -55,6 +64,7 @@ void FStaticMeshRenderPassBase::Render(const std::shared_ptr<FEditorViewportClie
 void FStaticMeshRenderPassBase::ClearRenderArr()
 {
     StaticMeshComponents.Empty();
+    SkinnedMeshComponents.Empty();
 }
 
 void FStaticMeshRenderPassBase::Render_Internal(const std::shared_ptr<FEditorViewportClient>& Viewport)
@@ -91,6 +101,14 @@ void FStaticMeshRenderPassBase::RenderAllStaticMeshes(const std::shared_ptr<FEdi
         {
             FEngineLoop::PrimitiveDrawBatch.AddAABBToBatch(Comp->GetBoundingBox(), Comp->GetWorldLocation(), WorldMatrix);
         }
+    }
+}
+
+void FStaticMeshRenderPassBase::RenderAllSkinnedMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+{
+    for (USkinnedMeshComponent* Comp: SkinnedMeshComponents)
+    {
+        
     }
 }
 
