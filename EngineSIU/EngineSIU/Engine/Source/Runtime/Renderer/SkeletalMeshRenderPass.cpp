@@ -186,10 +186,8 @@ void FSkeletalMeshRenderPass::UpdateVertexBuffer(FSkeletalMeshRenderData* Render
         {
             if (Vertex.BoneWeights[i] > 0.0f)
             {
-                //const FMatrix& BoneMatrix = RenderData->InverseBindPoseMatrices[Vertex.BoneIndices[i]];
-                //const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[i]];
+                const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[i]];
 
-                const FMatrix& BoneMatrix = FMatrix::Identity;
                 SkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Vertex.BoneWeights[i];
                 SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)).xyz() * Vertex.BoneWeights[i];
                 SkinnedTangent += BoneMatrix.TransformFVector4(FVector4(Vertex.Tangent, Vertex.TangentW)).xyz() * Vertex.BoneWeights[i];

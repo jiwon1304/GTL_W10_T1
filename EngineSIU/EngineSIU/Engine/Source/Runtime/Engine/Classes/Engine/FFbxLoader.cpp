@@ -613,30 +613,40 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
             }
 
             // Parse Bind Pose Matrix
-            FbxAMatrix BindPoseMatrix;
-            Cluster->GetTransformLinkMatrix(BindPoseMatrix); // 부모까지 
-            FbxAMatrix GlobalBindPoseMatrix;
-            Cluster->GetTransformMatrix(GlobalBindPoseMatrix); // 나까지 포함됨
+            FbxAMatrix ModelToBoneFbx;
+            Cluster->GetTransformLinkMatrix(ModelToBoneFbx); // model -> bone
+            FbxAMatrix ModelToParentBoneFbx;
+            Cluster->GetTransformMatrix(ModelToParentBoneFbx); // model -> parent bone(node)
 
-            FMatrix ConvertedMatrix = {
-                BindPoseMatrix.Get(0, 0), BindPoseMatrix.Get(0,1), BindPoseMatrix.Get(0, 2), BindPoseMatrix.Get(0, 3),
-                BindPoseMatrix.Get(1, 0), BindPoseMatrix.Get(1, 1), BindPoseMatrix.Get(1, 2), BindPoseMatrix.Get(1, 3),
-                BindPoseMatrix.Get(2, 0), BindPoseMatrix.Get(2, 1), BindPoseMatrix.Get(2, 2), BindPoseMatrix.Get(2, 3),
-                BindPoseMatrix.Get(3, 0), BindPoseMatrix.Get(3, 1), BindPoseMatrix.Get(3, 2), BindPoseMatrix.Get(3, 3)
+            FbxAMatrix ParentToBoneFbx = ModelToBoneFbx.Inverse() * ModelToParentBoneFbx;
+
+            FMatrix BoneOffset = {
+                ParentToBoneFbx.Get(0, 0), ParentToBoneFbx.Get(0, 1), ParentToBoneFbx.Get(0, 2), ParentToBoneFbx.Get(0, 3),
+                ParentToBoneFbx.Get(1, 0), ParentToBoneFbx.Get(1, 1), ParentToBoneFbx.Get(1, 2), ParentToBoneFbx.Get(1, 3),
+                ParentToBoneFbx.Get(2, 0), ParentToBoneFbx.Get(2, 1), ParentToBoneFbx.Get(2, 2), ParentToBoneFbx.Get(2, 3),
+                ParentToBoneFbx.Get(3, 0), ParentToBoneFbx.Get(3, 1), ParentToBoneFbx.Get(3, 2), ParentToBoneFbx.Get(3, 3)
             };
+            //FMatrix ModelToBone = {
+            //    ModelToBoneFbx.Get(0, 0), ModelToBoneFbx.Get(0,1), ModelToBoneFbx.Get(0, 2), ModelToBoneFbx.Get(0, 3),
+            //    ModelToBoneFbx.Get(1, 0), ModelToBoneFbx.Get(1, 1), ModelToBoneFbx.Get(1, 2), ModelToBoneFbx.Get(1, 3),
+            //    ModelToBoneFbx.Get(2, 0), ModelToBoneFbx.Get(2, 1), ModelToBoneFbx.Get(2, 2), ModelToBoneFbx.Get(2, 3),
+            //    ModelToBoneFbx.Get(3, 0), ModelToBoneFbx.Get(3, 1), ModelToBoneFbx.Get(3, 2), ModelToBoneFbx.Get(3, 3)
+            //};
 
-            FMatrix ConvertedGlobalMatrix = {
-                GlobalBindPoseMatrix.Get(0, 0), GlobalBindPoseMatrix.Get(0, 1), GlobalBindPoseMatrix.Get(0, 2), GlobalBindPoseMatrix.Get(0, 3),
-                GlobalBindPoseMatrix.Get(1, 0), GlobalBindPoseMatrix.Get(1, 1), GlobalBindPoseMatrix.Get(1, 2), GlobalBindPoseMatrix.Get(1, 3),
-                GlobalBindPoseMatrix.Get(2, 0), GlobalBindPoseMatrix.Get(2, 1), GlobalBindPoseMatrix.Get(2, 2), GlobalBindPoseMatrix.Get(2, 3),
-                GlobalBindPoseMatrix.Get(3, 0), GlobalBindPoseMatrix.Get(3, 1), GlobalBindPoseMatrix.Get(3, 2), GlobalBindPoseMatrix.Get(3, 3)
-            };
+            //FMatrix ModelToParentBone = {
+            //    ModelToParentBoneFbx.Get(0, 0), ModelToParentBoneFbx.Get(0, 1), ModelToParentBoneFbx.Get(0, 2), ModelToParentBoneFbx.Get(0, 3),
+            //    ModelToParentBoneFbx.Get(1, 0), ModelToParentBoneFbx.Get(1, 1), ModelToParentBoneFbx.Get(1, 2), ModelToParentBoneFbx.Get(1, 3),
+            //    ModelToParentBoneFbx.Get(2, 0), ModelToParentBoneFbx.Get(2, 1), ModelToParentBoneFbx.Get(2, 2), ModelToParentBoneFbx.Get(2, 3),
+            //    ModelToParentBoneFbx.Get(3, 0), ModelToParentBoneFbx.Get(3, 1), ModelToParentBoneFbx.Get(3, 2), ModelToParentBoneFbx.Get(3, 3)
+            //};
 
-            Bone.BindPoseMatrix = FMatrix::Inverse(ConvertedMatrix) * ConvertedGlobalMatrix;
-            OutRenderData.Bones.Add(Bone);
+            //Bone.BindPoseMatrix = FMatrix::Inverse(ConvertedMatrix) * ConvertedGlobalMatrix;
+            //Bone.BindPoseMatrix = FMatrix::Inverse(ModelToBone) * ModelToParentBone;
+            Bone.BindPoseMatrix = BoneOffset;
+            OutRenderData.Bones.Add(Bone); 
 
             // Store the inverse bind pose matrix
-            OutRenderData.InverseBindPoseMatrices.Add(FMatrix::Inverse(ConvertedMatrix));
+            OutRenderData.InverseBindPoseMatrices.Add(FMatrix::Inverse(Bone.BindPoseMatrix));
 
             // Parse Bone Weights
             int* ControlPointIndices = Cluster->GetControlPointIndices();
@@ -654,18 +664,9 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
                 {
                     // 
                     // 비어있는 인덱스에 저장
-                    if (OutRenderData.Vertices[GlobalIndex].BoneWeights[3] != 0.0f)
-                    {
-                        int asdf = 0;
-                    }
                     if (OutRenderData.Vertices[GlobalIndex].BoneWeights[j] == 0.0f)
                     {
-                        if (OutRenderData.Bones.Num() - 1 == 1 && GlobalIndex > 10000)
-                        {
-                            int asdf = 0;
-                        }
                         OutRenderData.Vertices[GlobalIndex].BoneIndices[j] = OutRenderData.Bones.Num() - 1;
-                        //assert(OutRenderData.Bones.Num() - 1 != 1 && GlobalIndex > 10000);
                         OutRenderData.Vertices[GlobalIndex].BoneWeights[j] = Weight;
                         break;
                     }
@@ -673,7 +674,7 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
             }
         }
     }
-    // TODO : StaticMesh6로 넘기기
+    // TODO : StaticMesh로 저장시키기?
     // Bone이 없는 경우
     else
     {

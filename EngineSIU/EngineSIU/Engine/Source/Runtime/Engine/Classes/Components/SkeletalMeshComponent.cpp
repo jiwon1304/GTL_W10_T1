@@ -209,15 +209,15 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
             // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
             ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
 
-            if (BoneIndex == -14)
+            if (BoneIndex == 14)
             {
                 static float deg = 0;
-                deg += 1.f;
+                deg += 5.f;
 
                 // 어깨의 로컬축에서 회전(Rot * BindPoseMatrix)
-                FMatrix Rot = FMatrix::CreateRotationMatrix(0, deg, 90);
+                FMatrix Rot = FMatrix::CreateRotationMatrix(0, deg, -90);
 
-                ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Rot * ( Bone.BindPoseMatrix);
+                ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix * Rot;
             }
         }
         else
@@ -225,7 +225,7 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
             ModelToBone = Bone.BindPoseMatrix;
         }
 
-        // 스키닝 행렬: ModelToBone * InverseBindPose (row-vector convention)
+        // 스키닝 행렬: 
         const FMatrix& InverseBindPose = InverseMatrices[BoneIndex];
         OutBoneMatrices[BoneIndex] = ModelToBone * InverseBindPose;
     }
