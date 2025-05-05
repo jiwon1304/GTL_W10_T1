@@ -141,8 +141,24 @@ public:
     /** Array의 Capacity를 Number로 설정합니다. */
     void Reserve(SizeType Number);
 
-    /** Count만큼 초기화되지 않은 공간을 확장합니다. */
+    /**
+     * Count만큼 초기화되지 않은 공간을 확장합니다.
+     * @warning std::vector의 한계로, 실제로는 AddDefaulted와 동작이 같습니다.
+     */
     SizeType AddUninitialized(SizeType Count);
+
+    /**
+     * 배열 끝에 기본 생성된 요소 1개를 추가합니다.
+     * @return 추가된 요소의 인덱스
+     */
+    SizeType AddDefaulted();
+
+    /**
+     * 배열 끝에 기본 생성된 요소를 Count개 만큼 추가합니다.
+     * @param Count 추가할 요소의 개수
+     * @return 추가된 첫 번째 요소의 인덱스. Count가 0 이하라면 현재 Num()을 반환할 수 있습니다.
+     */
+    SizeType AddDefaulted(SizeType Count);
 
     /** Array의 capacity를 현재 size에 맞게 축소하여 메모리를 최적화합니다. */
     void Shrink();
@@ -400,13 +416,40 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddUninitialized(S
     }
 
     // 기존 크기 저장
-    SizeType OldSize = ContainerPrivate.size();
+    SizeType StartIndex = ContainerPrivate.size();
 
-    // 메모리를 확장 (초기화하지 않음)
-    ContainerPrivate.resize(OldSize + Count);
+    // 메모리를 확장
+    ContainerPrivate.resize(StartIndex + Count);
 
     // 새 크기를 반환
-    return OldSize;
+    return StartIndex;
+}
+
+template <typename T, typename Allocator>
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddDefaulted()
+{
+    // 새 요소들이 시작될 인덱스 (현재 크기)
+    const SizeType StartIndex = Num();
+    ContainerPrivate.emplace_back();
+    return StartIndex;
+}
+
+template <typename T, typename Allocator>
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddDefaulted(SizeType Count)
+{
+    if (Count <= 0)
+    {
+        return Num();
+    }
+
+    // 새 요소들이 시작될 인덱스 (현재 크기)
+    const SizeType StartIndex = Num();
+
+    // resize를 사용하여 Count만큼 크기를 늘립니다.
+    ContainerPrivate.resize(StartIndex + Count);
+
+    // 추가된 첫 번째 요소의 인덱스 반환
+    return StartIndex;
 }
 
 template <typename T, typename Allocator>
