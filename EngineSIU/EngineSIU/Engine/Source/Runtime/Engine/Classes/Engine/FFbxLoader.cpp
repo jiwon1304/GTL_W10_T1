@@ -97,6 +97,11 @@ void FFbxLoader::LoadTexture(FbxScene* Scene, const FWString FilePath)
     for (int TextureIndex = 0; TextureIndex < TextureCount; ++TextureIndex)
     {
         FbxTexture* Texture = Scene->GetTexture(TextureIndex);
+        auto wrapU = Texture->GetWrapModeU(); // U방향 래핑
+        auto wrapV = Texture->GetWrapModeV(); // V방향 래핑
+        auto Mode = Texture->GetBlendMode();
+        FbxDouble2 uvScaling = Texture->GetUVScaling();
+        FbxDouble2 uvTranslation = Texture->GetUVTranslation();
         fbxsdk::FbxFileTexture* FileTexture = FbxCast<fbxsdk::FbxFileTexture>(Texture);
         if (FileTexture/* && FileTexture->GetUserDataPtr()*/)
         {
@@ -198,6 +203,7 @@ void FFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& OutM
                 TextureInfo.TexturePath = TexturePath;
                 TextureInfo.bIsSRGB = true; // FBX는 항상 srgb 사용
                 OutMaterialInfo.TextureInfos.Add(TextureInfo);
+                OutMaterialInfo.TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Diffuse);
             }
         }
     }
@@ -224,6 +230,7 @@ void FFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& OutM
                 TextureInfo.TexturePath = TexturePath;
                 TextureInfo.bIsSRGB = true; // FBX는 항상 srgb 사용
                 OutMaterialInfo.TextureInfos.Add(TextureInfo);
+                OutMaterialInfo.TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Specular);
             }
         }
     }
@@ -249,6 +256,7 @@ void FFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& OutM
                 TextureInfo.TexturePath = TexturePath;
                 TextureInfo.bIsSRGB = true; // FBX는 항상 srgb 사용
                 OutMaterialInfo.TextureInfos.Add(TextureInfo);
+                OutMaterialInfo.TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Ambient);
             }
         }
     }
@@ -274,6 +282,7 @@ void FFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& OutM
                 TextureInfo.TexturePath = TexturePath;
                 TextureInfo.bIsSRGB = true; // FBX는 항상 srgb 사용
                 OutMaterialInfo.TextureInfos.Add(TextureInfo);
+                OutMaterialInfo.TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Emissive);
             }
         }
     }
@@ -329,6 +338,13 @@ void FFbxLoader::ParseSkeleton(FbxNode* Node, FSkeletalMeshRenderData& OutRender
 /// Vertex별 정보를 파싱합니다.
 void FFbxLoader::ParseMesh(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData, uint32 VertexBase)
 {
+    /*
+    Control Point : Vertex Position 등... : GetControlPointsCount()
+    Polygon Vertex : UV 등... : GetPolygonCount()
+    Vertex가 같은 위치이지만 UV가 다를 수 있다.
+    Control Point만 사용한다면, Texture Patch가 접하는 위치에서 interpolation이 발생
+    -> texture map 상에서 의도하지 않는 위치로 매핑이 될 수 있음.
+    */
     // Parse Vertices
     int ControlPointCount = Mesh->GetControlPointsCount(); // 전체 버텍스 개수
 
@@ -387,26 +403,43 @@ void FFbxLoader::ParseMesh(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRenderData
         }
     }
 
-    //// Parse UVs
-    //FbxStringList UVSetNames;
-    //Mesh->GetUVSetNames(UVSetNames);
-    //for (int i = 0; i < UVSetNames.GetCount(); ++i)
-    //{
-    //    const char* UVSetName = UVSetNames.GetStringAt(i);
-    //    for (int j = 0; j < Mesh->GetPolygonCount(); ++j)
-    //    {
-    //        for (int k = 0; k < Mesh->GetPolygonSize(j); ++k)
-    //        {
-    //            int ControlPointIndex = Mesh->GetPolygonVertex(j, k);
-    //            FbxVector2 UV;
-    //            bool Unmapped;
-    //            Mesh->GetPolygonVertexUV(j, k, UVSetName, UV, Unmapped);
-    //            // Unmap되어있어도 할게없음...
-    //            OutRenderData.Vertices[VertexBase + ControlPointIndex].UV = FVector2D(UV[0], 1.0f - UV[1]); // Flip V axis
-    //            OutRenderData.Vertices[VertexBase + ControlPointIndex].MaterialIndex = Mesh->GetMaterialIndices()[j];
-    //        }
-    //    }
-    //}
+    // Parse UVs
+    FbxStringList UVSetNames;
+    Mesh->GetUVSetNames(UVSetNames);
+
+    // Material Index 준비
+    FbxLayerElementMaterial* MaterialElement = Mesh->GetElementMaterial();
+    FbxLayerElementArrayTemplate<int>* MaterialIndices = nullptr;
+    if (MaterialElement)
+    {
+        MaterialIndices = &MaterialElement->GetIndexArray();
+    }
+
+
+    for (int i = 0; i < UVSetNames.GetCount(); ++i)
+    {
+        const char* UVSetName = UVSetNames.GetStringAt(i);
+        for (int j = 0; j < Mesh->GetPolygonCount(); ++j)
+        {
+            int PolygonMaterialIndex = 0;
+            if (MaterialIndices && MaterialIndices->GetCount() > j)
+            {
+                PolygonMaterialIndex = MaterialIndices->GetAt(j);
+            }
+
+            for (int k = 0; k < Mesh->GetPolygonSize(j); ++k)
+            {
+                int ControlPointIndex = Mesh->GetPolygonVertex(j, k);
+                FbxVector2 UV;
+                bool Unmapped;
+                Mesh->GetPolygonVertexUV(j, k, UVSetName, UV, Unmapped);
+                // Unmap되어있어도 할게없음...
+                OutRenderData.Vertices[VertexBase + ControlPointIndex].UV = FVector2D(UV[0], 1.0f - UV[1]); // Flip V axis
+                OutRenderData.Vertices[VertexBase + ControlPointIndex].MaterialIndex = PolygonMaterialIndex;
+
+            }
+        }
+    }
 
     // Parse Indices
     for (int i = 0; i < Mesh->GetPolygonCount(); ++i)
@@ -451,6 +484,7 @@ void FFbxLoader::ParseMeshByMaterial(FbxNode* Node, FSkeletalMeshRenderData& Out
             DefaultMaterial.EmissiveColor = FVector(0, 0, 0);
             DefaultMaterial.Transparency = 0.0f;
             OutRenderData.Materials.Add(DefaultMaterial);
+
         }
 
         // Material Subset도 기본값 추가 (메쉬 전체를 기본 머티리얼로)
@@ -626,22 +660,7 @@ void FFbxLoader::ParseSkinningData(FbxMesh* Mesh, FSkeletalMeshRenderData& OutRe
                 ParentToBoneFbx.Get(2, 0), ParentToBoneFbx.Get(2, 1), ParentToBoneFbx.Get(2, 2), ParentToBoneFbx.Get(2, 3),
                 ParentToBoneFbx.Get(3, 0), ParentToBoneFbx.Get(3, 1), ParentToBoneFbx.Get(3, 2), ParentToBoneFbx.Get(3, 3)
             };
-            //FMatrix ModelToBone = {
-            //    ModelToBoneFbx.Get(0, 0), ModelToBoneFbx.Get(0,1), ModelToBoneFbx.Get(0, 2), ModelToBoneFbx.Get(0, 3),
-            //    ModelToBoneFbx.Get(1, 0), ModelToBoneFbx.Get(1, 1), ModelToBoneFbx.Get(1, 2), ModelToBoneFbx.Get(1, 3),
-            //    ModelToBoneFbx.Get(2, 0), ModelToBoneFbx.Get(2, 1), ModelToBoneFbx.Get(2, 2), ModelToBoneFbx.Get(2, 3),
-            //    ModelToBoneFbx.Get(3, 0), ModelToBoneFbx.Get(3, 1), ModelToBoneFbx.Get(3, 2), ModelToBoneFbx.Get(3, 3)
-            //};
 
-            //FMatrix ModelToParentBone = {
-            //    ModelToParentBoneFbx.Get(0, 0), ModelToParentBoneFbx.Get(0, 1), ModelToParentBoneFbx.Get(0, 2), ModelToParentBoneFbx.Get(0, 3),
-            //    ModelToParentBoneFbx.Get(1, 0), ModelToParentBoneFbx.Get(1, 1), ModelToParentBoneFbx.Get(1, 2), ModelToParentBoneFbx.Get(1, 3),
-            //    ModelToParentBoneFbx.Get(2, 0), ModelToParentBoneFbx.Get(2, 1), ModelToParentBoneFbx.Get(2, 2), ModelToParentBoneFbx.Get(2, 3),
-            //    ModelToParentBoneFbx.Get(3, 0), ModelToParentBoneFbx.Get(3, 1), ModelToParentBoneFbx.Get(3, 2), ModelToParentBoneFbx.Get(3, 3)
-            //};
-
-            //Bone.BindPoseMatrix = FMatrix::Inverse(ConvertedMatrix) * ConvertedGlobalMatrix;
-            //Bone.BindPoseMatrix = FMatrix::Inverse(ModelToBone) * ModelToParentBone;
             Bone.BindPoseMatrix = BoneOffset;
             OutRenderData.Bones.Add(Bone); 
 

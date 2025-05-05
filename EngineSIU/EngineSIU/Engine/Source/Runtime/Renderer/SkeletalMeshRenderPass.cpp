@@ -189,15 +189,14 @@ void FSkeletalMeshRenderPass::UpdateVertexBuffer(FSkeletalMeshRenderData* Render
                 const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[i]];
 
                 SkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Vertex.BoneWeights[i];
-                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)).xyz() * Vertex.BoneWeights[i];
-                SkinnedTangent += BoneMatrix.TransformFVector4(FVector4(Vertex.Tangent, Vertex.TangentW)).xyz() * Vertex.BoneWeights[i];
+                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)) * Vertex.BoneWeights[i];
+                SkinnedTangent += BoneMatrix.TransformFVector4(Vertex.Tangent) * Vertex.BoneWeights[i];
             }
         }
         FSkeletalMeshVertex NewVertex = Vertex;
         NewVertex.Position = SkinnedPosition.Pos();
         NewVertex.Normal = SkinnedNormal.Pos();
-        NewVertex.Tangent = SkinnedTangent.xyz();
-        NewVertex.TangentW = SkinnedTangent.W;
+        NewVertex.Tangent = SkinnedTangent;
 
         NewVertices.Add(NewVertex);
     }

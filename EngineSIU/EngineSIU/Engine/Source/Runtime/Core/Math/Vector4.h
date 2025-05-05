@@ -94,7 +94,17 @@ inline FVector4 FVector4::operator/(float Scalar) const
     };
 }
 
+// FVector * float
+FORCEINLINE FVector4 operator*(const FVector4& Vec, float Scalar)
+{
+    return FVector4(Vec.X * Scalar, Vec.Y * Scalar, Vec.Z * Scalar, Vec.W * Scalar);
+}
 
+// float * FVector
+FORCEINLINE FVector4 operator*(float Scalar, const FVector& Vec)
+{
+    return Vec * Scalar;
+}
 
 inline FArchive& operator<<(FArchive& Ar, FVector4& V)
 {

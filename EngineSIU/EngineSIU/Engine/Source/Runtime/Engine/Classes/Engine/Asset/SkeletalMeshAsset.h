@@ -10,8 +10,7 @@ struct FSkeletalMeshVertex
     FVector Position;       // Vertex Position (x, y, z)
     FVector4 Color;
     FVector Normal;         // Normal (nx, ny, nz)
-    FVector Tangent;        // Tangent (tx, ty, tz)
-    float TangentW = 0;         // Tangent W for Handedness
+    FVector4 Tangent;        // Tangent (tx, ty, tz)
     FVector2D UV;           // UV Coordinates (u, v)
     uint32 MaterialIndex = 0;   // Material Index
     int BoneIndices[8] = { -1,-1,-1,-1,-1,-1,-1,-1 };     // Indices of Skinning Bones

@@ -209,7 +209,7 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
             // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
             ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
 
-            if (BoneIndex == 14)
+            if (BoneIndex ==  14)
             {
                 static float deg = 0;
                 deg += 5.f;
