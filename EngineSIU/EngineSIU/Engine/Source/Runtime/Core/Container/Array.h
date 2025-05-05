@@ -31,7 +31,8 @@ public:
 
     T& operator[](SizeType Index);
     const T& operator[](SizeType Index) const;
-    void operator+(const TArray& OtherArray);
+    void operator+=(const TArray& OtherArray);
+    TArray operator+(const TArray& OtherArray) const;
 
 public:
     ArrayType& GetContainerPrivate() { return ContainerPrivate; }
@@ -151,11 +152,7 @@ public:
         requires std::is_invocable_r_v<bool, Compare, const T&, const T&>
     void Sort(const Compare& CompFn);
 
-    bool IsValidIndex(uint32 ElementIndex) const {
-        if (ElementIndex < 0 || ElementIndex >= Max()) return false;
-
-        return true;
-    }
+    bool IsValidIndex(uint32 ElementIndex) const;
 
     ElementType Pop();
 };
@@ -174,9 +171,17 @@ const T& TArray<T, Allocator>::operator[](SizeType Index) const
 }
 
 template <typename T, typename Allocator>
-void TArray<T, Allocator>::operator+(const TArray& OtherArray)
+void TArray<T, Allocator>::operator+=(const TArray& OtherArray)
 {
     ContainerPrivate.insert(end(), OtherArray.begin(), OtherArray.end());
+}
+
+template <typename T, typename Allocator>
+TArray<T, Allocator> TArray<T, Allocator>::operator+(const TArray& OtherArray) const
+{
+    TArray Result(*this);
+    Result += OtherArray;
+    return Result;
 }
 
 template <typename T, typename Allocator>
@@ -422,6 +427,13 @@ template <typename Compare>
 void TArray<T, Allocator>::Sort(const Compare& CompFn)
 {
     std::sort(ContainerPrivate.begin(), ContainerPrivate.end(), CompFn);
+}
+
+template <typename T, typename Allocator>
+bool TArray<T, Allocator>::IsValidIndex(uint32 ElementIndex) const
+{
+    // uint32라서 0미만은 검사 안함
+    return ElementIndex < Num();
 }
 
 template <typename T, typename Allocator>
