@@ -10,9 +10,10 @@
 #include "D3D11RHI/DXDBufferManager.h"
 #include "D3D11RHI/GraphicDevice.h"
 #include "D3D11RHI/DXDShaderManager.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "BaseGizmos/GizmoBaseComponent.h"
 #include "Engine/EditorEngine.h"
+#include "Engine/FbxObject.h"
 #include "PropertyEditor/ShowFlags.h"
 #include "UnrealEd/EditorViewportClient.h"
 
@@ -35,9 +36,9 @@ void FSkeletalMeshRenderPass::Initialize(FDXDBufferManager* InBufferManager, FGr
 
 void FSkeletalMeshRenderPass::PrepareRenderArr()
 {
-    for (const auto& Component : TObjectRange<USkeletalMeshComponent>())
+    for (const auto& Component : TObjectRange<USkinnedMeshComponent>())
     {
-        SkeletalMeshComponents.Add(Component);
+        SkinnedMeshComponent.Add(Component);
     }
 }
 
@@ -76,71 +77,78 @@ void FSkeletalMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient
 
 void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
-    for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+    for (USkinnedMeshComponent* SkinnedMeshData : SkinnedMeshComponent)
     {
-        if (!SkeletalMeshComponent) continue;
-        if (!SkeletalMeshComponent->GetSkeletalMesh()) continue;
+        if (!SkinnedMeshData) continue;
+        if (!SkinnedMeshData->GetSkinnedMesh()) continue;
 
-        FSkeletalMeshRenderData* RenderData = SkeletalMeshComponent->GetSkeletalMesh()->GetRenderData();
+        // FSkeletalMeshRenderData* RenderData = SkinnedMeshData->GetSkeletalMesh()->GetRenderData();
+        FSkinnedMesh* RenderData = SkinnedMeshData->GetSkinnedMesh();
         if (!RenderData) continue;
 
         // Bone Matrix는 CPU에서 처리
         TArray<FMatrix> BoneMatrices;
-        SkeletalMeshComponent->CalculateBoneMatrices(BoneMatrices);
+        SkinnedMeshData->CalculateBoneMatrices(BoneMatrices);
 
         // Update constant buffers
         UpdateObjectConstant(
-            SkeletalMeshComponent->GetWorldMatrix(), 
-            SkeletalMeshComponent->EncodeUUID() / 255.0f,
-            SkeletalMeshComponent->IsActive(),
-            RenderData->bCPUSkinning
+            SkinnedMeshData->GetWorldMatrix(), 
+            SkinnedMeshData->EncodeUUID() / 255.0f,
+            SkinnedMeshData->IsActive(),
+            bIsCPUSkinning
         );
 
-        TArray<FSkeletalMaterial*> Materials = SkeletalMeshComponent->GetSkeletalMesh()->GetMaterials();
-        TArray<UMaterial*> OverrideMaterials = SkeletalMeshComponent->GetOverrideMaterials();
+        TArray<UMaterial*> Materials = SkinnedMeshData->GetSkinnedMesh()->material;
+        TArray<UMaterial*> OverrideMaterials = SkinnedMeshData->GetOverrideMaterials();
 
-        FVertexInfo VertexInfo;
-        if (RenderData->bCPUSkinning)
+        for (int i = 0; i < RenderData->mesh.Num(); ++i)
         {
-            BufferManager->CreateDynamicVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
-            UpdateVertexBuffer(RenderData, BoneMatrices);
-        }
-        else
-        {
-            BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
-            UpdateBoneMatrices(BoneMatrices);
-        }
-
-        Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);
-
-        FIndexInfo IndexInfo;
-        BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
-        if (IndexInfo.IndexBuffer)
-        {
-            Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-        }
-
-        
-        // 이제 기본 subset이 있음
-        //Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
-
-        for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
-        {
-            uint32 MaterialIndex = RenderData->MaterialSubsets[SubMeshIndex].MaterialIndex;
-
-            if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
+            FFbxMeshData& MeshData = RenderData->mesh[i];
+            
+            FVertexInfo VertexInfo;
+            if (bIsCPUSkinning)
             {
-                MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+                BufferManager->CreateDynamicVertexBuffer(MeshData.name, MeshData.vertices, VertexInfo);
+                UpdateVertexBuffer(RenderData->mesh[i], BoneMatrices);
             }
             else
             {
-                MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
+                BufferManager->CreateVertexBuffer(MeshData.name, MeshData.vertices, VertexInfo);
+                UpdateBoneMatrices(BoneMatrices);
             }
 
-            uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
-            uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
-            Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+            Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);
+
+            FIndexInfo IndexInfo;
+            BufferManager->CreateIndexBuffer(MeshData.name, MeshData.indices, IndexInfo);
+            if (IndexInfo.IndexBuffer)
+            {
+                Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+            }
+
+        
+            Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
+
+            // TODO: parse material subset from fbx
+            // for (int SubMeshIndex = 0; SubMeshIndex < RenderData->material.Num(); SubMeshIndex++)
+            // {
+            //     uint32 MaterialIndex = RenderData->material[SubMeshIndex].MaterialIndex;
+            //
+            //     if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
+            //     {
+            //         MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+            //     }
+            //     else
+            //     {
+            //         MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
+            //     }
+            //
+            //     uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
+            //     uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
+            //     Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+            // }
         }
+
     }
 }
 
@@ -164,19 +172,19 @@ void FSkeletalMeshRenderPass::UpdateBoneMatrices(const TArray<FMatrix>& BoneMatr
 
 void FSkeletalMeshRenderPass::CreateShader()
 {
-    HRESULT hr = ShaderManager->AddVertexShaderAndInputLayout(L"SkeletalMeshVertexShader", L"Shaders/SkeletalMeshVertexShader.hlsl", "mainVS", FSkeletalMeshRenderData::LayoutDesc, ARRAYSIZE(FSkeletalMeshRenderData::LayoutDesc));
+    HRESULT hr = ShaderManager->AddVertexShaderAndInputLayout(L"SkeletalMeshVertexShader", L"Shaders/SkeletalMeshVertexShader.hlsl", "mainVS", FFbxVertex::LayoutDesc, ARRAYSIZE(FFbxVertex::LayoutDesc));
     if (FAILED(hr))
     {
         return;
     }
 }
 
-void FSkeletalMeshRenderPass::UpdateVertexBuffer(FSkeletalMeshRenderData* RenderData, const TArray<FMatrix>& BoneMatrices)
+void FSkeletalMeshRenderPass::UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices)
 {
-    TArray<FSkeletalMeshVertex> NewVertices;
-    NewVertices.Reserve(RenderData->Vertices.Num());
+    TArray<FFbxVertex> NewVertices;
+    NewVertices.Reserve(meshData.vertices.Num());
 
-    for (const FSkeletalMeshVertex& Vertex : RenderData->Vertices)
+    for (const FFbxVertex& Vertex : meshData.vertices)
     {
         FVector4 SkinnedPosition(0, 0, 0, 0);
         FVector4 SkinnedNormal(0, 0, 0, 0);
@@ -184,28 +192,28 @@ void FSkeletalMeshRenderPass::UpdateVertexBuffer(FSkeletalMeshRenderData* Render
 
         for (int i = 0; i < 8; ++i)
         {
-            if (Vertex.BoneWeights[i] > 0.0f)
+            if (Vertex.boneWeights[i] > 0.0f)
             {
-                const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[i]];
+                const FMatrix& BoneMatrix = BoneMatrices[Vertex.boneIndices[i]];
 
-                SkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Vertex.BoneWeights[i];
-                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)) * Vertex.BoneWeights[i];
-                SkinnedTangent += BoneMatrix.TransformFVector4(Vertex.Tangent) * Vertex.BoneWeights[i];
+                SkinnedPosition += BoneMatrix.TransformPosition(Vertex.position) * Vertex.boneWeights[i];
+                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.normal, 0)) * Vertex.boneWeights[i];
+                SkinnedTangent += BoneMatrix.TransformFVector4(Vertex.tangent) * Vertex.boneWeights[i];
             }
         }
-        FSkeletalMeshVertex NewVertex = Vertex;
-        NewVertex.Position = SkinnedPosition.Pos();
-        NewVertex.Normal = SkinnedNormal.Pos();
-        NewVertex.Tangent = SkinnedTangent;
+        FFbxVertex NewVertex = Vertex;
+        NewVertex.position = SkinnedPosition.Pos();
+        NewVertex.normal = SkinnedNormal.Pos();
+        NewVertex.tangent = SkinnedTangent.Pos();
 
         NewVertices.Add(NewVertex);
     }
 
-    BufferManager->UpdateDynamicVertexBuffer(RenderData->ObjectName, NewVertices);
+    BufferManager->UpdateDynamicVertexBuffer(meshData.name, NewVertices);
 }
 
 
 void FSkeletalMeshRenderPass::ClearRenderArr()
 {
-    SkeletalMeshComponents.Empty();
+    SkinnedMeshComponent.Empty();
 }

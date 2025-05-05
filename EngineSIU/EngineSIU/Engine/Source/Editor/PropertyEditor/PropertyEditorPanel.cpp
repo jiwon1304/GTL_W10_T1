@@ -23,8 +23,12 @@
 #include "Engine/Engine.h"
 #include "Components/HeightFogComponent.h"
 #include "Components/ProjectileMovementComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/Mesh/SkeletalMeshRenderData.h"
 #include "Engine/AssetManager.h"
+#include "Engine/FbxObject.h"
+#include "Engine/FFbxLoader.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Math/JungleMath.h"
@@ -121,6 +125,10 @@ void PropertyEditorPanel::Render()
     {
         RenderForStaticMesh(StaticMeshComponent);
         RenderForMaterial(StaticMeshComponent);
+    }
+    if (USkinnedMeshComponent* SkinnedMeshComponent = GetTargetComponent<USkinnedMeshComponent>(SelectedActor, SelectedComponent))
+    {
+        RenderForSkinnedMesh(SkinnedMeshComponent);
     }
     if (UHeightFogComponent* FogComponent = GetTargetComponent<UHeightFogComponent>(SelectedActor, SelectedComponent))
     {
@@ -398,7 +406,43 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
     }
     ImGui::PopStyleColor();
 }
+void PropertyEditorPanel::RenderForSkinnedMesh(USkinnedMeshComponent* SkinnedMeshComp) const
+{
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("Skinned Mesh", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+        ImGui::Text("SkinnedMesh");
+        ImGui::SameLine();
 
+        FString PreviewName = FString("None");
+        if (FSkinnedMesh* skinnedMesh = SkinnedMeshComp->GetSkinnedMesh())
+        {
+            PreviewName = skinnedMesh->name;
+        }
+        
+        const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
+
+        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        {
+            for (const auto& Asset : Assets)
+            {
+                if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                {
+                    FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
+                    FSkinnedMesh* SkinnedMesh = FFbxLoader::GetFbxObject(MeshName);
+                    if (SkinnedMesh)
+                    {
+                        SkinnedMeshComp->SetSkinnedMesh(SkinnedMesh);
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::TreePop();
+    }
+    ImGui::PopStyleColor();
+}
 void PropertyEditorPanel::RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const
 {
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));

@@ -7,12 +7,12 @@
 
 struct FSkeletalMeshRenderData;
 
-class USkeletalMesh : public UObject
+class USkinnedMesh : public UObject
 {
-    DECLARE_CLASS(USkeletalMesh, UObject)
+    DECLARE_CLASS(USkinnedMesh, UObject)
 
 public:
-    USkeletalMesh() = default;
+    USkinnedMesh() = default;
 
     virtual UObject* Duplicate(UObject* InOuter) override;
 

@@ -5,14 +5,14 @@
 #include "Engine/Asset/SkeletalMeshAsset.h"
 #include "Engine/FFbxLoader.h"
 
-UObject* USkeletalMesh::Duplicate(UObject* InOuter)
+UObject* USkinnedMesh::Duplicate(UObject* InOuter)
 {
     // TODO: Context->CopyResource를 사용해서 Buffer 복사
     ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
     return nullptr;
 }
 
-uint32 USkeletalMesh::GetMaterialIndex(FName MaterialSlotName) const
+uint32 USkinnedMesh::GetMaterialIndex(FName MaterialSlotName) const
 {
     for (uint32 materialIndex = 0; materialIndex < materials.Num(); materialIndex++) {
         if (materials[materialIndex]->MaterialSlotName == MaterialSlotName)
@@ -22,7 +22,7 @@ uint32 USkeletalMesh::GetMaterialIndex(FName MaterialSlotName) const
     return -1;
 }
 
-void USkeletalMesh::GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const
+void USkinnedMesh::GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const
 {
     for (const FSkeletalMaterial* Material : materials)
     {
@@ -30,23 +30,23 @@ void USkeletalMesh::GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const
     }
 }
 
-FWString USkeletalMesh::GetObjectName() const
+FWString USkinnedMesh::GetObjectName() const
 {
     return RenderData->ObjectName;
 }
 
-void USkeletalMesh::SetData(FSkeletalMeshRenderData* InRenderData)
+void USkinnedMesh::SetData(FSkeletalMeshRenderData* InRenderData)
 {
     RenderData = InRenderData;
 
     for (int materialIndex = 0; materialIndex < RenderData->Materials.Num(); materialIndex++)
     {
         FSkeletalMaterial* newMaterialSlot = new FSkeletalMaterial();
-        UMaterial* newMaterial = FFbxManager::CreateMaterial(RenderData->Materials[materialIndex]);
+        // UMaterial* newMaterial = FFbxManager::CreateMaterial(RenderData->Materials[materialIndex]);
 
-        newMaterialSlot->Material = newMaterial;
-        newMaterialSlot->MaterialSlotName = RenderData->Materials[materialIndex].MaterialName;
-
-        materials.Add(newMaterialSlot);
+        // newMaterialSlot->Material = newMaterial;
+        // newMaterialSlot->MaterialSlotName = RenderData->Materials[materialIndex].MaterialName;
+        //
+        // materials.Add(newMaterialSlot);
     }
 }

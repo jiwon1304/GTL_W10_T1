@@ -36,16 +36,16 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
     {
         if (*SkeletalMeshPath != TEXT("None"))
         {
-            if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(StringToWString(SkeletalMeshPath->ToAnsiString())))
-            {
-                SetSkeletalMesh(MeshToSet);
-                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            }
-            else
-            {
-                UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-                SetSkeletalMesh(nullptr);
-            }
+            // if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(StringToWString(SkeletalMeshPath->ToAnsiString())))
+            // {
+            //     SetSkeletalMesh(MeshToSet);
+            //     UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            // }
+            // else
+            // {
+            //     UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            //     SetSkeletalMesh(nullptr);
+            // }
         }
         else
         {
@@ -55,7 +55,7 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
     }
 }
 
-void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* Value)
+void USkeletalMeshComponent::SetSkeletalMesh(USkinnedMesh* Value)
 {
     SkeletalMesh = Value;
     if (SkeletalMesh == nullptr)

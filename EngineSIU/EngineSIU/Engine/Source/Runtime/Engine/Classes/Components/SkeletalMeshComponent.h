@@ -24,13 +24,13 @@ public:
     virtual TArray<FName> GetMaterialSlotNames() const override;
     virtual void GetUsedMaterials(TArray<UMaterial*>& Out) const override;
 
-    USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
-    void SetSkeletalMesh(USkeletalMesh* Value);
+    USkinnedMesh* GetSkeletalMesh() const { return SkeletalMesh; }
+    void SetSkeletalMesh(USkinnedMesh* Value);
 
     void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
 
 protected:
-    USkeletalMesh* SkeletalMesh = nullptr;
+    USkinnedMesh* SkeletalMesh = nullptr;
     int SelectedBoneIndex = -1;
     TArray<UMaterial*> OverrideMaterials;
     FBoundingBox AABB = FBoundingBox(FVector::ZeroVector, FVector::ZeroVector);

@@ -3,13 +3,26 @@
 
 struct FFbxVertex
 {
-    FVector vertex;
+    FVector position;
+    FVector4 color;
     FVector normal;
-    FVector tangent;
+    FVector4 tangent;
     FVector2D uv;
     int materialIndex = -1;
     int boneIndices[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
     float boneWeights[8];
+    inline const static D3D11_INPUT_ELEMENT_DESC LayoutDesc[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_INDICES0", 0, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_INDICES1", 0, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_WEIGHTS0", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"BONE_WEIGHTS1", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    }; 
 };
 struct FFbxMeshData
 {
@@ -47,8 +60,10 @@ struct FFbxMaterialPhong
 };
 
 struct FSkinnedMesh {
-    FFbxMeshData mesh;
+    FString name;
+    TArray<FFbxMeshData> mesh;
     FFbxSkeletonData skeleton;
-    TArray<FFbxMaterialPhong> material;
+    // TArray<FFbxMaterialPhong> material;
+    TArray<UMaterial*> material;
     FVector AABBmin, AABBmax;
 };

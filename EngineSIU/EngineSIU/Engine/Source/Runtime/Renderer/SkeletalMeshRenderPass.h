@@ -6,7 +6,9 @@
 #include "Container/Set.h"
 #include "Define.h"
 #include "Components/Light/PointLightComponent.h"
+#include "Engine/FbxObject.h"
 
+class USkinnedMeshComponent;
 struct FSkeletalMeshRenderData;
 class FShadowManager;
 class FDXDShaderManager;
@@ -36,9 +38,11 @@ public:
 private:
     void CreateShader();
 
-    void UpdateVertexBuffer(FSkeletalMeshRenderData* RenderData, const TArray<FMatrix>& BoneMatrices);
+    void UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices);
+
+    bool bIsCPUSkinning = true;
 protected:
-    TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+    TArray<USkinnedMeshComponent*> SkinnedMeshComponent;
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;

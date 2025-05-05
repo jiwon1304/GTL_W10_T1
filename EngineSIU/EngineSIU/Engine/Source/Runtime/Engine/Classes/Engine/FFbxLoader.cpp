@@ -4,6 +4,7 @@
 
 #include "FbxObject.h"
 #include "UObject/ObjectFactory.h"
+#include "Components/Material/Material.h"
 
 struct BoneWeights
 {
@@ -48,6 +49,7 @@ FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     
     FSkinnedMesh* result = LoadFBXObject(scene);
     scene->Destroy();
+    result->name = FBXFilePath;
     fbxMap[FBXFilePath] = result;
     return result;
 }
@@ -226,6 +228,9 @@ void FFbxLoader::LoadFBXMesh(
     FbxMesh* mesh = node->GetMesh();
     if (!mesh) return;
 
+    FFbxMeshData meshData;
+    meshData.name = node->GetName();
+    
     int polygonCount = mesh->GetPolygonCount();
     FbxVector4* controlPoints = mesh->GetControlPoints();
     FbxLayerElementNormal* normalElement = mesh->GetElementNormal();
@@ -247,14 +252,14 @@ void FFbxLoader::LoadFBXMesh(
             int controlPointIndex = mesh->GetPolygonVertex(polygonIndex, vertexIndex);
             FbxVector4 pos = controlPoints[controlPointIndex];
             FVector convertPos(pos[0], pos[1], pos[2]);
-            v.vertex = convertPos;
+            v.position = convertPos;
             
-            AABBmin.X = std::min(AABBmin.X, v.vertex.X);
-            AABBmin.Y = std::min(AABBmin.Y, v.vertex.Y);
-            AABBmin.Z = std::min(AABBmin.Z, v.vertex.Z);
-            AABBmax.X = std::max(AABBmax.X, v.vertex.X);
-            AABBmax.Y = std::max(AABBmax.Y, v.vertex.Y);
-            AABBmax.Z = std::max(AABBmax.Z, v.vertex.Z);
+            AABBmin.X = std::min(AABBmin.X, v.position.X);
+            AABBmin.Y = std::min(AABBmin.Y, v.position.Y);
+            AABBmin.Z = std::min(AABBmin.Z, v.position.Z);
+            AABBmax.X = std::max(AABBmax.X, v.position.X);
+            AABBmax.Y = std::max(AABBmax.Y, v.position.Y);
+            AABBmax.Z = std::max(AABBmax.Z, v.position.Z);
             
             // Normal
             FbxVector4 normal = {0, 0, 0};
@@ -324,14 +329,14 @@ void FFbxLoader::LoadFBXMesh(
             uint32 index;
             if (!indexMap.contains(key))
             {
-                index = fbxObject->mesh.vertices.Num();
-                fbxObject->mesh.vertices.Add(v);
+                index = meshData.vertices.Num();
+                meshData.vertices.Add(v);
                 indexMap[key] = index;
             } else
             {
                 index = indexMap[key];
             }
-            fbxObject->mesh.indices.Add(index);
+            meshData.indices.Add(index);
         }
     }
     
@@ -349,38 +354,40 @@ void FFbxLoader::LoadFBXMaterials(
 
     int materialCount = node->GetMaterialCount();
 
+    UMaterial* materialInfo = FObjectFactory::ConstructObject<UMaterial>(nullptr);
+
     for (int i = 0; i < materialCount; ++i)
     {
         FbxSurfaceMaterial* material = node->GetMaterial(i);
-        if (!material)
-        {
-            fbxObject->material.Add({});
-            continue;
-        }
+        // if (!material)
+        // {
+        //     fbxObject->material.Add({});
+        //     continue;
+        // }
 
-        FFbxMaterialPhong materialInfo;
+        // FFbxMaterialPhong materialInfo;
 
         // normalMap
-        FbxProperty normal = material->FindProperty(FbxSurfaceMaterial::sNormalMap);
-        if (normal.IsValid())
-        {
-            FbxTexture* texture = normal.GetSrcObject<FbxTexture>();
-            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            if (fileTexture)
-                materialInfo.normalMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
-        }
+        // FbxProperty normal = material->FindProperty(FbxSurfaceMaterial::sNormalMap);
+        // if (normal.IsValid())
+        // {
+        //     FbxTexture* texture = normal.GetSrcObject<FbxTexture>();
+        //     FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+        //     if (fileTexture)
+        //         materialInfo.normalMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+        // }
         
         // diffuse
         FbxProperty diffuse = material->FindProperty(FbxSurfaceMaterial::sDiffuse);
         if (diffuse.IsValid())
         {
             FbxDouble3 color = diffuse.Get<FbxDouble3>();
-            materialInfo.diffuseColor = FVector(color[0], color[1], color[2]);
+            materialInfo->SetDiffuse(FVector(color[0], color[1], color[2]));
             
-            FbxTexture* texture = diffuse.GetSrcObject<FbxTexture>();
-            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            if (fileTexture)
-                materialInfo.diffuseMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            // FbxTexture* texture = diffuse.GetSrcObject<FbxTexture>();
+            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            // if (fileTexture)
+            //     materialInfo.diffuseMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
         }
         
         // ambient
@@ -388,12 +395,12 @@ void FFbxLoader::LoadFBXMaterials(
         if (ambient.IsValid())
         {
             FbxDouble3 color = ambient.Get<FbxDouble3>();
-            materialInfo.ambientColor = FVector(color[0], color[1], color[2]);
+            materialInfo->SetAmbient(FVector(color[0], color[1], color[2]));
             
-            FbxTexture* texture = ambient.GetSrcObject<FbxTexture>();
-            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            if (fileTexture)
-                materialInfo.ambientMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            // FbxTexture* texture = ambient.GetSrcObject<FbxTexture>();
+            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            // if (fileTexture)
+            //     materialInfo.ambientMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
         }
 
         // specular
@@ -401,12 +408,12 @@ void FFbxLoader::LoadFBXMaterials(
         if (ambient.IsValid())
         {
             FbxDouble3 color = specular.Get<FbxDouble3>();
-            materialInfo.specularColor = FVector(color[0], color[1], color[2]);
+            materialInfo->SetSpecular(FVector(color[0], color[1], color[2]));
             
-            FbxTexture* texture = specular.GetSrcObject<FbxTexture>();
-            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            if (fileTexture)
-                materialInfo.specularMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            // FbxTexture* texture = specular.GetSrcObject<FbxTexture>();
+            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            // if (fileTexture)
+            //     materialInfo.specularMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
         }
 
         // emissive
@@ -414,12 +421,12 @@ void FFbxLoader::LoadFBXMaterials(
         if (ambient.IsValid())
         {
             FbxDouble3 color = emissive.Get<FbxDouble3>();
-            materialInfo.emissiveColor = FVector(color[0], color[1], color[2]);
+            materialInfo->SetEmissive(FVector(color[0], color[1], color[2]));
             
-            FbxTexture* texture = emissive.GetSrcObject<FbxTexture>();
-            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            if (fileTexture)
-                materialInfo.emissiveMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            // FbxTexture* texture = emissive.GetSrcObject<FbxTexture>();
+            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            // if (fileTexture)
+            //     materialInfo.emissiveMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
         }
         
         fbxObject->material.Add(materialInfo);

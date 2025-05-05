@@ -15,6 +15,8 @@ public:
 
     FSkinnedMesh* GetSkinnedMesh() const { return SkinnedMesh; }
     void SetSkinnedMesh(FSkinnedMesh* InSkinnedMesh);
+    void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
+    
 protected:
     FSkinnedMesh* SkinnedMesh = nullptr;
 };
