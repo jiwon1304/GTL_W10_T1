@@ -84,6 +84,10 @@ public:
     [[nodiscard]] float SizeSquared() const { return SquaredLength(); }
     [[nodiscard]] float Length() const { return FMath::Sqrt(SquaredLength()); }
     [[nodiscard]] float Size() const { return Length(); }
+    [[nodiscard]] bool Equals(const FVector2D& Other, float Tolerance = KINDA_SMALL_NUMBER) const
+    {
+        return FMath::Abs(X - Other.X) <= Tolerance && FMath::Abs(Y - Other.Y) <= Tolerance;
+    }
 };
 
 // 3D 벡터

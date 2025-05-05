@@ -31,6 +31,17 @@ public:
 
     FVector4 operator/(float Scalar) const;
 
+    bool operator==(const FVector4& Other) const = default;
+    bool operator!=(const FVector4& Other) const = default;
+
+    [[nodiscard]] bool Equals(const FVector4& Other, float Tolerance = KINDA_SMALL_NUMBER) const
+    {
+        return FMath::Abs(X - Other.X) <= Tolerance
+            && FMath::Abs(Y - Other.Y) <= Tolerance
+            && FMath::Abs(Z - Other.Z) <= Tolerance
+            && FMath::Abs(W - Other.W) <= Tolerance;
+    }
+
     FString ToString() const;
     bool InitFromString(const FString& InSourceString);
 };
