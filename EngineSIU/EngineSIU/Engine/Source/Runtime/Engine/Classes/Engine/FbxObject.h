@@ -1,5 +1,6 @@
 #pragma once
 #include "Define.h"
+#include "Math/Quat.h"
 
 struct FFbxVertex
 {
@@ -37,6 +38,9 @@ struct FFbxJoint
     int parentIndex;
     FMatrix localBindPose;
     FMatrix inverseBindPose;
+    FVector position;
+    FQuat rotation;
+    FVector scale;
 };
 
 struct FFbxSkeletonData
@@ -63,7 +67,7 @@ struct FSkinnedMesh {
     FString name;
     TArray<FFbxMeshData> mesh;
     FFbxSkeletonData skeleton;
-    // TArray<FFbxMaterialPhong> material;
     TArray<UMaterial*> material;
+    TArray<FMaterialSubset> materialSubsets;
     FVector AABBmin, AABBmax;
 };

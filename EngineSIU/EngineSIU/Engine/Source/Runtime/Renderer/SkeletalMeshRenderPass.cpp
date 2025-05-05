@@ -127,26 +127,25 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
             }
 
         
-            Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
+            // Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
 
-            // TODO: parse material subset from fbx
-            // for (int SubMeshIndex = 0; SubMeshIndex < RenderData->material.Num(); SubMeshIndex++)
-            // {
-            //     uint32 MaterialIndex = RenderData->material[SubMeshIndex].MaterialIndex;
-            //
-            //     if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
-            //     {
-            //         MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
-            //     }
-            //     else
-            //     {
-            //         MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
-            //     }
-            //
-            //     uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
-            //     uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
-            //     Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
-            // }
+            for (int SubMeshIndex = 0; SubMeshIndex < RenderData->material.Num() && SubMeshIndex < RenderData->materialSubsets.Num(); SubMeshIndex++)
+            {
+                uint32 MaterialIndex = RenderData->materialSubsets[SubMeshIndex].MaterialIndex;
+            
+                if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
+                {
+                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+                }
+                else
+                {
+                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
+                }
+            
+                uint32 StartIndex = RenderData->materialSubsets[SubMeshIndex].IndexStart;
+                uint32 IndexCount = RenderData->materialSubsets[SubMeshIndex].IndexCount;
+                Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+            }
         }
 
     }

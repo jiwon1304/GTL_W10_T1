@@ -42,6 +42,7 @@
 #include "Contents/Actors/PlatformActor.h"
 #include "Contents/Actors/GoalPlatformActor.h"
 #include "Contents/Actors/TriggerBox.h"
+#include "Engine/AssetManager.h"
 #include "Engine/FFbxLoader.h"
 #include "Renderer/CompositingPass.h"
 
@@ -233,7 +234,7 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                     const FString FileName = FileNames.Pop();
                     UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
 
-                    FSkinnedMesh* fbx = FFbxLoader::ParseFBX(FileName);
+                    FSkinnedMesh* fbx = FFbxLoader::GetFbxObject(FileName);
                     if (fbx == nullptr)
                     {
                         tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);

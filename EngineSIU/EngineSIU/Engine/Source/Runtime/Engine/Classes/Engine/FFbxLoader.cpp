@@ -57,6 +57,13 @@ FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     return result;
 }
 
+FSkinnedMesh* FFbxLoader::GetFbxObject(const FString& filename)
+{
+    if (!fbxMap.Contains(filename))
+        ParseFBX(filename);
+    return fbxMap[filename];
+}
+
 FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
     FSkinnedMesh* result = new FSkinnedMesh();
@@ -171,6 +178,16 @@ void FFbxLoader::LoadFbxSkeleton(
         }
     }
     joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
+    auto t = node->LclTranslation.Get();
+    joint.position = FVector(t[0], t[1], t[2]);
+    auto r = node->LclRotation.Get();
+    joint.rotation = FQuat::CreateRotation(
+        FMath::RadiansToDegrees(r[0]),
+        FMath::RadiansToDegrees(r[1]),
+        FMath::RadiansToDegrees(r[2])
+    );
+    auto s = node->LclScaling.Get();
+    joint.scale = FVector(s[0], s[1], s[2]);
 
     int thisIndex = fbxObject->skeleton.joints.Num();
     
@@ -229,7 +246,8 @@ void FFbxLoader::LoadFBXMesh(
 )
 {
     FbxMesh* mesh = node->GetMesh();
-    if (!mesh) return;
+    if (!mesh)
+        return;
 
     FFbxMeshData meshData;
     meshData.name = node->GetName();
@@ -243,8 +261,9 @@ void FFbxLoader::LoadFBXMesh(
 
     FVector AABBmin(FLT_MAX, FLT_MAX, FLT_MAX);
     FVector AABBmax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    std::unordered_map<std::string, uint32> indexMap;
-
+    TMap<FString, uint32> indexMap;
+    TMap<int, TArray<uint32>> materialIndexToIndices;
+    
     for (int polygonIndex = 0; polygonIndex < polygonCount; ++polygonIndex)
     {
         for (int vertexIndex = 0; vertexIndex < 3; ++vertexIndex)
@@ -293,12 +312,17 @@ void FFbxLoader::LoadFBXMesh(
                 int uvIdx = mesh->GetTextureUVIndex(polygonIndex, vertexIndex);
                 uv = uvElement->GetDirectArray().GetAt(uvIdx);
             }
-            FVector2D convertUV(uv[0], uv[1]);
+            FVector2D convertUV(uv[0], 1.f - uv[1]);
             v.uv = convertUV;
 
-            // Material
-            v.materialIndex = materialElement->GetIndexArray().GetAt(polygonIndex);
-
+            // Material & Subset
+            if (materialElement)
+            {
+                const FbxLayerElementArrayTemplate<int>& indices = materialElement->GetIndexArray();
+                v.materialIndex = indices.GetAt(polygonIndex);
+                materialIndexToIndices[v.materialIndex].Add(static_cast<uint32>(controlPointIndex));
+            }
+            
             // Skin
             TArray<BoneWeights>* weights = boneWeight.Find(controlPointIndex);
             if (weights)
@@ -328,9 +352,9 @@ void FFbxLoader::LoadFBXMesh(
             // indices process
             std::stringstream ss;
             ss << GetData(convertPos.ToString()) << '|' << GetData(convertNormal.ToString()) << '|' << GetData(convertUV.ToString());
-            std::string key = ss.str();
+            FString key = ss.str();
             uint32 index;
-            if (!indexMap.contains(key))
+            if (!indexMap.Contains(key))
             {
                 index = meshData.vertices.Num();
                 meshData.vertices.Add(v);
@@ -341,6 +365,24 @@ void FFbxLoader::LoadFBXMesh(
             }
             meshData.indices.Add(index);
         }
+    }
+
+    // subset 처리.
+    uint32 accumIndex = 0;
+    for (auto& [materialIndex, indices]: materialIndexToIndices)
+    {
+        FMaterialSubset subset;
+        subset.IndexStart = static_cast<uint32>(accumIndex);
+        subset.IndexCount = static_cast<uint32>(indices.Num());
+        subset.MaterialIndex = materialIndex;
+        if (materialIndex < node->GetMaterialCount())
+        {
+            FbxSurfaceMaterial* mat = node->GetMaterial(materialIndex);
+            if (mat)
+                subset.MaterialName = mat->GetName();
+        }
+        accumIndex += indices.Num();
+        fbxObject->materialSubsets.Add(subset);
     }
     
     fbxObject->AABBmin = AABBmin;
@@ -358,29 +400,34 @@ void FFbxLoader::LoadFBXMaterials(
         return;
 
     int materialCount = node->GetMaterialCount();
-
-    UMaterial* materialInfo = FObjectFactory::ConstructObject<UMaterial>(nullptr);
-
+    
     for (int i = 0; i < materialCount; ++i)
     {
         FbxSurfaceMaterial* material = node->GetMaterial(i);
-        // if (!material)
-        // {
-        //     fbxObject->material.Add({});
-        //     continue;
-        // }
 
-        // FFbxMaterialPhong materialInfo;
-
+        UMaterial* materialInfo = FObjectFactory::ConstructObject<UMaterial>(nullptr);
+        
+        materialInfo->GetMaterialInfo().MaterialName = material->GetName();
+        int reservedCount = static_cast<uint32>(EMaterialTextureSlots::MTS_MAX);
+        for (int i = 0; i < reservedCount; ++i)
+            materialInfo->GetMaterialInfo().TextureInfos.Add({});
+        
         // normalMap
-        // FbxProperty normal = material->FindProperty(FbxSurfaceMaterial::sNormalMap);
-        // if (normal.IsValid())
-        // {
-        //     FbxTexture* texture = normal.GetSrcObject<FbxTexture>();
-        //     FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-        //     if (fileTexture)
-        //         materialInfo.normalMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
-        // }
+        FbxProperty normal = material->FindProperty(FbxSurfaceMaterial::sNormalMap);
+        if (normal.IsValid())
+        {
+            FbxTexture* texture = normal.GetSrcObject<FbxTexture>();
+            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            if (fileTexture && CreateTextureFromFile(StringToWString(fileTexture->GetFileName()), false))
+            {
+                const uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Normal);
+                FTextureInfo& slot = materialInfo->GetMaterialInfo().TextureInfos[SlotIdx];
+                slot.TextureName = fileTexture->GetName();
+                slot.TexturePath = StringToWString(fileTexture->GetFileName());
+                slot.bIsSRGB = false;
+                materialInfo->GetMaterialInfo().TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Normal);
+            }
+        }
         
         // diffuse
         FbxProperty diffuse = material->FindProperty(FbxSurfaceMaterial::sDiffuse);
@@ -389,10 +436,17 @@ void FFbxLoader::LoadFBXMaterials(
             FbxDouble3 color = diffuse.Get<FbxDouble3>();
             materialInfo->SetDiffuse(FVector(color[0], color[1], color[2]));
             
-            // FbxTexture* texture = diffuse.GetSrcObject<FbxTexture>();
-            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            // if (fileTexture)
-            //     materialInfo.diffuseMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            FbxTexture* texture = diffuse.GetSrcObject<FbxTexture>();
+            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            if (fileTexture && CreateTextureFromFile(StringToWString(fileTexture->GetFileName()), true))
+            {
+                const uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Diffuse);
+                FTextureInfo& slot = materialInfo->GetMaterialInfo().TextureInfos[SlotIdx];
+                slot.TextureName = fileTexture->GetName();
+                slot.TexturePath = StringToWString(fileTexture->GetFileName());
+                slot.bIsSRGB = true;
+                materialInfo->GetMaterialInfo().TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Diffuse);
+            }
         }
         
         // ambient
@@ -402,10 +456,18 @@ void FFbxLoader::LoadFBXMaterials(
             FbxDouble3 color = ambient.Get<FbxDouble3>();
             materialInfo->SetAmbient(FVector(color[0], color[1], color[2]));
             
-            // FbxTexture* texture = ambient.GetSrcObject<FbxTexture>();
-            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            // if (fileTexture)
-            //     materialInfo.ambientMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            FbxTexture* texture = ambient.GetSrcObject<FbxTexture>();
+            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            if (fileTexture && CreateTextureFromFile(StringToWString(fileTexture->GetFileName()), true))
+            {
+                const uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Ambient);
+                FTextureInfo& slot = materialInfo->GetMaterialInfo().TextureInfos[SlotIdx];
+                slot.TextureName = fileTexture->GetName();
+                slot.TexturePath = StringToWString(fileTexture->GetFileName());
+                slot.bIsSRGB = true;
+                materialInfo->GetMaterialInfo().TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Ambient);
+            }
+
         }
 
         // specular
@@ -415,10 +477,17 @@ void FFbxLoader::LoadFBXMaterials(
             FbxDouble3 color = specular.Get<FbxDouble3>();
             materialInfo->SetSpecular(FVector(color[0], color[1], color[2]));
             
-            // FbxTexture* texture = specular.GetSrcObject<FbxTexture>();
-            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            // if (fileTexture)
-            //     materialInfo.specularMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            FbxTexture* texture = specular.GetSrcObject<FbxTexture>();
+            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            if (fileTexture && CreateTextureFromFile(StringToWString(fileTexture->GetFileName()), true))
+            {
+                const uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Specular);
+                FTextureInfo& slot = materialInfo->GetMaterialInfo().TextureInfos[SlotIdx];
+                slot.TextureName = fileTexture->GetName();
+                slot.TexturePath = StringToWString(fileTexture->GetFileName());
+                slot.bIsSRGB = true;
+                materialInfo->GetMaterialInfo().TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Specular);
+            }
         }
 
         // emissive
@@ -428,12 +497,37 @@ void FFbxLoader::LoadFBXMaterials(
             FbxDouble3 color = emissive.Get<FbxDouble3>();
             materialInfo->SetEmissive(FVector(color[0], color[1], color[2]));
             
-            // FbxTexture* texture = emissive.GetSrcObject<FbxTexture>();
-            // FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
-            // if (fileTexture)
-            //     materialInfo.emissiveMapInfo.TexturePath = StringToWString(fileTexture->GetFileName());
+            FbxTexture* texture = emissive.GetSrcObject<FbxTexture>();
+            FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
+            if (fileTexture && CreateTextureFromFile(StringToWString(fileTexture->GetFileName()), true))
+            {
+                const uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Emissive);
+                FTextureInfo& slot = materialInfo->GetMaterialInfo().TextureInfos[SlotIdx];
+                slot.TextureName = fileTexture->GetName();
+                slot.TexturePath = StringToWString(fileTexture->GetFileName());
+                slot.bIsSRGB = true;
+                
+                materialInfo->GetMaterialInfo().TextureFlag |= static_cast<uint16>(EMaterialTextureFlags::MTF_Emissive);
+            }
         }
         
         fbxObject->material.Add(materialInfo);
     }
+}
+
+bool FFbxLoader::CreateTextureFromFile(const FWString& Filename, bool bIsSRGB)
+{
+    if (FEngineLoop::ResourceManager.GetTexture(Filename))
+    {
+        return true;
+    }
+
+    HRESULT hr = FEngineLoop::ResourceManager.LoadTextureFromFile(FEngineLoop::GraphicDevice.Device, Filename.c_str(), bIsSRGB);
+
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    return true;
 }

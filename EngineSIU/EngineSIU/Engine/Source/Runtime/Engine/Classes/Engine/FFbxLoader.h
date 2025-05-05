@@ -10,8 +10,8 @@ struct BoneWeights;
 
 struct FFbxLoader
 {
-    static FSkinnedMesh* ParseFBX(const FString& FBXFilePath);
-    static FSkinnedMesh* GetFbxObject(const FString& filename) { return fbxMap[filename]; }
+    static FSkinnedMesh* GetFbxObject(const FString& filename);
+
 private:
     static FbxManager* GetFbxManager();
     static FbxIOSettings* GetFbxIOSettings();
@@ -37,6 +37,8 @@ private:
         FSkinnedMesh* fbxObject,
         FbxNode* node
     );
+    static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
     inline static TMap<FString, FSkinnedMesh*> fbxMap;
+    static FSkinnedMesh* ParseFBX(const FString& FBXFilePath);
 };
 
