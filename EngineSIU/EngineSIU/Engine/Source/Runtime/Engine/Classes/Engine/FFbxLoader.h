@@ -19,18 +19,18 @@ private:
     static void LoadFbxSkeleton(
         FFbxObject* fbxObject,
         FbxNode* node,
-        TMap<FString, uint8>& boneNameToIndex,
+        TMap<FString, int>& boneNameToIndex,
         int parentIndex
     );
     static void LoadSkinWeights(
         FbxNode* node,
-        const TMap<FString, uint8>& boneNameToIndex,
+        const TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& OutBoneWeights
     );
     static void LoadFBXMesh(
         FFbxObject* fbxObject,
         FbxNode* node,
-        TMap<FString, uint8>& boneNameToIndex,
+        TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& boneWeight
     );
     static void LoadFBXMaterials(

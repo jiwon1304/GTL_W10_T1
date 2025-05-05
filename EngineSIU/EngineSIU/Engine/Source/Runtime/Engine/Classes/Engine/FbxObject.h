@@ -7,9 +7,9 @@ struct FFbxVertex
     FVector normal;
     FVector tangent;
     FVector2D uv;
-    uint32 materialIndex;
-    uint8 boneIndices[4] = { 255, 255, 255, 255 };
-    float boneWeights[4];
+    int materialIndex = -1;
+    int boneIndices[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+    float boneWeights[8];
 };
 struct FFbxMeshData
 {

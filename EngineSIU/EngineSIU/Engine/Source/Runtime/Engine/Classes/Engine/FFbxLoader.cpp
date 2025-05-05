@@ -7,7 +7,7 @@
 
 struct BoneWeights
 {
-    uint8 jointIndex;
+    int jointIndex;
     float weight;
 };
 
@@ -57,7 +57,7 @@ FFbxObject* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
     FFbxObject* result = new FFbxObject();
 
     TMap<int, TArray<BoneWeights>> weightMap;
-    TMap<FString, uint8> boneNameToIndex;
+    TMap<FString, int> boneNameToIndex;
 
     TArray<FbxNode*> skeletons;
     TArray<FbxNode*> meshes;
@@ -133,7 +133,7 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
 void FFbxLoader::LoadFbxSkeleton(
     FFbxObject* fbxObject,
     FbxNode* node,
-    TMap<FString, uint8>& boneNameToIndex,
+    TMap<FString, int>& boneNameToIndex,
     int parentIndex = -1
 )
 {
@@ -167,7 +167,7 @@ void FFbxLoader::LoadFbxSkeleton(
     }
     joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
 
-    uint8 thisIndex = fbxObject->skeleton.joints.Num();
+    int thisIndex = fbxObject->skeleton.joints.Num();
     
     fbxObject->skeleton.joints.Add(joint);
     boneNameToIndex.Add(joint.name, thisIndex);
@@ -180,7 +180,7 @@ void FFbxLoader::LoadFbxSkeleton(
 
 void FFbxLoader::LoadSkinWeights(
     FbxNode* node,
-    const TMap<FString, uint8>& boneNameToIndex,
+    const TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& OutBoneWeights
 )
 {
@@ -200,7 +200,7 @@ void FFbxLoader::LoadSkinWeights(
                 continue;
 
             FString boneName = linkedBone->GetName();
-            uint8 boneIndex = boneNameToIndex[boneName];
+            int boneIndex = boneNameToIndex[boneName];
 
             int* indices = cluster->GetControlPointIndices();
             double* weights = cluster->GetControlPointWeights();
@@ -219,7 +219,7 @@ void FFbxLoader::LoadSkinWeights(
 void FFbxLoader::LoadFBXMesh(
     FFbxObject* fbxObject,
     FbxNode* node,
-    TMap<FString, uint8>& boneNameToIndex,
+    TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& boneWeight
 )
 {
@@ -280,8 +280,7 @@ void FFbxLoader::LoadFBXMesh(
             v.uv = convertUV;
 
             // Material
-            if (materialElement && materialElement->GetMappingMode() == FbxLayerElement::eByPolygon)
-                v.materialIndex = materialElement->GetIndexArray().GetAt(polygonIndex);
+            v.materialIndex = materialElement->GetIndexArray().GetAt(polygonIndex);
 
             // Skin
             TArray<BoneWeights>* weights = boneWeight.Find(controlPointIndex);
