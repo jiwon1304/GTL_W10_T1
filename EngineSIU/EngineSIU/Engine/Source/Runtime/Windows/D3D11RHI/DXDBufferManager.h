@@ -80,6 +80,9 @@ public:
     template<typename T>
     static void SafeRelease(T*& comObject);
 
+    // Device Context에 버퍼 바인딩
+    void SetVertexBuffer(const FString& InName, ID3D11DeviceContext* DeviceContext = nullptr);
+    void SetIndexBuffer(const FString& InName, ID3D11DeviceContext* DeviceContext = nullptr);
 
     FVertexInfo GetVertexBuffer(const FString& InName) const;
     FIndexInfo GetIndexBuffer(const FString& InName) const;
@@ -135,6 +138,7 @@ HRESULT FDXDBufferManager::CreateVertexBufferInternal(const FString& KeyName, co
     OutVertexInfo.NumVertices = static_cast<uint32>(vertices.Num());
     OutVertexInfo.VertexBuffer = NewBuffer;
     OutVertexInfo.Stride = Stride;
+    OutVertexInfo.Offset = 0;
     VertexBufferPool.Add(KeyName, OutVertexInfo);
 
     return S_OK;
@@ -205,6 +209,7 @@ HRESULT FDXDBufferManager::CreateVertexBufferInternal(const FWString& KeyName, c
     OutVertexInfo.NumVertices = static_cast<uint32>(vertices.Num());
     OutVertexInfo.VertexBuffer = NewBuffer;
     OutVertexInfo.Stride = Stride;
+    OutVertexInfo.Offset = 0;
     TextAtlasVertexBufferPool.Add(KeyName, OutVertexInfo);
 
     return S_OK;

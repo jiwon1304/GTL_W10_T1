@@ -1651,6 +1651,10 @@
     <ClCompile Include="Engine\Source\Runtime\Windows\WindowsFileDialog.cpp">
       <Filter>Engine\Source\Runtime\Windows</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMeshRenderData.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkeletalMeshComponent.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\FFbxLoader.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Renderer\SkeletalMeshRenderPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineSIU.natvis" />

@@ -54,9 +54,7 @@ float4 mainPS(PS_INPUT_StaticMesh Input) : SV_Target
             float3 OtherColor = MaterialTextures[TEXTURE_SLOT_AMBIENT].Sample(MaterialSamplers[TEXTURE_SLOT_AMBIENT], Input.UV).rgb;
             DiffuseColor = lerp(DiffuseColor, OtherColor, DiffuseMultiplier * DiffuseMultiplier);
         }
-        //
     }
-    
     // Normal
     float3 WorldNormal = normalize(Input.WorldNormal);
     if (Material.TextureFlag & TEXTURE_FLAG_NORMAL)
@@ -131,6 +129,7 @@ float4 mainPS(PS_INPUT_StaticMesh Input) : SV_Target
         LitColor = Lighting(Input.WorldPosition, WorldNormal, ViewWorldLocation, DiffuseColor, Metallic, Roughness);
 #else
         LitColor = Lighting(Input.WorldPosition, WorldNormal, ViewWorldLocation, DiffuseColor, SpecularColor, Shininess, FlatTileIndex);
+        //return float4(ViewWorldLocation, 1);
 #endif
         LitColor += EmissiveColor * 5.f; // 5는 임의의 값
         FinalColor = float4(LitColor, 1);

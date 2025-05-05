@@ -16,9 +16,11 @@
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
 #include "Editor/PropertyEditor/ShowFlags.h"
+#include "Components/SkeletalMeshComponent.h"
 
 class UEditorEngine;
 class UStaticMeshComponent;
+class USkeletalMeshComponent;
 #include "UnrealEd/EditorViewportClient.h"
 
 FShadowRenderPass::FShadowRenderPass()
@@ -96,6 +98,13 @@ void FShadowRenderPass::PrepareRenderArr()
             {
                 StaticMeshComponents.Add(iter);
             }
+        }
+    }
+    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
+    {
+        if (iter->GetOwner() && !iter->GetOwner()->IsHidden())
+        {
+            SkeletalMeshComponents.Add(iter);
         }
     }
 }
@@ -264,6 +273,10 @@ void FShadowRenderPass::RenderAllStaticMeshes(const std::shared_ptr<FEditorViewp
         RenderPrimitive(RenderData, Comp->GetStaticMesh()->GetMaterials(), Comp->GetOverrideMaterials(), Comp->GetselectedSubMeshIndex());
         
     }
+}
+
+void FShadowRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+{
 }
 
 void FShadowRenderPass::RenderAllStaticMeshesForCSM(const std::shared_ptr<FEditorViewportClient>& Viewport, FCascadeConstantBuffer FCasCadeData)

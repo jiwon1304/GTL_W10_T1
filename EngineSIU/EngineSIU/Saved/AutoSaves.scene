@@ -1,5 +1,333 @@
 {
-    "Actors": [],
+    "Actors": [
+        {
+            "ActorClass": "AItemActor",
+            "ActorID": "AItemActor_127",
+            "ActorLabel": "OBJ_COIN_127",
+            "ActorTickInEditor": "false",
+            "Components": [
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_128",
+                    "Properties": {
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_128",
+                        "ComponentOwner": "AItemActor_127",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "USphereComponent",
+                    "ComponentID": "SphereComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USphereComponent",
+                        "ComponentName": "SphereComponent_0",
+                        "ComponentOwner": "AItemActor_127",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SphereRadius": "1.000000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                },
+                {
+                    "ComponentClass": "USkeletalMeshComponent",
+                    "ComponentID": "MeshComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USkeletalMeshComponent",
+                        "ComponentName": "MeshComponent_0",
+                        "ComponentOwner": "AItemActor_127",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SkeletalMeshPath": "Contents/suzanne.fbx",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                }
+            ],
+            "RootComponentID": "SphereComponent_0"
+        },
+        {
+            "ActorClass": "AItemActor",
+            "ActorID": "AItemActor_135",
+            "ActorLabel": "OBJ_COIN_135",
+            "ActorTickInEditor": "false",
+            "Components": [
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_136",
+                    "Properties": {
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_136",
+                        "ComponentOwner": "AItemActor_135",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "USphereComponent",
+                    "ComponentID": "SphereComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USphereComponent",
+                        "ComponentName": "SphereComponent_0",
+                        "ComponentOwner": "AItemActor_135",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SphereRadius": "1.000000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                },
+                {
+                    "ComponentClass": "USkeletalMeshComponent",
+                    "ComponentID": "MeshComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USkeletalMeshComponent",
+                        "ComponentName": "MeshComponent_0",
+                        "ComponentOwner": "AItemActor_135",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SkeletalMeshPath": "Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                },
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_141",
+                    "Properties": {
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_141",
+                        "ComponentOwner": "AItemActor_135",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                }
+            ],
+            "RootComponentID": "SphereComponent_0"
+        },
+        {
+            "ActorClass": "ADirectionalLight",
+            "ActorID": "ADirectionalLight_139",
+            "ActorLabel": "OBJ_DIRECTIONALLGIHT_139",
+            "ActorTickInEditor": "false",
+            "Components": [
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_141",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_141",
+                        "ComponentOwner": "ADirectionalLight_139",
+                        "ComponentOwnerClass": "ADirectionalLight",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UDirectionalLightComponent",
+                    "ComponentID": "UDirectionalLightComponent_0",
+                    "Properties": {
+                        "AABB_Max": "X=1.000 Y=1.000 Z=0.100",
+                        "AABB_Min": "X=-1.000 Y=-1.000 Z=-0.100",
+                        "AttachParentID": "UBillboardComponent_0",
+                        "ComponentClass": "UDirectionalLightComponent",
+                        "ComponentName": "UDirectionalLightComponent_0",
+                        "ComponentOwner": "ADirectionalLight_139",
+                        "ComponentOwnerClass": "ADirectionalLight",
+                        "Direction": "X=-1.000 Y=-0.000 Z=-0.000",
+                        "Intensity": "10.000000",
+                        "LightColor": "R=1.000 G=1.000 B=1.000 A=1.000",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_140",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_140",
+                        "ComponentOwner": "ADirectionalLight_139",
+                        "ComponentOwnerClass": "ADirectionalLight",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UBillboardComponent",
+                    "ComponentID": "UBillboardComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "nullptr",
+                        "BufferKey": "Assets/Editor/Icon/S_LightDirectional.PNG",
+                        "ComponentClass": "UBillboardComponent",
+                        "ComponentName": "UBillboardComponent_0",
+                        "ComponentOwner": "ADirectionalLight_139",
+                        "ComponentOwnerClass": "ADirectionalLight",
+                        "FinalIndexU": "0.000000",
+                        "FinalIndexV": "0.000000",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": "UBillboardComponent"
+                    }
+                },
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_148",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_148",
+                        "ComponentOwner": "ADirectionalLight_139",
+                        "ComponentOwnerClass": "ADirectionalLight",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                }
+            ],
+            "RootComponentID": "UBillboardComponent_0"
+        },
+        {
+            "ActorClass": "AItemActor",
+            "ActorID": "AItemActor_152",
+            "ActorLabel": "OBJ_COIN_152",
+            "ActorTickInEditor": "false",
+            "Components": [
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_147",
+                    "Properties": {
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_147",
+                        "ComponentOwner": "AItemActor_152",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "USphereComponent",
+                    "ComponentID": "SphereComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USphereComponent",
+                        "ComponentName": "SphereComponent_0",
+                        "ComponentOwner": "AItemActor_152",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=-68.882 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-16.616",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SphereRadius": "1.000000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                },
+                {
+                    "ComponentClass": "USkeletalMeshComponent",
+                    "ComponentID": "MeshComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
+                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USkeletalMeshComponent",
+                        "ComponentName": "MeshComponent_0",
+                        "ComponentOwner": "AItemActor_152",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SkeletalMeshPath": "None",
+                        "bAutoActive": "true",
+                        "bIsActive": "true",
+                        "m_Type": ""
+                    }
+                },
+                {
+                    "ComponentClass": "USceneComponent",
+                    "ComponentID": "USceneComponent_153",
+                    "Properties": {
+                        "AttachParentID": "SphereComponent_0",
+                        "ComponentClass": "USceneComponent",
+                        "ComponentName": "USceneComponent_153",
+                        "ComponentOwner": "AItemActor_152",
+                        "ComponentOwnerClass": "AItemActor",
+                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
+                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
+                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "bAutoActive": "true",
+                        "bIsActive": "true"
+                    }
+                }
+            ],
+            "RootComponentID": "SphereComponent_0"
+        }
+    ],
     "NextUUID": 0,
     "Version": 1
 }

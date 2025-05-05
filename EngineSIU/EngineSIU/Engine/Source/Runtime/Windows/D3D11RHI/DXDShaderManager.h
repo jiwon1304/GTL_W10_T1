@@ -70,6 +70,10 @@ public:
     ID3D11ComputeShader* GetComputeShaderByKey(const std::wstring& Key);
     ID3D11GeometryShader* GetGeometryShaderByKey(const std::wstring& Key);
 
+    void SetVertexShader(const std::wstring& Key, ID3D11DeviceContext* Context) const;
+    void SetVertexShaderAndInputLayout(const std::wstring& Key, ID3D11DeviceContext* Context) const;
+    void SetPixelShader(const std::wstring& Key, ID3D11DeviceContext* Context) const;
+
 private:
 	TMap<std::wstring, ID3D11InputLayout*> InputLayouts;
 	TMap<std::wstring, ID3D11VertexShader*> VertexShaders;
