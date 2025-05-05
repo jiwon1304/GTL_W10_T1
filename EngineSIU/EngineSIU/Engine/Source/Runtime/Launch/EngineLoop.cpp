@@ -130,7 +130,6 @@ void FEngineLoop::Render() const
         
         Renderer.RenderViewport(LevelEditor->GetActiveViewportClient());
     }
-    
 }
 
 void FEngineLoop::Tick()
@@ -172,6 +171,9 @@ void FEngineLoop::Tick()
         LevelEditor->Tick(DeltaTime);
         Render();
         UIMgr->BeginFrame();
+        // Get panel area rect from LevelEditor and pass it to UnrealEditor->Render
+        FRect PanelAreaRect = LevelEditor->GetPanelAreaRect();
+        //UnrealEditor->Render(PanelAreaRect);
         UnrealEditor->Render();
 
         FConsole::GetInstance().Draw();
