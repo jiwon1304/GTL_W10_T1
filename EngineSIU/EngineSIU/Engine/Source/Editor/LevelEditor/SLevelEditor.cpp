@@ -139,14 +139,14 @@ void SLevelEditor::ResizeEditor(const uint32 InEditorWidth, const uint32 InEdito
         FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
         if (ViewportVSplitter && ViewportHSplitter)
         {
-            ViewportVSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
-            ViewportHSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
+            ViewportVSplitter->SetRect(ViewportAreaRect);
+            ViewportHSplitter->SetRect(ViewportAreaRect);
         }
 
         FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
         if (EditorHSplitter)
         {
-            EditorHSplitter->OnResize(static_cast<uint32>(PanelAreaRect.Width), static_cast<uint32>(PanelAreaRect.Height));
+            EditorHSplitter->SetRect(PanelAreaRect);
         }
 
         ResizeViewports();
@@ -505,14 +505,14 @@ void SLevelEditor::RegisterEditorInputDelegates()
                         FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
                         if (ViewportVSplitter && ViewportHSplitter)
                         {
-                            ViewportVSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
-                            ViewportHSplitter->OnResize(static_cast<uint32>(ViewportAreaRect.Width), static_cast<uint32>(ViewportAreaRect.Height));
+                            ViewportVSplitter->SetRect(ViewportAreaRect);
+                            ViewportHSplitter->SetRect(ViewportAreaRect);
                         }
 
                         FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
                         if (EditorHSplitter)
                         {
-                            EditorHSplitter->OnResize(static_cast<uint32>(PanelAreaRect.Width), static_cast<uint32>(PanelAreaRect.Height));
+                            EditorHSplitter->SetRect(PanelAreaRect);
                         }
                     }
 

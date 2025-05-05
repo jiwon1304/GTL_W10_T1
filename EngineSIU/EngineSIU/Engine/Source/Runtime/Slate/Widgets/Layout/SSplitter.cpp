@@ -23,6 +23,11 @@ void SSplitter::OnResize(uint32 InWidth, uint32 InHeight)
     Rect.Height = static_cast<float>(InHeight);
 }
 
+void SSplitter::SetRect(const FRect& InRect)
+{
+    Rect = InRect;
+}
+
 bool SSplitter::OnPressed(const FPoint& InPoint)
 {
     if (!IsHover(InPoint))
@@ -97,7 +102,12 @@ void SSplitterV::SaveConfig(TMap<FString, FString>& Config, FString Key) const
 void SSplitterV::OnResize(uint32 InWidth, uint32 InHeight)
 {
     __super::OnResize(InWidth, InHeight);
-    
+    UpdateChildRects();
+}
+
+void SSplitterV::SetRect(const FRect& InRect)
+{
+    Rect = InRect;
     UpdateChildRects();
 }
 
@@ -174,7 +184,12 @@ void SSplitterH::SaveConfig(TMap<FString, FString>& Config, FString Key) const
 void SSplitterH::OnResize(uint32 InWidth, uint32 InHeight)
 {
     __super::OnResize(InWidth, InHeight);
-    
+    UpdateChildRects();
+}
+
+void SSplitterH::SetRect(const FRect& InRect)
+{
+    Rect = InRect;
     UpdateChildRects();
 }
 

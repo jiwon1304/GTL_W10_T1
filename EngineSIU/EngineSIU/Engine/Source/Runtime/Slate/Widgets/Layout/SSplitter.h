@@ -27,6 +27,7 @@ public:
     virtual void OnDragStart(const FPoint& MousePos) { /* 초기화 */ }
     virtual void OnDrag(const FPoint& Delta) = 0; // 가로/세로에 따라 구현 다름.
     virtual void OnResize(uint32 InWidth, uint32 InHeight) override;
+    virtual void SetRect(const FRect& InRect);
     virtual bool OnPressed(const FPoint& InPoint) override;
     virtual bool OnReleased() override;
 
@@ -55,7 +56,9 @@ public:
         }
         return DefaultValue;
     }
+    virtual ~SSplitter() = default;
 };
+
 
 class SSplitterV : public SSplitter
 {
@@ -67,6 +70,7 @@ public:
     virtual float GetSplitterLTCenter() override;
     
     virtual void OnResize(uint32 InWidth, uint32 InHeight) override;
+    virtual void SetRect(const FRect& InRect) override;
 
     virtual void LoadConfig(const TMap<FString, FString>& Config, FString Key, float DefaultValue) override;
     virtual void SaveConfig(TMap<FString, FString>& Config, FString Key) const override;
@@ -86,6 +90,7 @@ public:
     virtual float GetSplitterLTCenter() override;
     
     virtual void OnResize(uint32 InWidth, uint32 InHeight) override;
+    virtual void SetRect(const FRect& InRect) override;
 
     virtual void LoadConfig(const TMap<FString, FString>& Config, FString Key, float DefaultValue) override;
     virtual void SaveConfig(TMap<FString, FString>& Config, FString Key) const override;
