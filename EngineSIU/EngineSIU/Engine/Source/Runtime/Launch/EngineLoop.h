@@ -51,6 +51,8 @@ public:
     FGPUTimingManager GPUTimingManager;
     FEngineProfiler EngineProfiler;
 
+    HINSTANCE AppInstance;
+
 private:
     UImGuiManager* UIMgr;
     //TODO: GWorld 제거, Editor들 EditorEngine으로 넣기
@@ -69,6 +71,8 @@ public:
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
 
     FSlateAppMessageHandler* GetAppMessageHandler() const { return AppMessageHandler.get(); }
+
+    void CreateAssetViewerWindow();
 
     void TempRenderDebugImGui();
 };

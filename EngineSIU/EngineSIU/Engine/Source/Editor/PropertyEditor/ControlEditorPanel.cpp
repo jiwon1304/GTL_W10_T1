@@ -32,6 +32,8 @@
 #include "Actors/DirectionalLightActor.h"
 #include "Actors/SpotLightActor.h"
 #include "Actors/AmbientLightActor.h"
+#include "UnrealEd/UnrealEd.h" // For GEngineLoop.GetUnrealEditor()
+#include "EngineLoop.h" // For GEngineLoop
 
 #include "Actors/CubeActor.h"
 #include "Actors/SphereActor.h"
@@ -187,6 +189,20 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
             ImGui::ShowDemoWindow(&bShowImGuiDemoWindow); // 창이 닫힐 때 상태를 업데이트
         }
 
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("Window")) // New "Window" submenu
+        {
+            if (ImGui::MenuItem("Asset Viewer"))
+            {
+                if (UnrealEd* Editor = GEngineLoop.GetUnrealEditor())
+                {
+                    Editor->ToggleAssetViewerWindow();
+                }
+            }
+            ImGui::EndMenu();
+        }
+        
         ImGui::Separator();
 
         if (ImGui::BeginMenu("Import"))

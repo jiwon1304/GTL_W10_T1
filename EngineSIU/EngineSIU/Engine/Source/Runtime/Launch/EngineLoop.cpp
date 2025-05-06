@@ -5,6 +5,7 @@
 #include "D3D11RHI/GraphicDevice.h"
 #include "Engine/EditorEngine.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "AssetViewer/AssetViewerWindow.h"
 #include "PropertyEditor/ViewportTypePanel.h"
 #include "Slate/Widgets/Layout/SSplitter.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -42,6 +43,8 @@ int32 FEngineLoop::PreInit()
 
 int32 FEngineLoop::Init(HINSTANCE hInstance)
 {
+    AppInstance = hInstance;
+
     FPlatformTime::InitTiming();
 
     /* must be initialized before window. */
@@ -99,6 +102,8 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     //FSoundManager::GetInstance().PlaySound("fishdream");
 
     UpdateUI();
+
+    CreateAssetViewerWindow();
 
     return 0;
 }
@@ -299,6 +304,13 @@ void FEngineLoop::UpdateUI()
         GEngineLoop.GetUnrealEditor()->OnResize(AppWnd);
     }
     ViewportTypePanel::GetInstance().OnResize(AppWnd);
+}
+
+void FEngineLoop::CreateAssetViewerWindow()
+{
+    // AssetViewerWindow 생성 및 초기화
+    FAssetViewerWindow* AssetViewerWindow = new FAssetViewerWindow();
+    AssetViewerWindow->Initialize(AppInstance);
 }
 
 void FEngineLoop::TempRenderDebugImGui()
