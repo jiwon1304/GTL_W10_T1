@@ -72,7 +72,6 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     GetClientSize(SkeletalMeshViewerAppWnd, ClientWidth, ClientHeight);
     AssetViewer->Initialize(ClientWidth, ClientHeight);
     UnrealEditor->Initialize();
-
     
     {
         if (!GPUTimingManager.Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext))
@@ -425,14 +424,7 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         // Do Nothing (ShowWindow로 관리하므로 직접 처리할 필요 없음. DESTROY가 호출될 때에는 Exit에서 일괄처리함)
         break;
     case WM_SIZE:
-        if (wParam != SIZE_MINIMIZED)
-        {
-            if (GEngineLoop.GetUnrealEditor())
-            {
-                GEngineLoop.GetUnrealEditor()->OnResize(hWnd);
-            }
-        }
-        GEngineLoop.UpdateUI();
+        GEngineLoop.UpdateSubWindowUI();
         break;
     case WM_CLOSE:
         ShowWindow(hWnd, SW_HIDE);
@@ -447,7 +439,7 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         break;
     default:
         // @todo MessageHandler 수정
-        //GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
+        GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
         break;
     }
 
@@ -462,6 +454,15 @@ void FEngineLoop::UpdateUI()
         GEngineLoop.GetUnrealEditor()->OnResize(MainAppWnd);
     }
     ViewportTypePanel::GetInstance().OnResize(MainAppWnd);
+}
+
+void FEngineLoop::UpdateSubWindowUI()
+{
+    if (GEngineLoop.GetUnrealEditor())
+    {
+        GEngineLoop.GetUnrealEditor()->OnResize(SkeletalMeshViewerAppWnd, true);
+    }
+    //ViewportTypePanel::GetInstance().OnResize(SkeletalMeshViewerAppWnd);
 }
 
 void FEngineLoop::ToggleWindow(const HWND hWnd)

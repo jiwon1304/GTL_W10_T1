@@ -41,6 +41,7 @@ private:
     static LRESULT CALLBACK SubAppWndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
     void UpdateUI();
+    void UpdateSubWindowUI();
 
 public:
     static FGraphicsDevice GraphicDevice;
