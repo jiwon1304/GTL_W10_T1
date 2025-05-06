@@ -12,7 +12,7 @@ struct BoneWeights
     float weight;
 };
 
-FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
+FSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     if (fbxMap.Contains(FBXFilePath))
         return fbxMap[FBXFilePath];
@@ -38,37 +38,50 @@ FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         iosettings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
     }
 
-    FbxAxisSystem targetAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded);
-    targetAxisSystem.ConvertScene(scene);
     bool bIsImported = importer->Import(scene);
     importer->Destroy();
     if (!bIsImported)
     {
         return nullptr;   
     }
+
+    // convert scene
+    FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
+    FbxAxisSystem targetAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded);
+    if (sceneAxisSystem != targetAxisSystem)
+    {
+        targetAxisSystem.ConvertScene(scene);
+    }
+    
+    FbxSystemUnit SceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();
+    if( SceneSystemUnit.GetScaleFactor() != 1.0 )
+    {
+        FbxSystemUnit::cm.ConvertScene(scene);
+    }
     
     FbxGeometryConverter converter(GetFbxManager());
     converter.Triangulate(scene, true);
 
-    FSkinnedMesh* result = LoadFBXObject(scene);
+    FSkeletalMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
     fbxMap[FBXFilePath] = result;
     return result;
 }
 
-FSkinnedMesh* FFbxLoader::GetFbxObject(const FString& filename)
+FSkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
 {
     if (!fbxMap.Contains(filename))
         ParseFBX(filename);
     return fbxMap[filename];
 }
 
-FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
+FSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
-    FSkinnedMesh* result = new FSkinnedMesh();
+    FSkeletalMesh* result = new FSkeletalMesh();
 
-    TMap<int, TArray<BoneWeights>> weightMap;
+    TArray<TMap<int, TArray<BoneWeights>>> weightMaps;
+    // TMap<int, TArray<BoneWeights>> weightMap;
     TMap<FString, int> boneNameToIndex;
 
     TArray<FbxNode*> skeletons;
@@ -106,23 +119,22 @@ FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
     }
 
     // parse skins
-    for (auto& node: meshes)
+    for (int i = 0; i < meshes.Num(); ++i)
     {
+        FbxNode*& node = meshes[i];
+        TMap<int, TArray<BoneWeights>> weightMap;
         LoadSkinWeights(node, boneNameToIndex, weightMap);
+        weightMaps.Add(weightMap);
     }
 
     // parse meshes & material
-    for (auto& node: meshes)
+    for (int i = 0; i < meshes.Num(); ++i)
     {
-        LoadFBXMesh(result, node, boneNameToIndex, weightMap);
+        FbxNode*& node = meshes[i];
+        LoadFBXMesh(result, node, boneNameToIndex, weightMaps[i]);
         LoadFBXMaterials(result, node);
     }
 
-    // // parse materials
-    // for (auto& node: meshes)
-    // {
-    // }
-    
     return result;
 }
 
@@ -143,7 +155,7 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
 
 
 void FFbxLoader::LoadFbxSkeleton(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     int parentIndex = -1
@@ -239,7 +251,7 @@ void FFbxLoader::LoadSkinWeights(
 }
 
 void FFbxLoader::LoadFBXMesh(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& boneWeight
@@ -366,7 +378,7 @@ void FFbxLoader::LoadFBXMesh(
                 });
 
                 float total = 0.0f;
-                for (int i = 0; i < 4 && i < weights->Num(); ++i)
+                for (int i = 0; i < 8 && i < weights->Num(); ++i)
                 {
                     v.boneIndices[i] = (*weights)[i].jointIndex;
                     v.boneWeights[i] = (*weights)[i].weight;
@@ -377,7 +389,7 @@ void FFbxLoader::LoadFBXMesh(
                 // Normalize
                 if (total > 0.f)
                 {
-                    for (int i = 0; i < 4; ++i)
+                    for (int i = 0; i < 8; ++i)
                         v.boneWeights[i] /= total;
                 }
             }
@@ -444,7 +456,7 @@ void FFbxLoader::LoadFBXMesh(
 }
 
 void FFbxLoader::LoadFBXMaterials(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node
 )
 {

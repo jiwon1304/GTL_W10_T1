@@ -5,7 +5,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Components/StaticMeshComponent.h"
 #include "BaseGizmos/GizmoBaseComponent.h"
-#include "Components/SkinnedMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/EditorEngine.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UObject/Casts.h"
@@ -42,7 +42,7 @@ void FStaticMeshRenderPassBase::PrepareRenderArr()
         }
         StaticMeshComponents.Add(iter);
     }
-    for (const auto iter : TObjectRange<USkinnedMeshComponent>())
+    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
     {
         if (iter->GetWorld() != GEngine->ActiveWorld)
         {

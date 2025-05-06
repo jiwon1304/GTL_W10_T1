@@ -8,15 +8,14 @@
 #include "Components/Light/PointLightComponent.h"
 #include "Engine/FbxObject.h"
 
-class USkinnedMeshComponent;
+class USkeletalMeshComponent;
 struct FSkeletalMeshRenderData;
+struct FSkeletalMaterial;
 class FShadowManager;
 class FDXDShaderManager;
 class UWorld;
 class UMaterial;
 class FEditorViewportClient;
-class USkeletalMeshComponent;
-struct FSkeletalMaterial;
 
 class FSkeletalMeshRenderPass : public IRenderPass
 {
@@ -45,7 +44,7 @@ private:
 
     bool bIsCPUSkinning = true;
 protected:
-    TArray<USkinnedMeshComponent*> SkinnedMeshComponent;
+    TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;

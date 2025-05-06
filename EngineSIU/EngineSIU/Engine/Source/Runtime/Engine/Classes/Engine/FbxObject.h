@@ -49,22 +49,7 @@ struct FFbxSkeletonData
     TArray<FFbxJoint> joints;
 };
 
-struct FFbxMaterialPhong
-{
-    FTextureInfo normalMapInfo;
-    FVector diffuseColor;
-    FTextureInfo diffuseMapInfo;
-    FVector ambientColor;
-    FTextureInfo ambientMapInfo;
-    FVector specularColor;
-    FTextureInfo specularMapInfo;
-    FVector emissiveColor;
-    FTextureInfo emissiveMapInfo;
-    float shininessColor;
-    float transparencyFactor;
-};
-
-struct FSkinnedMesh {
+struct FSkeletalMesh {
     FString name;
     TArray<FFbxMeshData> mesh;
     FFbxSkeletonData skeleton;

@@ -20,7 +20,6 @@
 
 class UEditorEngine;
 class UStaticMeshComponent;
-class USkeletalMeshComponent;
 #include "UnrealEd/EditorViewportClient.h"
 
 FShadowRenderPass::FShadowRenderPass()

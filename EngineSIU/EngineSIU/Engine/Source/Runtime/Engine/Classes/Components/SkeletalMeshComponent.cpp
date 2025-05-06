@@ -1,8 +1,9 @@
-#include "Components/SkeletalMeshComponent.h"
+#include "SkeletalMeshComponent.h"
+
+#include "Engine/AssetManager.h"
+#include "Engine/FbxObject.h"
 #include "Engine/FFbxLoader.h"
 #include "UObject/Casts.h"
-#include "UObject/ObjectFactory.h"
-#include "GameFramework/Actor.h"
 
 UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 {
@@ -15,10 +16,10 @@ UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 void USkeletalMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) const
 {
     Super::GetProperties(OutProperties);
-
+        
     if (SkeletalMesh != nullptr)
     {
-        FString PathFString = SkeletalMesh->GetObjectName().c_str();
+        FString PathFString = SkeletalMesh->name;
         OutProperties.Add(TEXT("SkeletalMeshPath"), PathFString);
     }
     else
@@ -36,197 +37,93 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
     {
         if (*SkeletalMeshPath != TEXT("None"))
         {
-            // if (USkeletalMesh* MeshToSet = FFbxManager::CreateSkeletalMesh(StringToWString(SkeletalMeshPath->ToAnsiString())))
-            // {
-            //     SetSkeletalMesh(MeshToSet);
-            //     UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            // }
-            // else
-            // {
-            //     UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            //     SetSkeletalMesh(nullptr);
-            // }
+            if (UAssetManager::Get().AddAsset(StringToWString(SkeletalMeshPath->ToAnsiString())))
+            {
+                FSkeletalMesh* MeshToSet = FFbxLoader::GetFbxObject(SkeletalMeshPath->ToAnsiString());
+                SetSkinnedMesh(MeshToSet);
+                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+                SetSkinnedMesh(nullptr);
+            }
         }
         else
         {
-            SetSkeletalMesh(nullptr);
+            SetSkinnedMesh(nullptr);
             UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
         }
     }
 }
 
-void USkeletalMeshComponent::SetSkeletalMesh(USkinnedMesh* Value)
+void USkeletalMeshComponent::SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh)
 {
-    SkeletalMesh = Value;
+    SkeletalMesh = InSkinnedMesh;
     if (SkeletalMesh == nullptr)
     {
-        OverrideMaterials.SetNum(0);
         AABB = FBoundingBox(FVector::ZeroVector, FVector::ZeroVector);
-    }
-    else
+    } else
     {
-        OverrideMaterials.SetNum(Value->GetMaterials().Num());
-        // AABB = FBoundingBox(SkeletalMesh->GetRenderData()->BoundingBoxMin, SkeletalMesh->GetRenderData()->BoundingBoxMax);
+        AABB = FBoundingBox(InSkinnedMesh->AABBmin, InSkinnedMesh->AABBmax);
     }
 }
-
-uint32 USkeletalMeshComponent::GetNumMaterials() const
-{
-    return SkeletalMesh ? SkeletalMesh->GetMaterials().Num() : 0;
-}
-
-UMaterial* USkeletalMeshComponent::GetMaterial(uint32 ElementIndex) const
-{
-    if (SkeletalMesh)
-    {
-        if (OverrideMaterials.IsValidIndex(ElementIndex) && OverrideMaterials[ElementIndex])
-        {
-            return OverrideMaterials[ElementIndex];
-        }
-
-        if (SkeletalMesh->GetMaterials().IsValidIndex(ElementIndex))
-        {
-            return SkeletalMesh->GetMaterials()[ElementIndex]->Material;
-        }
-    }
-    return nullptr;
-}
-
-uint32 USkeletalMeshComponent::GetMaterialIndex(FName MaterialSlotName) const
-{
-    return SkeletalMesh ? SkeletalMesh->GetMaterialIndex(MaterialSlotName) : -1;
-}
-
-TArray<FName> USkeletalMeshComponent::GetMaterialSlotNames() const
-{
-    TArray<FName> MaterialNames;
-    if (SkeletalMesh)
-    {
-        for (const FSkeletalMaterial* Material : SkeletalMesh->GetMaterials())
-        {
-            MaterialNames.Emplace(Material->MaterialSlotName);
-        }
-    }
-    return MaterialNames;
-}
-
-void USkeletalMeshComponent::GetUsedMaterials(TArray<UMaterial*>& Out) const
-{
-    if (SkeletalMesh)
-    {
-        SkeletalMesh->GetUsedMaterials(Out);
-        for (int32 MaterialIndex = 0; MaterialIndex < GetNumMaterials(); ++MaterialIndex)
-        {
-            if (OverrideMaterials.IsValidIndex(MaterialIndex) && OverrideMaterials[MaterialIndex])
-            {
-                Out[MaterialIndex] = OverrideMaterials[MaterialIndex];
-            }
-        }
-    }
-}
-//
-//void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
-//{
-//    if (!SkeletalMesh || SkeletalMesh->GetRenderData()->Bones.Num() == 0)
-//    {
-//        // No skeletal mesh or bones to process
-//        // 이제 무조건 Bone을 하나 붙여주고 있어서 안들어올듯...
-//        OutBoneMatrices.Add(FMatrix::Identity);
-//        return;
-//    }
-//
-//    const FSkeletalMeshRenderData* RenderData = SkeletalMesh->GetRenderData();
-//    if (!RenderData)
-//    {
-//        return;
-//    }
-//
-//    const TArray<FSkeletalMeshBone>& Bones = RenderData->Bones;
-//    const TArray<FMatrix>& InverseMatrices = RenderData->InverseBindPoseMatrices;
-//
-//    OutBoneMatrices.SetNum(Bones.Num());
-//
-//    for (int BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
-//    {
-//        const FSkeletalMeshBone& Bone = Bones[BoneIndex];
-//
-//        // model space -> Bone Space
-//        FMatrix ModelToBone = FMatrix::Identity;
-//
-//        if (Bone.ParentIndex != -1)
-//        {
-//            // model -> 부모 bone의 space -> 내 bone의 space
-//            // 원래 버텍스는 model space 기준 -> bone의 space로 변환
-//            ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
-//            if (BoneIndex == 14)
-//            {
-//                static float rad = 0;
-//                rad += 1.f;
-//            
-//                ModelToBone = Bone.BindPoseMatrix * FMatrix::CreateRotationMatrix(rad, 0, 0) * OutBoneMatrices[Bone.ParentIndex];
-//            }
-//        }
-//        else
-//        {
-//            ModelToBone = Bone.BindPoseMatrix;
-//        }
-//
-//
-//        // Step 3: 스킨 매트릭스 계산: 현재 Pose * Inverse Bind Pose
-//        // 
-//        const FMatrix& InverseBindPose = InverseMatrices[BoneIndex];
-//        OutBoneMatrices[BoneIndex] = ModelToBone * InverseBindPose;
-//    }
-//}
-
 void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
 {
-    if (!SkeletalMesh || SkeletalMesh->GetRenderData()->Bones.Num() == 0)
+    if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
     {
         OutBoneMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const FSkeletalMeshRenderData* RenderData = SkeletalMesh->GetRenderData();
-    if (!RenderData)
+    const TArray<FFbxJoint>& joints = SkeletalMesh->skeleton.joints;
+
+    OutBoneMatrices.SetNum(joints.Num());
+
+    for (int jointIndex = 0; jointIndex < joints.Num(); ++jointIndex)
     {
-        return;
-    }
-
-    const TArray<FSkeletalMeshBone>& Bones = RenderData->Bones;
-    const TArray<FMatrix>& InverseMatrices = RenderData->InverseBindPoseMatrices;
-
-    OutBoneMatrices.SetNum(Bones.Num());
-
-    for (int BoneIndex = 0; BoneIndex < Bones.Num(); ++BoneIndex)
-    {
-        const FSkeletalMeshBone& Bone = Bones[BoneIndex];
+        const FFbxJoint& joint = joints[jointIndex];
 
         FMatrix ModelToBone = FMatrix::Identity;
 
-        if (Bone.ParentIndex != -1)
+        if (joint.parentIndex != -1)
         {
             // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
-            ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix;
+            ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose;
 
-            if (BoneIndex == -14)
+            if (jointIndex == SelectedBoneIndex)
             {
-                static float deg = 0;
-                deg += 5.f;
 
-                // 어깨의 로컬축에서 회전(Rot * BindPoseMatrix)
-                FMatrix Rot = FMatrix::CreateRotationMatrix(0, deg, -90);
+                FMatrix Translation = FMatrix::CreateTranslationMatrix(SelectedLocation);
+                FMatrix Rotation = FMatrix::CreateRotationMatrix(SelectedRotation.Roll, SelectedRotation.Pitch, SelectedRotation.Yaw);
+                FMatrix Scale = FMatrix::CreateScaleMatrix(SelectedScale.X, SelectedScale.Y, SelectedScale.Z);
 
-                ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.BindPoseMatrix * Rot;
+                ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose * Scale * Rotation * Translation;
             }
         }
         else
         {
-            ModelToBone = Bone.BindPoseMatrix;
+            ModelToBone = joint.localBindPose;
         }
 
         // 스키닝 행렬: 
-        const FMatrix& InverseBindPose = InverseMatrices[BoneIndex];
-        OutBoneMatrices[BoneIndex] = ModelToBone * InverseBindPose;
+        const FMatrix& InverseBindPose = joint.inverseBindPose;
+        OutBoneMatrices[jointIndex] = ModelToBone * InverseBindPose;
     }
+}
+
+const TMap<int, FString>& USkeletalMeshComponent::GetBoneIndexToName()
+{
+    BoneIndexToName.Empty();
+    BoneIndexToName.Add(-1, "None");
+    if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
+    {
+        return BoneIndexToName;
+    }
+    
+    for (int i = 0 ; i < SkeletalMesh->skeleton.joints.Num(); ++i)
+    {
+        BoneIndexToName.Add(i, SkeletalMesh->skeleton.joints[i].name);
+    }
+    return BoneIndexToName;
 }
