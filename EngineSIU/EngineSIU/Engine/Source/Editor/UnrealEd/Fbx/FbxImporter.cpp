@@ -3,6 +3,7 @@
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Components/Mesh/StaticMesh.h"
 #include "Engine/AssetManager.h"
+#include "UObject/ObjectFactory.h"
 
 using namespace NS_FbxTypeConverter;
 namespace fs = std::filesystem;
@@ -72,18 +73,18 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& O
 {
     const fs::path FilePath = InFilePath.ToWideString();
 
-    std::shared_ptr<UStaticMeshTest> SharedStaticMesh = std::make_shared<UStaticMeshTest>();
-    if (ImportFromFileInternal(InFilePath, SharedStaticMesh.get(), nullptr))
+    UAssetManager& AssetManager = UAssetManager::Get();
+    UStaticMeshTest* NewStaticMesh = FObjectFactory::ConstructObject<UStaticMeshTest>(&AssetManager);
+    if (ImportFromFileInternal(InFilePath, NewStaticMesh, nullptr))
     {
-        UAssetManager& AssetManager = UAssetManager::Get();
         FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
         Info.AssetName = FName(FilePath.filename().wstring());
         Info.AssetType = EAssetType::StaticMesh;
         Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
-        FEngineLoop::ResourceManager.AddStaticMesh(FName(FilePath.filename().wstring()), SharedStaticMesh);
-        OutStaticMesh = SharedStaticMesh.get();
+        FEngineLoop::ResourceManager.AddAssignStaticMeshMap(FName(FilePath.filename().wstring()), NewStaticMesh);
+        OutStaticMesh = NewStaticMesh;
         return true;
     }
     return false;
@@ -93,18 +94,19 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
 {
     const fs::path FilePath = InFilePath.ToWideString();
 
-    std::shared_ptr<USkeletalMesh> SharedSkeletalMesh = std::make_shared<USkeletalMesh>();
-    if (ImportFromFileInternal(InFilePath, nullptr, SharedSkeletalMesh.get()))
+    // std::shared_ptr<USkeletalMesh> SharedSkeletalMesh = std::make_shared<USkeletalMesh>();
+    UAssetManager& AssetManager = UAssetManager::Get();
+    USkeletalMesh* NewSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(&AssetManager);
+    if (ImportFromFileInternal(InFilePath, nullptr, NewSkeletalMesh))
     {
-        UAssetManager& AssetManager = UAssetManager::Get();
         FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
         Info.AssetName = FName(FilePath.filename().wstring());
         Info.AssetType = EAssetType::SkeletalMesh;
         Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
-        FEngineLoop::ResourceManager.AddSkeletalMesh(FName(FilePath.filename().wstring()), SharedSkeletalMesh);
-        OutSkeletalMesh = SharedSkeletalMesh.get();
+        FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(FilePath.filename().wstring()), NewSkeletalMesh);
+        OutSkeletalMesh = NewSkeletalMesh;
         return true;
     }
     return false;
