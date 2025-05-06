@@ -87,6 +87,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& O
         OutStaticMesh = NewStaticMesh;
         return true;
     }
+    GUObjectArray.MarkRemoveObject(NewStaticMesh);
     return false;
 }
 
@@ -94,7 +95,6 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
 {
     const fs::path FilePath = InFilePath.ToWideString();
 
-    // std::shared_ptr<USkeletalMesh> SharedSkeletalMesh = std::make_shared<USkeletalMesh>();
     UAssetManager& AssetManager = UAssetManager::Get();
     USkeletalMesh* NewSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(&AssetManager);
     if (ImportFromFileInternal(InFilePath, nullptr, NewSkeletalMesh))
@@ -109,6 +109,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
         OutSkeletalMesh = NewSkeletalMesh;
         return true;
     }
+    GUObjectArray.MarkRemoveObject(NewSkeletalMesh);
     return false;
 }
 
