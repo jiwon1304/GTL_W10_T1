@@ -9,6 +9,8 @@
 #include "Math/Rotator.h"
 #include "UObject/Casts.h"
 
+class USkeletalMeshComponent;
+class USkinnedMeshComponent;
 class USpringArmComponent;
 class UShapeComponent;
 class UAmbientLightComponent;
@@ -80,7 +82,11 @@ private:
 
     void RenderForShapeComponent(UShapeComponent* ShapeComponent) const;
     void RenderForSpringArmComponent(USpringArmComponent* SpringArmComponent) const;
-    
+
+    /* Skeletal Mesh Settings */
+    void RenderForSkinnedMeshComponent(USkinnedMeshComponent* SkinnedMeshComponent) const;
+    void RenderForSkeletalMeshComponent(USkeletalMeshComponent* SkeletalMeshComponent) const;
+
     template<typename T>
         requires std::derived_from<T, UActorComponent>
     T* GetTargetComponent(AActor* SelectedActor, USceneComponent* SelectedComponent);

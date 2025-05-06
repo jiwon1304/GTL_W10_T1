@@ -23,7 +23,10 @@
 #include "Engine/Engine.h"
 #include "Components/HeightFogComponent.h"
 #include "Components/ProjectileMovementComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/Mesh/SkeletalMesh.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
@@ -78,7 +81,7 @@ void PropertyEditorPanel::Render()
         TargetComponent = SelectedComponent;
     }
     else if (SelectedActor != nullptr)
-    {        
+    {
         TargetComponent = SelectedActor->GetRootComponent();
     }
 
@@ -92,36 +95,53 @@ void PropertyEditorPanel::Render()
     {
         RenderForActor(SelectedActor, TargetComponent);
     }
-    
+
     if (UAmbientLightComponent* LightComponent = GetTargetComponent<UAmbientLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForAmbientLightComponent(LightComponent);
     }
+
     if (UDirectionalLightComponent* LightComponent = GetTargetComponent<UDirectionalLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForDirectionalLightComponent(LightComponent);
     }
+
     if (UPointLightComponent* LightComponent = GetTargetComponent<UPointLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForPointLightComponent(LightComponent);
     }
+
     if (USpotLightComponent* LightComponent = GetTargetComponent<USpotLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForSpotLightComponent(LightComponent);
     }
+
     if (UProjectileMovementComponent* ProjectileComp = GetTargetComponent<UProjectileMovementComponent>(SelectedActor, SelectedComponent))
     {
         RenderForProjectileMovementComponent(ProjectileComp);
     }
+
     if (UTextComponent* TextComp = GetTargetComponent<UTextComponent>(SelectedActor, SelectedComponent))
     {
         RenderForTextComponent(TextComp);
     }
+
     if (UStaticMeshComponent* StaticMeshComponent = GetTargetComponent<UStaticMeshComponent>(SelectedActor, SelectedComponent))
     {
         RenderForStaticMesh(StaticMeshComponent);
         RenderForMaterial(StaticMeshComponent);
     }
+
+    if (USkinnedMeshComponent* SkinnedMeshComponent = GetTargetComponent<USkinnedMeshComponent>(SelectedActor, SelectedComponent))
+    {
+        RenderForSkinnedMeshComponent(SkinnedMeshComponent);
+    }
+
+    if (USkeletalMeshComponent* SkeletalMeshComponent = GetTargetComponent<USkeletalMeshComponent>(SelectedActor, SelectedComponent))
+    {
+        RenderForSkinnedMeshComponent(SkeletalMeshComponent);
+    }
+
     if (UHeightFogComponent* FogComponent = GetTargetComponent<UHeightFogComponent>(SelectedActor, SelectedComponent))
     {
         RenderForExponentialHeightFogComponent(FogComponent);
@@ -131,7 +151,7 @@ void PropertyEditorPanel::Render()
     {
         RenderForCameraComponent(CameraComponent);
     }
-  
+
     if (UShapeComponent* ShapeComponent = GetTargetComponent<UShapeComponent>(SelectedActor, SelectedComponent))
     {
         RenderForShapeComponent(ShapeComponent);
@@ -925,6 +945,45 @@ void PropertyEditorPanel::RenderForSpringArmComponent(USpringArmComponent* Sprin
 
         ImGui::TreePop();
     }
+}
+
+void PropertyEditorPanel::RenderForSkinnedMeshComponent(USkinnedMeshComponent* SkinnedMeshComponent) const
+{
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("Skeletal Mesh", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+        ImGui::Text("SkeletalMesh");
+        ImGui::SameLine();
+
+        FString PreviewName = FString("None");
+        if (USkeletalMesh* SkeletalMesh = SkinnedMeshComponent->GetSkeletalMesh())
+        {
+            PreviewName = SkeletalMesh->AssetName.ToString();
+        }
+        
+        if (ImGui::BeginCombo("##SkeletalMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        {
+            const TMap<FName, FAssetInfo>& Assets = UAssetManager::Get().GetAssetRegistry();
+            for (const auto& Asset : Assets)
+            {
+                if (ImGui::Selectable(*Asset.Value.AssetName.ToString(), false))
+                {
+                    FString MeshName = Asset.Value.GetFullPath();
+                    if (USkeletalMesh* SkeletalMesh = FEngineLoop::ResourceManager.GetSkeletalMesh(Asset.Value.GetFullPath()))
+                    {
+                        SkinnedMeshComponent->SetSkeletalMesh(SkeletalMesh);
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TreePop();
+    }
+    ImGui::PopStyleColor();
+}
+
+void PropertyEditorPanel::RenderForSkeletalMeshComponent(USkeletalMeshComponent* SkeletalMeshComponent) const
+{
 }
 
 void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp)
