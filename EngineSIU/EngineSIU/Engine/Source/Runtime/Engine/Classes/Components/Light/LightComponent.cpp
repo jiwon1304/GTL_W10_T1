@@ -1,4 +1,5 @@
 #include "LightComponent.h"
+#include "Math/JungleCollision.h"
 #include "UObject/Casts.h"
 
 ULightComponentBase::ULightComponentBase()
@@ -56,7 +57,9 @@ void ULightComponentBase::TickComponent(float DeltaTime)
 
 int ULightComponentBase::CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const
 {
-    return AABB.Intersect(InRayOrigin, InRayDirection, OutHitDistance);
+    // model space기준 ray
+    bool res = JungleCollision::RayIntersectsSphere({ InRayOrigin, InRayDirection }, { FVector(0,0,0),2}, &OutHitDistance);
+    return res;
 }
 
 void ULightComponentBase::UpdateViewMatrix()

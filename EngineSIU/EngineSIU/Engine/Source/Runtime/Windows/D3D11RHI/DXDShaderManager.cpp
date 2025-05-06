@@ -398,7 +398,10 @@ HRESULT FDXDShaderManager::AddPixelShader(const std::wstring& Key, const std::ws
     hr = D3DCompileFromFile(FileName.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, EntryPoint.c_str(), "ps_5_0", shaderFlags, 0, &PsBlob, &ErrorBlob);
     if (FAILED(hr))
     {
-        std::string error = (char*)ErrorBlob->GetBufferPointer();
+        if (ErrorBlob) {
+            OutputDebugStringA((char*)ErrorBlob->GetBufferPointer());
+            ErrorBlob->Release();
+        }
         return hr;
     }
 

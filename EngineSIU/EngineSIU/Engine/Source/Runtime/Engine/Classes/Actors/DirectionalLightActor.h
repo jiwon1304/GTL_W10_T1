@@ -14,8 +14,5 @@ public:
 protected:
     UPROPERTY
     (UDirectionalLightComponent*, DirectionalLightComponent, = nullptr);
-
-    UPROPERTY
-    (UBillboardComponent*, BillboardComponent, = nullptr);
 };
 

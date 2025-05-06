@@ -23,14 +23,14 @@ void AItemActor::PostSpawnInitialize()
     SphereComponent = AddComponent<USphereComponent>(FName("SphereComponent_0"));
     SetRootComponent(SphereComponent);
 
-    MeshComponent = AddComponent<USkinnedMeshComponent>(FName("MeshComponent_0"));
-    FFbxLoader::GetFbxObject("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
-    auto mesh = FFbxLoader::GetFbxObject("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
-    MeshComponent->SetSkinnedMesh(mesh);
+    //MeshComponent = AddComponent<USkinnedMeshComponent>(FName("MeshComponent_0"));
+    //FFbxLoader::GetFbxObject("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
+    //auto mesh = FFbxLoader::GetFbxObject("Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx");
+    //MeshComponent->SetSkinnedMesh(mesh);
     // MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
     //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/hand/girl.fbx"));
     //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/suzanne.fbx"));
-    MeshComponent->SetupAttachment(RootComponent);
+    //MeshComponent->SetupAttachment(RootComponent);
 }
 
 void AItemActor::BeginPlay()

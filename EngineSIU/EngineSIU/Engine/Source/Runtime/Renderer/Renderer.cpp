@@ -478,7 +478,7 @@ void FRenderer::RenderEditorOverlay(const std::shared_ptr<FEditorViewportClient>
     {
         QUICK_SCOPE_CYCLE_COUNTER(LinePass_CPU)
         QUICK_GPU_SCOPE_CYCLE_COUNTER(LinePass_GPU, *GPUTimingManager)
-        LineRenderPass->Render(Viewport); // 기존 뎁스를 그대로 사용하지만 뎁스를 클리어하지는 않음
+        //LineRenderPass->Render(Viewport); // 기존 뎁스를 그대로 사용하지만 뎁스를 클리어하지는 않음
     }
     {
         QUICK_SCOPE_CYCLE_COUNTER(GizmoPass_CPU)

@@ -2,17 +2,17 @@
 #define MAX_NUM_BOX      100
 #define MAX_NUM_SPHERE   100
 
-struct BoxData
+struct AABBData
 {
-    row_major matrix WorldMatrix;
+    float3 Position;
+    float Padding1;
     
     float3 Extent;
     float Padding2;
 };
-
 cbuffer ConstantBufferDebugAABB : register(b11)
 {
-    BoxData DataBox[MAX_NUM_BOX];
+    AABBData DataAABB[8];
 }
 
 struct SphereData
@@ -23,52 +23,60 @@ struct SphereData
 
 cbuffer ConstantBufferDebugSphere : register(b11)
 {
-    SphereData DataSphere[MAX_NUM_SPHERE];
+    SphereData DataSphere[8];
 }
 
 struct ConeData
 {
-    float3 ApexPosition;
+    float3 ApexPosiiton;
     float Radius;
-
     float3 Direction;
     float Angle;
+    float4 Color;
 };
 
 cbuffer ConstantBufferDebugCone : register(b11)
 {
-    ConeData DataCone[100];
+    ConeData DataCone[16];
 }
 
 cbuffer ConstantBufferDebugGrid : register(b11)
 {
-    row_major matrix InverseViewProj;
-}
+    float3 GridOrigin; // Grid의 중심
+    float GridSpacing;
+    int GridCount; // 총 grid 라인 수
+    float GridColor;
+    float GridAlpha;
+    float GridPadding;
+};
 
-cbuffer ConstantBufferDebugIcon : register(b11)
+struct IconData
 {
     float3 IconPosition;
     float IconScale;
-}
-
-struct ArrowData
-{
-    float3 Position;
-    float  Scale;
-    float3 Direction;
-    float  ScaleZ;
+    float4 IconColor;
 };
+cbuffer ConstantBufferDebugIcon : register(b11)
+{
+    IconData IconDatas[16];
+}
 
 cbuffer ConstantBufferDebugArrow : register(b11)
 {
-    ArrowData DataArrow[100];
+    float3 ArrowPosition;
+    float ArrowScaleXYZ;
+    float3 ArrowDirection;
+    float ArrowScaleZ;
+    float4 ArrowColor;
 }
 
 struct CapsuleData
 {
-    row_major matrix WorldMatrix;
-    float HalfHeight;
+    float3 PointA;
     float Radius;
+    float3 PointB;
+    float pad;
+    float4 Color;
 };
 
 cbuffer ConstantBufferDebugCapsule : register(b11)

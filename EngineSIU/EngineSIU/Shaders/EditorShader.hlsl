@@ -70,24 +70,40 @@ const static float4 AxisColor[3] =
     float4(0, 0, 1, 1)
 };
 
+struct PS_INPUT_AXIS
+{
+    float4 position : SV_Position;
+    float4 worldPos : POSITION;
+    float4 color : COLOR;
+};
+
 // Draw()에서 NumVertices만큼 SV_VertexID만 다른채로 호출됨.
 // 어차피 월드에 하나이므로 Vertex를 받지않음.
-PS_INPUT axisVS(uint vertexID : SV_VertexID)
+PS_INPUT_AXIS axisVS(uint vertexID : SV_VertexID)
 {
-    PS_INPUT output;
+    PS_INPUT_AXIS output;
     
     float4 Vertex = AxisPos[vertexID];
+    output.worldPos = Vertex;
     Vertex = mul(Vertex, ViewMatrix);
     Vertex = mul(Vertex, ProjectionMatrix);
     output.position = Vertex;
     
     output.color = AxisColor[vertexID / 2];
-    
     return output;
 }
 
-float4 axisPS(PS_INPUT input) : SV_Target
+float4 axisPS(PS_INPUT_AXIS input) : SV_Target
 {
+    float Dist = length(input.worldPos.xyz - ViewWorldLocation);
+
+    float MaxDist = 400 * 1.2f;
+    float MinDist = MaxDist * 0.3f;
+
+    // Fade out grid
+    float Fade = saturate(1.f - (Dist - MinDist) / (MaxDist - MinDist));
+    input.color.a *= Fade * Fade * Fade;
+    
     return input.color;
 }
 
@@ -98,14 +114,15 @@ struct VS_INPUT_POS_ONLY
     float4 position : POSITION0;
 };
 
-PS_INPUT BoxVS(VS_INPUT_POS_ONLY input, uint instanceID : SV_InstanceID)
+PS_INPUT aabbVS(VS_INPUT_POS_ONLY input, uint instanceID : SV_InstanceID)
 {
     PS_INPUT output;
     
-    float3 Scale = DataBox[instanceID].Extent;
+    float3 pos = DataAABB[instanceID].Position;
+    float3 scale = DataAABB[instanceID].Extent;
     //scale = float3(1, 1, 1);
     
-    float4 localPos = mul(float4(input.position.xyz * Scale, 1.f), DataBox[instanceID].WorldMatrix);
+    float4 localPos = float4(input.position.xyz * scale + pos, 1.f);
         
     localPos = mul(localPos, ViewMatrix);
     localPos = mul(localPos, ProjectionMatrix);
@@ -116,44 +133,39 @@ PS_INPUT BoxVS(VS_INPUT_POS_ONLY input, uint instanceID : SV_InstanceID)
     return output;
 }
 
-float4 BoxPS(PS_INPUT input) : SV_Target
+float4 aabbPS(PS_INPUT input) : SV_Target
 {
-    return float4(1.0f, 1.0f, 0.0f, 1.0f); // 노란색 Box Collider
+    return float4(1.0f, 1.0f, 0.0f, 1.0f); // 노란색 AABB
 }
 
 /////////////////////////////////////////////
 // Sphere
-PS_INPUT SphereVS(VS_INPUT_POS_ONLY input, uint instanceID : SV_InstanceID)
+PS_INPUT sphereVS(VS_INPUT_POS_ONLY input, uint instanceID : SV_InstanceID)
 {
     PS_INPUT output;
     
     float3 pos = DataSphere[instanceID].Position;
     float scale = DataSphere[instanceID].Radius;
+    //scale = float3(1, 1, 1);
     
     float4 localPos = float4(input.position.xyz * scale + pos, 1.f);
         
     localPos = mul(localPos, ViewMatrix);
     localPos = mul(localPos, ProjectionMatrix);
     output.position = localPos;
-
-    output.color = float4(100.f / 255.f, 220.f / 255.f, 255.f / 255.f, 1.0f);
+    
+    // color는 지정안해줌
     
     return output;
 }
 
-float4 SpherePS(PS_INPUT input) : SV_Target
+float4 spherePS(PS_INPUT input) : SV_Target
 {
-    return input.color;
+    return float4(0.777f, 1.0f, 1.0f, 1.0f); // 하늘색
 }
 
 /////////////////////////////////////////////
 // Cone
-struct ConeVSInput
-{
-    uint vertexID : SV_VertexID;
-    uint instanceID : SV_InstanceID;
-};
-
 float3x3 CreateRotationMatrixFromX(float3 targetDir)
 {
     float3 from = float3(1, 0, 0); // 기준 방향 X축
@@ -179,8 +191,8 @@ float3x3 CreateRotationMatrixFromX(float3 targetDir)
         float x = axis.x, y = axis.y, z = axis.z;
         float3x3 rot180 = float3x3(
             -1 + 2 * x * x, 2 * x * y, 2 * x * z,
-            2 * x * y, -1 + 2 * y * y, 2 * y * z,
-            2 * x * z, 2 * y * z, -1 + 2 * z * z
+                2 * x * y, -1 + 2 * y * y, 2 * y * z,
+                2 * x * z, 2 * y * z, -1 + 2 * z * z
         );
         return rot180;
     }
@@ -189,8 +201,8 @@ float3x3 CreateRotationMatrixFromX(float3 targetDir)
     float3 axis = normalize(cross(to, from)); // 왼손 좌표계 보정
     float s = sqrt(1.0f - cosTheta * cosTheta); // sin(theta)
     float3x3 K = float3x3(
-        0, -axis.z, axis.y,
-        axis.z, 0, -axis.x,
+         0, -axis.z, axis.y,
+         axis.z, 0, -axis.x,
         -axis.y, axis.x, 0
     );
 
@@ -198,332 +210,166 @@ float3x3 CreateRotationMatrixFromX(float3 targetDir)
     float3x3 R = I + s * K + (1 - cosTheta) * mul(K, K);
     return R;
 }
-
-PS_INPUT ConeVS(ConeVSInput Input)
+PS_INPUT coneVS(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
+    const int NUM_SEGMENTS = 16;
     PS_INPUT output;
-
-    int NumConeSegments = 24;
-    int NumSphereSegments = 10;
-    const float PI = 3.1415926535897932f;
-
-    float Angle = DataCone[Input.instanceID].Angle;
+    
+    int SegmentIndex;
+    // cone의 옆면
+    float Angle = DataCone[instanceID].Angle;
     float TangentAngle = tan(Angle);
     float SinAngle = sin(Angle);
     float CosAngle = cos(Angle);
-    float Radius = DataCone[Input.instanceID].Radius;
-
-    int NumSide = 2 * NumConeSegments;
-    int NumBase = 2 * NumConeSegments;
-    int NumXZ = 2 * NumSphereSegments;
-
-    float3 LocalPos3;
-
-    int SegmentIndex;
-
-    // ConeSide
-    if (Input.vertexID < NumSide)
+    float radius = DataCone[instanceID].Radius;
+    
+    float3 localPos3;
+    // 원뿔의 빗면
+    if (vertexID == 0)
     {
-        int LineIndex = Input.vertexID / 2;
-        // ConeApex
-        if (Input.vertexID % 2 == 0)
-        {
-            LocalPos3 = float3(0, 0, 0);
-        }
-        // ConeBase
-        else
-        {
-            float ConeBaseRadius = Radius * SinAngle;
-            float ConeHeight = Radius * CosAngle;
-            SegmentIndex = (Input.vertexID / 2);  // Start After Apex
-            // Angle = Index * 2PI / NumSegments
-            float SegmentAngle = SegmentIndex * (2.0f * PI / (float)NumConeSegments);
-            LocalPos3 = float3(ConeHeight, ConeBaseRadius, ConeBaseRadius);
-            LocalPos3 = LocalPos3 * float3(1.f, cos(SegmentAngle), sin(SegmentAngle));
-        }
+        localPos3 = float3(0, 0, 0);
     }
-    // ConeBase
-    else if (Input.vertexID < NumSide + NumBase)
+    else if (vertexID < NUM_SEGMENTS + 1)
     {
-        float ConeBaseRadius = Radius * SinAngle;
-        float ConeHeight = Radius * CosAngle;
-        if (Input.vertexID % 2 == 0)
-        {
-            SegmentIndex = ((Input.vertexID - (2 * NumConeSegments)) / 2);
-        }
-        else
-        {
-            SegmentIndex = ((Input.vertexID - (2 * NumConeSegments) + 1) / 2);
-        }
-        float SegmentAngle = SegmentIndex / (float)NumConeSegments * 2.0f * PI;
-        LocalPos3 = float3(ConeHeight, ConeBaseRadius, ConeBaseRadius);
-        LocalPos3 = LocalPos3 * float3(1.f, cos(SegmentAngle), sin(SegmentAngle));
+        float ConeBaseRadius = radius * SinAngle;
+        float ConeHeight = radius * CosAngle;
+        SegmentIndex = (vertexID - 1);
+        float SegmentAngle = SegmentIndex / (float) NUM_SEGMENTS * 2.0f * 3.1415926535897932f;
+        localPos3 = float3(ConeHeight, ConeBaseRadius, ConeBaseRadius);
+        localPos3 = localPos3 * float3(1.f, cos(SegmentAngle), sin(SegmentAngle));
     }
-    // XZ Plane Sphere
-    else if (Input.vertexID < NumSide + NumBase + NumXZ)
+    // xz plane의 구
+    else if (vertexID < NUM_SEGMENTS + 1 + NUM_SEGMENTS + 1)
     {
-        if (Input.vertexID % 2 == 0)
-        {
-            SegmentIndex = ((Input.vertexID - (4 * NumConeSegments)) / 2);
-        }
-        else
-        {
-            SegmentIndex = ((Input.vertexID - (4 * NumConeSegments) + 1) / 2);
-        }
-        float SegmentAngle = SegmentIndex / (float)(NumSphereSegments) * (2 * Angle);
+        SegmentIndex = (vertexID - (NUM_SEGMENTS + 1));
+        float SegmentAngle = SegmentIndex / (float) (NUM_SEGMENTS) * (2 * Angle);
         float angleOffset = -Angle;
-        LocalPos3 = float3(cos(angleOffset + SegmentAngle), 0, sin(angleOffset + SegmentAngle));
-        LocalPos3 = LocalPos3 * float3(Radius, Radius, Radius) * 1;
+        localPos3 = float3(cos(angleOffset + SegmentAngle), 0, sin(angleOffset + SegmentAngle));
+        localPos3 = localPos3 * float3(radius, radius, radius) * 1;
     }
-    // YZ Plane Sphere
-    else// if (vertexID < NumSphereSegments + 1 + 2 * (NumConeSegments + 1))
+    // yz plane의 구
+    else if (vertexID < NUM_SEGMENTS + 1 + 2 * (NUM_SEGMENTS + 1))
     {
-        if (Input.vertexID % 2 == 0)
-        {
-            SegmentIndex = ((Input.vertexID - (4 * NumConeSegments + 2 * NumSphereSegments)) / 2);
-        }
-        else
-        {
-            SegmentIndex = ((Input.vertexID - (4 * NumConeSegments + 2 * NumSphereSegments) + 1) / 2);
-        }
-        float SegmentAngle = SegmentIndex / (float)(NumSphereSegments) * (2 * Angle);
+        SegmentIndex = (vertexID - (NUM_SEGMENTS + 1 + NUM_SEGMENTS + 1));
+        float SegmentAngle = SegmentIndex / (float) (NUM_SEGMENTS) * (2 * Angle);
         float angleOffset = -Angle;
-        LocalPos3 = float3(cos(angleOffset + SegmentAngle), sin(angleOffset + SegmentAngle), 0);
-        LocalPos3 = LocalPos3 * float3(Radius, Radius, Radius) * 1;
+        localPos3 = float3(cos(angleOffset + SegmentAngle), sin(angleOffset + SegmentAngle), 0);
+        localPos3 = localPos3 * float3(radius, radius, radius) * 1;
+    }
+    // 원점
+    else
+    {
+        localPos3 = float3(0, 0, 0);
     }
 
-    float3 pos = DataCone[Input.instanceID].ApexPosition;
-    float3x3 rot = CreateRotationMatrixFromX(DataCone[Input.instanceID].Direction);
-
-    LocalPos3 = mul(LocalPos3, rot);
-    LocalPos3 = LocalPos3 + pos;
-
-    float4 localPos = float4(LocalPos3, 1.f);
-
+    float3 pos = DataCone[instanceID].ApexPosiiton;
+    float3x3 rot = CreateRotationMatrixFromX(DataCone[instanceID].Direction);
+    
+    localPos3 = mul(localPos3, rot);
+    localPos3 = localPos3 + pos;
+    
+    float4 localPos = float4(localPos3, 1.f);
+        
     localPos = mul(localPos, ViewMatrix);
     localPos = mul(localPos, ProjectionMatrix);
     output.position = localPos;
-
-    if (Input.instanceID % 2 == 0)
-    {
-        //Inner
-        output.color = float4(40.f / 255.f, 100.f / 255.f, 255.f / 255.f, 1.0f);
-    }
-    else
-    {
-        // Outer
-        output.color = float4(100.f / 255.f, 220.f / 255.f, 255.f / 255.f, 1.0f);
-    }
-
+    output.color = DataCone[instanceID].Color;
     return output;
 }
 
-float4 ConePS(PS_INPUT input) : SV_Target
+float4 conePS(PS_INPUT input) : SV_Target
 {
     return input.color;
 }
-
 /////////////////////////////////////////////
 // Grid
+
+struct VS_INPUT_GRID
+{
+    uint vertexID : SV_VertexID; // 0 또는 1: 각 라인의 시작과 끝
+    uint instanceID : SV_InstanceID; // 인스턴스 ID로 grid, axis, bounding box를 구분
+};
+
 struct PS_INPUT_GRID
 {
     float4 Position : SV_Position;
-    float4 NearPoint : COLOR0;
-    float4 FarPoint : COLOR1;
-    float3 WorldPos : WORLD_POSITION;
-    float2 Deriv : TEXCOORD1;
-    float ViewMode : TEXCOORD2;
+    float4 WorldPosition : POSITION;
+    float4 Color : COLOR;
 };
 
-static const float3 XYQuadPos[12] =
+/////////////////////////////////////////////////////////////////////////
+// Grid 위치 계산 함수
+/////////////////////////////////////////////////////////////////////////
+float3 ComputeGridPosition(uint instanceID, uint vertexID)
 {
-    float3(-1, -1, 0), float3(-1, 1, 0), float3(1, -1, 0), // 좌하단, 좌상단, 우하단
-    float3(-1, 1, 0), float3(1, 1, 0), float3(1, -1, 0), // 좌상단, 우상단, 우하단 - 오른손 좌표계
-    float3(1, -1, 0), float3(1, 1, 0), float3(-1, 1, 0),
-    float3(1, -1, 0), float3(-1, 1, 0), float3(-1, -1, 0),
-};
-
-// YZ 평면: X = 0, (Y,Z) 사용
-static const float3 YZQuadPos[12] =
-{
-    float3(0, -1, -1), float3(0, -1, 1), float3(0, 1, -1), // 좌하단, 좌상단, 우하단
-    float3(0, -1, 1), float3(0, 1, 1), float3(0, 1, -1), // 좌상단, 우상단, 우하단 - 오른손 좌표계
-    float3(0, 1, -1), float3(0, 1, 1), float3(0, -1, 1),
-    float3(0, 1, -1), float3(0, -1, 1), float3(0, -1, -1),
-};
-
-static const float3 XZQuadPos[12] =
-{
-    float3(-1, 0, -1), float3(-1, 0, 1), float3(1, 0, -1), // 좌하단, 좌상단, 우하단
-    float3(-1, 0, 1), float3(1, 0, 1), float3(1, 0, -1), // 좌상단, 우상단, 우하단 - 오른손 좌표계
-    float3(1, 0, -1), float3(1, 0, 1), float3(-1, 0, 1),
-    float3(1, 0, -1), float3(-1, 0, 1), float3(-1, 0, -1),
-};
-
-/*
-PS_INPUT_GRID gridVS(uint vertexID : SV_VertexID)
-{
-    // 상수버퍼의 CaemerLookAt : (screenWidth, screenHeight, ViewMode)
+    int halfCount = GridCount / 2;
+    float centerOffset = halfCount * 0.5; // grid 중심이 원점에 오도록
     
+    float3 startPos;
+    float3 endPos;
+    
+    if (instanceID < halfCount)
+    {
+        // 수직선: X 좌표 변화, Y는 -centerOffset ~ +centerOffset
+        float x = GridOrigin.x + (instanceID - centerOffset) * GridSpacing;
+        if (abs(x) < 0.001) // axis와 겹치는 선
+        {
+            startPos = float3(0, 0, 0);
+            endPos = float3(0, (GridOrigin.y - centerOffset * GridSpacing), 0);
+        }
+        else
+        {
+            startPos = float3(x, GridOrigin.y - centerOffset * GridSpacing, GridOrigin.z);
+            endPos = float3(x, GridOrigin.y + centerOffset * GridSpacing, GridOrigin.z);
+        }
+    }
+    else
+    {
+        // 수평선: Y 좌표 변화, X는 -centerOffset ~ +centerOffset
+        int idx = instanceID - halfCount;
+        float y = GridOrigin.y + (idx - centerOffset) * GridSpacing;
+        if (abs(y) < 0.001)
+        {
+            startPos = float3(0, 0, 0);
+            endPos = float3(-(GridOrigin.x + centerOffset * GridSpacing), 0, 0);
+        }
+        else
+        {
+            startPos = float3(GridOrigin.x - centerOffset * GridSpacing, y, GridOrigin.z);
+            endPos = float3(GridOrigin.x + centerOffset * GridSpacing, y, GridOrigin.z);
+        }
+
+    }
+    return (vertexID == 0) ? startPos : endPos;
+}
+
+PS_INPUT_GRID gridVS(VS_INPUT_GRID input)
+{
     PS_INPUT_GRID output;
-    float viewMode = CameraLookAt.z;
-    float gridScale = 1000000.0f; // 최종 그리드 크기
-    float3 pos;
-    if (viewMode <= 2.0)
-    {
-        pos = XYQuadPos[vertexID];
-    }
-    else if (viewMode <= 4.0)
-    {
-        pos = XZQuadPos[vertexID];
-    }
-    else
-    {
-        pos = YZQuadPos[vertexID];
-    }
-    float3 vPos3 = pos * gridScale; // 정점 정의 거꾸로 되있었음..
+    float3 pos = ComputeGridPosition(input.instanceID, input.vertexID);
     
-    // 뷰모드에 따라 다른 카메라 오프셋 적용
-    float3 offset = float3(0.0, 0.0, 0.0);
-    if (viewMode <= 2.0)
-    {
-        offset = float3(ViewWorldLocation.x, ViewWorldLocation.y, 0.0);
-    }
-    else if (viewMode <= 4.0)
-    {
-        offset = float3(0.0, ViewWorldLocation.x, ViewWorldLocation.z);
-    }
-    else
-    {
-        offset = float3(ViewWorldLocation.y, 0.0, ViewWorldLocation.z);
-    }
-    vPos3 += offset;
-    
-    float4 vPos4 = float4(vPos3, 1.0f);
-    vPos4 = mul(vPos4, ViewMatrix);
-    vPos4 = mul(vPos4, ProjectionMatrix);
-    output.Position = vPos4;
-    output.WorldPos = vPos3;
-    output.Deriv = 2.0 / CameraLookAt.xy;
-    output.ViewMode = viewMode;
+    output.WorldPosition = float4(pos, 1.f);
+    output.Position = mul(output.WorldPosition, ViewMatrix);
+    output.Position = mul(output.Position, ProjectionMatrix);
+    output.Color = float4(GridColor.xxx, GridAlpha);
     
     return output;
 }
-*/
 
-float log10f(float x)
+float4 gridPS(PS_INPUT_GRID input) : SV_Target
 {
-    return log(x) / log(10.0);
+    float Dist = length(input.WorldPosition.xyz - ViewWorldLocation);
+
+    float MaxDist = 400 * 1.2f;
+    float MinDist = MaxDist * 0.3f;
+
+    // Fade out grid
+    float Fade = saturate(1.f - (Dist - MinDist) / (MaxDist - MinDist));
+    input.Color.a *= Fade * Fade * Fade;
+
+    return input.Color;
 }
 
-float max2(float2 v)
-{
-    return max(v.x, v.y);
-}
-// x, y 모두 음수 일 때에 패턴을 아예 출력 안하는 문제 발생
-// HLSL의 fmod는 음수 입력에 대해 음수의 나머지를 반환하므로, saturate를 거치면 0에 수렴하는 문제가 있음
-float modWrap(float x, float y)
-{
-    float m = fmod(x, y);
-    return (m < 0.0) ? m + y : m;
-}
-
-float2 modWrap2(float2 xy, float y)
-{
-    return float2(modWrap(xy.x, y), modWrap(xy.y, y));
-}
-
-// 뷰 모드에 따른 2D 평면 좌표 반환
-float2 GetPlaneCoords(float3 worldPos, float viewMode)
-{
-    if (viewMode <= 2.0)
-        return worldPos.xy; // 뷰 모드 0~2 : XY 평면
-    else if (viewMode <= 4.0)
-        return worldPos.xz; // 뷰 모드 3~4 : XZ 평면
-    else
-        return worldPos.yz; // 뷰 모드 5 이상 : YZ 평면
-}
-
-// 주어진 평면 좌표와, 셀 크기, 미분값(dudv)에 해당하는 LOD 단계의 알파값 계산
-float ComputeLODAlpha(float3 worldPos, float cellSize, float2 dudv, float viewMode)
-{
-    float2 planeCoords = GetPlaneCoords(worldPos, viewMode);
-    float2 modResult = modWrap2(planeCoords, cellSize) / dudv;
-    return max2(1.0 - abs(saturate(modResult) * 2.0 - 1.0));
-}
-
-struct PS_OUTPUT
-{
-    float4 Color : SV_Target;
-    float Depth : SV_Depth;
-};
-
-/*
-PS_OUTPUT gridPS(PS_INPUT_GRID input)
-{
-    PS_OUTPUT output;
-    
-    // 기본 상수 값들
-    const float gGridSize = 5.0;
-    const float gGridMinPixelsBetweenCells = 0.5;
-    const float gGridCellSize = 1.0;
-    const float4 gGridColorThick = float4(0.3, 0.3, 0.3, 1.0);
-    const float4 gGridColorThin = float4(0.2, 0.2, 0.2, 1.0);
-    
-    // 뷰모드에 따라 사용할 평면 좌표
-    float2 planeCoords = GetPlaneCoords(input.WorldPos, input.ViewMode);
-    float2 dvx = float2(ddx(planeCoords.x), ddy(planeCoords.x));
-    float2 dvy = float2(ddx(planeCoords.y), ddy(planeCoords.y));
-    
-    // 최소값 클램핑 - 한 픽셀에서의 변화량이 미미할 때 떨림 현상 방지용 (효과는 없음)
-    float epsilon = 1e-3;
-    float lx = max(length(dvx), epsilon);
-    float ly = max(length(dvy), epsilon);
-    float2 dudv = float2(lx, ly);
-    float l = length(dudv);
-
-    // LOD 계산 (log10 기반)
-    float LOD = max(0.0, log10f(l * gGridMinPixelsBetweenCells / gGridCellSize) + 1.0);
-
-    float GridCellSizeLod0 = gGridCellSize * pow(10.0, floor(LOD));
-    float GridCellSizeLod1 = GridCellSizeLod0 * 10.0;
-    float GridCellSizeLod2 = GridCellSizeLod1 * 10.0;
-
-    dudv *= 4.0;
-
-    // 뷰모드에 따라 모듈러 연산에 전달할 2D 성분 결정
-    float Lod0a = ComputeLODAlpha(input.WorldPos, GridCellSizeLod0, dudv, input.ViewMode);
-    float Lod1a = ComputeLODAlpha(input.WorldPos, GridCellSizeLod1, dudv, input.ViewMode);
-    float Lod2a = ComputeLODAlpha(input.WorldPos, GridCellSizeLod2, dudv, input.ViewMode);
-    
-    // LOD 페이드 (LOD의 소수 부분)
-    float LODFade = frac(LOD);
-    float4 Color;
-    if (Lod2a > 0.0)
-    {
-        Color = gGridColorThick;
-        Color.a *= Lod2a;
-    }
-    else if (Lod1a > 0.0)
-    {
-        Color = lerp(gGridColorThick, gGridColorThin, LODFade);
-        Color.a *= Lod1a;
-    }
-    else
-    {
-        Color = gGridColorThin;
-        Color.a *= (Lod0a * LODFade);
-    }
-
-    // 카메라와의 거리 기반 페이드아웃 ( TOFIX: 여기선 XY 평면을 기준으로함)
-    float OpacityFalloff = (1.0 - saturate(length(input.WorldPos.xy - ViewWorldLocation.xy) / gGridSize));
-    Color.a *= OpacityFalloff;
-
-    output.Color = Color;
-    output.Depth = 0.9999999; // 월드 그리드는 강제로 먼 깊이값 부여 (Forced to be Occluded ALL THE TIME)
-    return output;
-}
-*/
 
 /////////////////////////////////////////////
 // Icon
@@ -531,6 +377,7 @@ struct PS_INPUT_ICON
 {
     float4 Position : SV_Position;
     float2 TexCoord : TEXCOORD;
+    float4 Color : COLOR;
 };
 
 Texture2D gTexture : register(t0);
@@ -549,10 +396,12 @@ const static float2 QuadTexCoord[6] =
 };
 
 
-PS_INPUT_ICON IconVS(uint vertexID : SV_VertexID)
+PS_INPUT_ICON iconVS(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
     PS_INPUT_ICON output;
 
+    float3 IconPosition = IconDatas[instanceID].IconPosition;
+    float IconScale = IconDatas[instanceID].IconScale;
     // 카메라를 향하는 billboard 좌표계 생성
     float3 forward = normalize(ViewWorldLocation - IconPosition);
     float3 up = float3(0, 0, 1);
@@ -567,33 +416,36 @@ PS_INPUT_ICON IconVS(uint vertexID : SV_VertexID)
     float4 viewPos = mul(float4(worldPos, 1.0), ViewMatrix);
     output.Position = mul(viewPos, ProjectionMatrix);
 
-    output.TexCoord =
-    QuadTexCoord[vertexID];
-    return
-    output;
+    output.TexCoord = QuadTexCoord[vertexID];
+    output.Color = IconDatas[instanceID].IconColor;
+    return output;
 }
 
+
 // 픽셀 셰이더
-float4 IconPS(PS_INPUT_ICON input) : SV_Target
+float4 iconPS(PS_INPUT_ICON input) : SV_Target
 {
-    float4 col = gTexture.Sample(gSampler, input.TexCoord);
+    float4 iconTexture = gTexture.Sample(gSampler, input.TexCoord);
+    float4 color = input.Color / 2;
+    color.w = 1.f;
+    
+    float4 OutColor = iconTexture * color;
     float threshold = 0.01; // 필요한 경우 임계값을 조정
-    if (col.a < threshold)
+    if (OutColor.a < threshold)
         clip(-1); // 픽셀 버리기
     
-    return col;
+    return OutColor;
 }
+
 
 /////////////////////////////////////////////
 // Arrow
-PS_INPUT ArrowVS(VS_INPUT input, uint instanceID : SV_InstanceID)
+PS_INPUT arrowVS(VS_INPUT input)
 {
     PS_INPUT output;
 
-    ArrowData instanceData = DataArrow[instanceID];
-
     // 정규화된 방향
-    float3 forward = normalize(instanceData.Direction);
+    float3 forward = normalize(ArrowDirection);
 
     // 기본 up 벡터와 forward가 나란할 때를 방지
     float3 up = abs(forward.y) > 0.99 ? float3(0, 0, 1) : float3(0, 1, 0);
@@ -607,173 +459,130 @@ PS_INPUT ArrowVS(VS_INPUT input, uint instanceID : SV_InstanceID)
     // 회전 행렬 구성 (Row-Major 기준)
     float3x3 rotationMatrix = float3x3(right, up, forward);
 
-    input.position = input.position * instanceData.Scale;
-    input.position.z = input.position.z * instanceData.ScaleZ;
+    input.position = input.position * ArrowScaleXYZ;
+    input.position.z = input.position.z * ArrowScaleZ;
     // 로컬 → 회전 → 위치
-    float3 worldPos = mul(input.position.xyz, rotationMatrix) + instanceData.Position;
+    float3 worldPos = mul(input.position.xyz, rotationMatrix) + ArrowPosition;
 
     float4 pos = float4(worldPos, 1.0);
     pos = mul(pos, ViewMatrix);
     pos = mul(pos, ProjectionMatrix);
 
     output.position = pos;
-    output.color = float4(0.7, 0.7, 0.7, 1.0f);
+    output.color = ArrowColor;
 
     return output;
 }
 
-float4 ArrowPS(PS_INPUT input) : SV_Target
+float4 arrowPS(PS_INPUT input) : SV_Target
 {
     return input.color;
 }
 
-PS_INPUT CapsuleVS(
-    uint vertexID : SV_VertexID,
-    uint instanceID : SV_InstanceID
-)
+// --------- Input/Output 구조체 ----------
+struct VS_INPUT_CAPSULE
+{
+    uint CapsuleIndex : SV_InstanceID;
+    uint VertexID : SV_VertexID;
+};
+
+// 캡슐 메쉬 분할 수 조절 (높을수록 부드럽게)
+#define CAPSULE_RINGS 12
+#define CAPSULE_SEGMENTS 24
+
+// 캡슐을 구*2 + 원통으로 분할하여 인스턴스 드로우
+PS_INPUT capsuleVS(VS_INPUT_CAPSULE input)
 {
     PS_INPUT output;
-    //— 1) 인스턴스별 파라미터
-    float halfHeight = DataCapsule[instanceID].HalfHeight;
-    float Radius = DataCapsule[instanceID].Radius;
-    float4x4 World = DataCapsule[instanceID].WorldMatrix;
 
-    //— 2) 분할 개수
-    static const uint segments = 16;
-    static const uint stacks = 8;
-    static const float PI = 3.1415926535897932f;
+    // 캡슐 정보 로드
+    CapsuleData capsule = DataCapsule[input.CapsuleIndex];
+    float3 pa = capsule.PointA;
+    float3 pb = capsule.PointB;
+    float r = capsule.Radius;
 
-    //— 3) offset 계산
-    float centerOffset = halfHeight - Radius;
+    // 캡슐 축 방향 및 길이
+    float3 axis = normalize(pb - pa);
+    float len = length(pb - pa);
 
-    //— 4) 파트별 라인/버텍스 개수
-    uint horizTop = (stacks + 1) * segments;    // 수평 링: stacks+1 개
-    uint vertTop = stacks * segments;           // 수직 줄: stacks 개
-    uint linesTop = horizTop + vertTop;         // = segments*(2*stacks+1)
-    uint vertsTop = linesTop * 2;               // 544 (stacks=8, segments=16)
+    // 축을 기준으로 회전행렬 생성 (z축→axis)
+    float3 up = float3(0, 0, 1);
+    float3 v = cross(up, axis);
+    float s = length(v);
+    float c = dot(up, axis);
+    float3x3 rot = (s < 1e-5) ? float3x3(1, 0, 0, 0, 1, 0, 0, 0, 1) :
+        (float3x3(
+            v.x * v.x * (1 - c) + c, v.x * v.y * (1 - c) - v.z * s, v.x * v.z * (1 - c) + v.y * s,
+            v.y * v.x * (1 - c) + v.z * s, v.y * v.y * (1 - c) + c, v.y * v.z * (1 - c) - v.x * s,
+            v.z * v.x * (1 - c) - v.y * s, v.z * v.y * (1 - c) + v.x * s, v.z * v.z * (1 - c) + c
+        ));
 
-    uint linesCyl = segments * 3;               // 48
-    uint vertsCyl = linesCyl * 2;               // 96
+    // 전체 캡슐 메쉬를 [위구, 실린더(원통), 아래구]로 분할
+    uint vertsPerHemisphere = (CAPSULE_RINGS / 2 + 1) * (CAPSULE_SEGMENTS + 1);
+    uint vertsPerCylinder = (CAPSULE_RINGS / 2 - 1) * (CAPSULE_SEGMENTS + 1);
 
-    uint vertsInst = vertsTop + vertsCyl + vertsTop; // 544+96+544 = 1184
+    // 인덱스에 따라 위치 계산
+    float3 localPos = float3(0, 0, 0);
 
-    //— 5) 절차적 매핑
-    float3 localPos;
-    uint v = vertexID % vertsInst;
-    if (v < vertsTop)
+    // 위쪽 구 (z=+len/2)
+    if (input.VertexID < vertsPerHemisphere)
     {
-        // --- 상단 반구 ---
-        uint lineIdx = v / 2; // [0 .. linesTop-1]
-        bool isEnd = (v & 1) == 1;
-
-        float3 p0, p1;
-        if (lineIdx < horizTop)
-        {
-            // 1) 수평 링
-            uint stackId = lineIdx / segments; // 0..stacks
-            uint segId = lineIdx % segments;
-
-            float t = stackId / float(stacks);
-            float theta = t * (PI / 2);
-            float z0 = cos(theta), r0 = sin(theta);
-            float phi = (segId / float(segments)) * 2 * PI;
-            p0 = float3(r0 * cos(phi), r0 * sin(phi), z0);
-            // 다음 세그먼트
-            float phi1 = (((segId + 1) % segments) / float(segments)) * 2 * PI;
-            p1 = float3(r0 * cos(phi1), r0 * sin(phi1), z0);
-        }
-        else
-        {
-            // 2) 수직 줄
-            uint vertIdx = lineIdx - horizTop; // 0..vertTop-1
-            uint stackId = vertIdx / segments; // 0..stacks-1
-            uint segId = vertIdx % segments;
-
-            // 두 스택 간의 점
-            float t0 = stackId / float(stacks);
-            float t1 = (stackId + 1) / float(stacks);
-            float theta0 = t0 * (PI / 2), theta1 = t1 * (PI / 2);
-            float z0 = cos(theta0), z1 = cos(theta1);
-            float r0 = sin(theta0), r1 = sin(theta1);
-            float phi = (segId / float(segments)) * 2 * PI;
-            p0 = float3(r0 * cos(phi), r0 * sin(phi), z0);
-            p1 = float3(r1 * cos(phi), r1 * sin(phi), z1);
-        }
-
-        // 적용: 반지름 스케일 + offset
-        float3 sph0 = p0 * Radius;
-        sph0.z += centerOffset;
-        float3 sph1 = p1 * Radius;
-        sph1.z += centerOffset;
-        localPos = isEnd ? sph1 : sph0;
+        uint ring = input.VertexID / (CAPSULE_SEGMENTS + 1);
+        uint seg = input.VertexID % (CAPSULE_SEGMENTS + 1);
+        float v = ring / (float) (CAPSULE_RINGS / 2);
+        float theta = v * (3.14159265f / 2); // 0~pi/2
+        float u = seg / (float) (CAPSULE_SEGMENTS);
+        float phi = u * (2 * 3.14159265f);
+        localPos = float3(
+            r * sin(theta) * cos(phi),
+            r * sin(theta) * sin(phi),
+            r * cos(theta) + len / 2
+        );
     }
-    else if (v < vertsTop + vertsCyl)
+    // 원통
+    else if (input.VertexID < vertsPerHemisphere + vertsPerCylinder)
     {
-        // --- 실린더 (unchanged) ---
-        uint cylID = (v - vertsTop) / 2;
-        bool isEnd = ((v - vertsTop) & 1) == 1;
-        uint segId = cylID % segments;
-        float ang = (2 * PI * segId) / segments;
-        float2 circ = float2(cos(ang), sin(ang)) * Radius;
-        float z = isEnd ? -centerOffset : +centerOffset;
-        localPos = float3(circ.x, circ.y, z);
+        uint cid = input.VertexID - vertsPerHemisphere;
+        uint ring = cid / (CAPSULE_SEGMENTS + 1);
+        uint seg = cid % (CAPSULE_SEGMENTS + 1);
+        float v = ring / (float) (CAPSULE_RINGS / 2 - 1);
+        float z = len / 2 - v * len;
+        float u = seg / (float) (CAPSULE_SEGMENTS);
+        float phi = u * (2 * 3.14159265f);
+        localPos = float3(
+            r * cos(phi),
+            r * sin(phi),
+            z
+        );
     }
+    // 아래쪽 구 (z=-len/2)
     else
     {
-        // --- 하단 반구 (mirror of 상단) ---
-        uint vv = v - (vertsTop + vertsCyl);
-        uint lineIdx = vv / 2;
-        bool isEnd = (vv & 1) == 1;
-
-        float3 p0, p1;
-        if (lineIdx < horizTop)
-        {
-            // 수평 링
-            uint stackId = lineIdx / segments; // 0..stacks
-            uint segId = lineIdx % segments;
-
-            float t = stackId / float(stacks);
-            float theta = t * (PI / 2);
-            float z0 = -cos(theta), r0 = sin(theta);
-            float phi = (segId / float(segments)) * 2 * PI;
-            p0 = float3(r0 * cos(phi), r0 * sin(phi), z0);
-            float phi1 = (((segId + 1) % segments) / float(segments)) * 2 * PI;
-            p1 = float3(r0 * cos(phi1), r0 * sin(phi1), z0);
-        }
-        else
-        {
-            // 수직 줄
-            uint vertIdx = lineIdx - horizTop;
-            uint stackId = vertIdx / segments;
-            uint segId = vertIdx % segments;
-
-            float t0 = stackId / float(stacks);
-            float t1 = (stackId + 1) / float(stacks);
-            float theta0 = t0 * (PI / 2), theta1 = t1 * (PI / 2);
-            float z0 = -cos(theta0), z1 = -cos(theta1);
-            float r0 = sin(theta0), r1 = sin(theta1);
-            float phi = (segId / float(segments)) * 2 * PI;
-            p0 = float3(r0 * cos(phi), r0 * sin(phi), z0);
-            p1 = float3(r1 * cos(phi), r1 * sin(phi), z1);
-        }
-
-        float3 sph0 = p0 * Radius;
-        sph0.z -= centerOffset;
-        float3 sph1 = p1 * Radius;
-        sph1.z -= centerOffset;
-        localPos = isEnd ? sph1 : sph0;
+        uint sid = input.VertexID - (vertsPerHemisphere + vertsPerCylinder);
+        uint ring = sid / (CAPSULE_SEGMENTS + 1);
+        uint seg = sid % (CAPSULE_SEGMENTS + 1);
+        float v = ring / (float) (CAPSULE_RINGS / 2);
+        float theta = v * (3.14159265f / 2); // 0~pi/2
+        float u = seg / (float) (CAPSULE_SEGMENTS);
+        float phi = u * (2 * 3.14159265f);
+        localPos = float3(
+            r * sin(theta) * cos(phi),
+            r * sin(theta) * sin(phi),
+            -r * cos(theta) - len / 2
+        );
     }
 
-    //— 6) 월드·뷰·투영
-    float4 worldP = mul(float4(localPos, 1), World);
-    worldP = mul(worldP, ViewMatrix);
-    worldP = mul(worldP, ProjectionMatrix);
-    output.position = worldP;
+    // 축방향 회전 및 위치 이동
+    float3 worldPos = mul(rot, localPos) + (pa + pb) * 0.5;
+
+    // 뷰/프로젝션 매트릭스 적용
+    float4 viewPos = mul(ViewMatrix, float4(worldPos, 1));
+    output.position = mul(ProjectionMatrix, viewPos);
     output.color = float4(0, 1, 0, 1);
     return output;
 }
 
-float4 CapsulePS(PS_INPUT input) : SV_Target
+float4 capsulePS(PS_INPUT input) : SV_Target
 {
-    return float4(0, 1, 0, 1);
+    return input.color;
 }

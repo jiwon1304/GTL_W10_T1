@@ -240,6 +240,7 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClCompile Include="Engine\Source\Runtime\Core\HAL\PlatformMemory.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Color.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Define.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleCollision.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleMath.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\MathUtility.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Matrix.cpp" />
@@ -520,6 +521,7 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClInclude Include="Engine\Source\Runtime\Core\HAL\PlatformMemory.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\HAL\PlatformType.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Color.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\JungleCollision.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\JungleMath.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\MathFwd.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\MathSSE.h" />
