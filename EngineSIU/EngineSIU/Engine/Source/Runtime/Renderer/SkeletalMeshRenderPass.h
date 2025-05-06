@@ -26,7 +26,7 @@ public:
     // ~IRenderPass
 
 protected:
-    TArray<USkeletalMeshComponent*> StaticMeshComponents;
+    TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
