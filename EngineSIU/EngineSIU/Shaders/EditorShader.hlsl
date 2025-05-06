@@ -586,3 +586,85 @@ float4 capsulePS(PS_INPUT input) : SV_Target
 {
     return input.color;
 }
+
+const static float3 PyramidPos[5] =
+{
+    float3(1, 1, 0),
+    float3(-1, 1, 0),
+    float3(-1, -1, 0),
+    float3(1, -1, 0),
+    float3(0, 0, 1)
+};
+
+// 각 모서리를 이루는 점 두 개의 인덱스 (16개, 8개의 라인)
+static const uint PyramidEdgeIndices[16] =
+{
+    // 밑면 사각형
+    0, 1,
+    1, 2,
+    2, 3,
+    3, 0,
+    // 옆면
+    0, 4,
+    1, 4,
+    2, 4,
+    3, 4
+};
+
+float3 GetUpVector(float3 dir)
+{
+    // direction이 0,0,0일 경우 기본 up
+    if (all(dir == float3(0, 0, 0)))
+        return float3(0, 0, 1);
+    return normalize(dir);
+}
+
+// direction 기준 회전 행렬 생성 (z축 -> direction)
+float3x3 GetRotationMatrix(float3 direction)
+{
+    float3 up = GetUpVector(direction);
+
+    // 보조 축 계산 (z축과 direction 평행시 문제 방지)
+    float3 temp = abs(up.z) < 0.99 ? float3(0, 0, 1) : float3(1, 0, 0);
+    float3 right = normalize(cross(temp, up));
+    float3 forward = cross(up, right);
+
+    // 열벡터 방식: (right, forward, up)
+    return float3x3(right, forward, up);
+}
+
+// Quad Pyramid
+PS_INPUT pyramidVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
+{
+    PS_INPUT output;
+
+    uint localVertexIdx = VertexID % 16;
+    uint pyramidIdx = InstanceID;
+    uint posIdx = PyramidEdgeIndices[localVertexIdx];
+    float3 localPos = PyramidPos[posIdx];
+
+    PyramidData pd = DataPyramid[pyramidIdx];
+
+    float3 scale = float3(pd.SquareSize.xx, pd.Height);
+    float3 modelPos = localPos * scale;
+
+    // direction에 따라 회전
+    float3x3 rot = GetRotationMatrix(pd.Direction);
+    float3 worldOffset = mul(modelPos, rot);
+
+    float3 worldPos = pd.Position + worldOffset;
+
+    // View/Proj 변환은 별도 상수버퍼에서 처리
+    output.position = float4(worldPos, 1);
+    output.position = mul(output.position, ViewMatrix);
+    output.position = mul(output.position, ProjectionMatrix);
+    
+    output.color = pd.Color;
+
+    return output;
+}
+
+float4 pyramidPS(PS_INPUT input) : SV_Target
+{
+    return input.color;
+}

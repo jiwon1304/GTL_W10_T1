@@ -19,6 +19,7 @@
 #include "Engine/Classes/Components/BoxComponent.h"
 #include "Engine/Classes/Components/SphereComponent.h"
 #include "Engine/Classes/Components/CapsuleComponent.h"
+#include "Engine/Classes/Components/SkinnedMeshComponent.h"
 #include "Runtime/Engine/World/World.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UObject/UObjectIterator.h"
@@ -87,6 +88,10 @@ void FEditorRenderPass::CreateShaders()
     // Capsule
     ShaderManager->AddVertexShader(CapsuleKeyW, L"Shaders/EditorShader.hlsl", "capsuleVS");
     ShaderManager->AddPixelShader(CapsuleKeyW, L"Shaders/EditorShader.hlsl", "capsulePS");
+
+    // Pyramid
+    ShaderManager->AddVertexShader(PyramidKeyW, L"Shaders/EditorShader.hlsl", "pyramidVS");
+    ShaderManager->AddPixelShader(PyramidKeyW, L"Shaders/EditorShader.hlsl", "pyramidPS");
 }
 void FEditorRenderPass::ReleaseShaders()
 {
@@ -304,6 +309,7 @@ void FEditorRenderPass::CreateConstantBuffers()
     BufferManager->CreateConstantBuffer<FConstantBufferDebugArrow>(ArrowKey);
     BufferManager->CreateConstantBuffer<FConstantBufferDebugIcon>(IconKey, ConstantBufferSizeIcon);
     BufferManager->CreateConstantBuffer<FConstantBufferDebugCapsule>(CapsuleKey, ConstantBufferSizeCapsule);
+    BufferManager->CreateConstantBuffer<FConstantBufferDebugPyramid>(PyramidKey, ConstantBufferSizePyramid);
     //CreateCB(sizeof(FConstantBufferCamera), &Resources.ConstantBuffers.AABBKeyCamera00);
     //CreateCB(sizeof(FConstantBufferDebugAABB) * ConstantBufferSizeAABB, &Resources.ConstantBuffers.AABB11);
     //CreateCB(sizeof(FConstantBufferDebugSphere) * ConstantBufferSizeSphere, &Resources.ConstantBuffers.Sphere11);
@@ -344,6 +350,14 @@ void FEditorRenderPass::PrepareRenderArr()
         if (iter->GetWorld() == GEngine->ActiveWorld)
         {
             Resources.Components.StaticMesh.Add(iter);
+        }
+    }
+
+    for (const auto iter : TObjectRange<USkinnedMeshComponent>())
+    {
+        if (iter->GetWorld() == GEngine->ActiveWorld)
+        {
+            Resources.Components.SkinnedMesh.Add(iter);
         }
     }
 
@@ -415,6 +429,7 @@ void FEditorRenderPass::PrepareRenderArr()
 void FEditorRenderPass::ClearRenderArr()
 {
     Resources.Components.StaticMesh.Empty();
+    Resources.Components.SkinnedMesh.Empty();
     Resources.Components.DirLight.Empty();
     Resources.Components.AmbientLight.Empty();
     Resources.Components.PointLight.Empty();
@@ -449,6 +464,7 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
     RenderPointlightInstanced();
     RenderSpotlightInstanced();
     RenderArrows();
+    RenderSkinnedMeshs();
 
     //ID3D11DepthStencilState* DepthStateEnable = Graphics->DepthStencilStateTestWriteEnable;
     //Graphics->DeviceContext->OMSetDepthStencilState(DepthStateEnable, 0);
@@ -914,4 +930,25 @@ void FEditorRenderPass::RenderShapes()
         Graphics->DeviceContext->DrawInstanced(totalVertsPerCapsule,1,0, 0); // 내부에서 버텍스 사용중
     }
 
+}
+
+void FEditorRenderPass::RenderSkinnedMeshs()
+{
+    ShaderManager->SetVertexShader(PyramidKeyW, Graphics->DeviceContext);
+    ShaderManager->SetPixelShader(PyramidKeyW, Graphics->DeviceContext);
+    Graphics->DeviceContext->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+    Graphics->DeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+    BufferManager->BindConstantBuffer(PyramidKey, 11, EShaderStage::Vertex);
+    FConstantBufferDebugPyramid Test;
+    Test.Color = FLinearColor::Red;
+    Test.Position = FVector(0, 1, 1);
+    Test.Height = 3;
+    Test.SquareSize = 1;
+    Test.Direction = FVector(0, 1, 1);
+
+    BufferManager->UpdateConstantBuffer(PyramidKey, Test);
+    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+    const uint32 NumVertices = 16;
+
+    Graphics->DeviceContext->DrawInstanced(NumVertices, 1, 0, 0);
 }

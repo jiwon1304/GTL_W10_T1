@@ -1,36 +1,20 @@
 {
     "Actors": [
         {
-            "ActorClass": "ACapsuleActor",
-            "ActorID": "ACapsuleActor_144",
-            "ActorLabel": "OBJ_CAPSULE_COLLISION_144",
-            "ActorTickInEditor": "true",
+            "ActorClass": "AItemActor",
+            "ActorID": "AItemActor_139",
+            "ActorLabel": "OBJ_COIN_139",
+            "ActorTickInEditor": "false",
             "Components": [
-                {
-                    "ComponentClass": "USceneComponent",
-                    "ComponentID": "USceneComponent_145",
-                    "Properties": {
-                        "AttachParentID": "nullptr",
-                        "ComponentClass": "USceneComponent",
-                        "ComponentName": "USceneComponent_145",
-                        "ComponentOwner": "ACapsuleActor_144",
-                        "ComponentOwnerClass": "ACapsuleActor",
-                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
-                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
-                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
-                        "bAutoActive": "true",
-                        "bIsActive": "true"
-                    }
-                },
                 {
                     "ComponentClass": "USceneComponent",
                     "ComponentID": "USceneComponent_140",
                     "Properties": {
-                        "AttachParentID": "nullptr",
+                        "AttachParentID": "SphereComponent_0",
                         "ComponentClass": "USceneComponent",
                         "ComponentName": "USceneComponent_140",
-                        "ComponentOwner": "ACapsuleActor_144",
-                        "ComponentOwnerClass": "ACapsuleActor",
+                        "ComponentOwner": "AItemActor_139",
+                        "ComponentOwnerClass": "AItemActor",
                         "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
                         "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
                         "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
@@ -39,49 +23,27 @@
                     }
                 },
                 {
-                    "ComponentClass": "UCapsuleComponent",
-                    "ComponentID": "UCapsuleComponent_141",
-                    "Properties": {
-                        "AABB_max": "X=0.000 Y=0.000 Z=0.000",
-                        "AABB_min": "X=0.000 Y=0.000 Z=0.000",
-                        "AttachParentID": "UCapsuleComponent_146",
-                        "CapsuleHalfHeight": "0.880000",
-                        "CapsuleRadius": "0.340000",
-                        "ComponentClass": "UCapsuleComponent",
-                        "ComponentName": "UCapsuleComponent_141",
-                        "ComponentOwner": "ACapsuleActor_144",
-                        "ComponentOwnerClass": "ACapsuleActor",
-                        "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
-                        "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=0.000",
-                        "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
-                        "bAutoActive": "true",
-                        "bIsActive": "true",
-                        "m_Type": ""
-                    }
-                },
-                {
-                    "ComponentClass": "UCapsuleComponent",
-                    "ComponentID": "UCapsuleComponent_146",
+                    "ComponentClass": "USphereComponent",
+                    "ComponentID": "SphereComponent_0",
                     "Properties": {
                         "AABB_max": "X=0.000 Y=0.000 Z=0.000",
                         "AABB_min": "X=0.000 Y=0.000 Z=0.000",
                         "AttachParentID": "nullptr",
-                        "CapsuleHalfHeight": "0.880000",
-                        "CapsuleRadius": "0.340000",
-                        "ComponentClass": "UCapsuleComponent",
-                        "ComponentName": "UCapsuleComponent_146",
-                        "ComponentOwner": "ACapsuleActor_144",
-                        "ComponentOwnerClass": "ACapsuleActor",
+                        "ComponentClass": "USphereComponent",
+                        "ComponentName": "SphereComponent_0",
+                        "ComponentOwner": "AItemActor_139",
+                        "ComponentOwnerClass": "AItemActor",
                         "RelativeLocation": "X=0.000 Y=0.000 Z=0.000",
                         "RelativeRotation": "Pitch=0.000 Yaw=0.000 Roll=-0.000",
                         "RelativeScale3D": "X=1.000 Y=1.000 Z=1.000",
+                        "SphereRadius": "1.000000",
                         "bAutoActive": "true",
                         "bIsActive": "true",
                         "m_Type": ""
                     }
                 }
             ],
-            "RootComponentID": "UCapsuleComponent_146"
+            "RootComponentID": "SphereComponent_0"
         }
     ],
     "NextUUID": 0,

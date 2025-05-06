@@ -83,3 +83,18 @@ cbuffer ConstantBufferDebugCapsule : register(b11)
 {
     CapsuleData DataCapsule[MAX_NUM_CAPSULE];
 }
+
+struct PyramidData
+{
+    float3 Position;
+    float Height;
+    float3 Direction;
+    float SquareSize;
+    float4 Color;
+};
+
+cbuffer ConstantBufferDebugPyramid : register(b11)
+{
+    PyramidData DataPyramid[32];
+}
+

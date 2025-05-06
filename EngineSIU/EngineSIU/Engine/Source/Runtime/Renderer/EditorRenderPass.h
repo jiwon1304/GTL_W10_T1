@@ -33,6 +33,7 @@ private:
         struct FWorldComponentContainer
         {
             TArray<class UStaticMeshComponent*> StaticMesh;
+            TArray<class USkinnedMeshComponent*> SkinnedMesh;
             TArray<class UDirectionalLightComponent*> DirLight;
             TArray<class USpotLightComponent*> SpotLight;
             TArray<class UPointLightComponent*> PointLight;
@@ -187,11 +188,24 @@ private:
     const FString CapsuleKey = "DebugCapsule";
     void RenderShapes();
 
+    //// SkinnedMeshs
+    struct FConstantBufferDebugPyramid
+    {
+        FVector Position;
+        float Height;
+        FVector Direction;
+        float SquareSize;
+        FLinearColor Color;
+    };
+    const FWString PyramidKeyW = L"DebugPyramid";
+    const FString PyramidKey = "DebugPyramid";
+    void RenderSkinnedMeshs();
 
     const UINT32 ConstantBufferSizeAABB = 8;
     const UINT32 ConstantBufferSizeSphere = 8;
     const UINT32 ConstantBufferSizeCone = 16; // 최대
     const uint32 ConstantBufferSizeIcon = 16;
     const uint32 ConstantBufferSizeCapsule = 8;
+    const uint32 ConstantBufferSizePyramid = 32;
 };
 
