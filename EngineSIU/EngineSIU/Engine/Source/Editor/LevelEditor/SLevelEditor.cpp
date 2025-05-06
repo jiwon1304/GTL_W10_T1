@@ -199,21 +199,52 @@ void SLevelEditor::ResizeViewports()
                 const FRect Left = ViewportVSplitter->SideLT->GetRect();
                 const FRect Right = ViewportVSplitter->SideRB->GetRect();
 
-                for (int i = 0; i < 4; ++i)
-                {
-                    GetViewports()[i]->ResizeViewport(Top, Bottom, Left, Right);
-                }
+                // 좌상단 뷰포트 (0) - 상단 패딩만 적용
+                FRect TopLeftRect = FRect(
+                    Left.TopLeftX, 
+                    Left.TopLeftY + 72.f,  // 상단 패딩 적용
+                    Left.Width, 
+                    Top.Height - 72.f      // 높이 조정
+                );
+                
+                // 우상단 뷰포트 (1) - 상단 패딩만 적용
+                FRect TopRightRect = FRect(
+                    Right.TopLeftX, 
+                    Right.TopLeftY + 72.f,  // 상단 패딩 적용
+                    Right.Width, 
+                    Top.Height - 72.f       // 높이 조정
+                );
+                
+                // 좌하단 뷰포트 (2) - 하단 패딩만 적용
+                FRect BottomLeftRect = FRect(
+                    Left.TopLeftX, 
+                    Bottom.TopLeftY,
+                    Left.Width, 
+                    Bottom.Height - 32.f    // 하단 패딩 적용
+                );
+                
+                // 우하단 뷰포트 (3) - 하단 패딩만 적용
+                FRect BottomRightRect = FRect(
+                    Right.TopLeftX, 
+                    Bottom.TopLeftY,
+                    Right.Width, 
+                    Bottom.Height - 32.f    // 하단 패딩 적용
+                );
+
+                // 각 뷰포트에 계산된 영역을 적용
+                GetViewports()[0]->GetViewport()->ResizeViewport(TopLeftRect);
+                GetViewports()[1]->GetViewport()->ResizeViewport(TopRightRect);
+                GetViewports()[2]->GetViewport()->ResizeViewport(BottomLeftRect);
+                GetViewports()[3]->GetViewport()->ResizeViewport(BottomRightRect);
             }
         }
         else
         {
             if (ActiveViewportClient)
             {
-                //const FRect FullRect(0.f, 0.f, ViewportAreaRect.Width, ViewportAreaRect.Height);
-                // 72 = Top padding height, 32 = bottom padding height
-                const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width * 0.8f, ViewportAreaRect.Height - 72.f - 32.f);
-                ActiveViewportClient->GetViewport()->ResizeViewport(FullRect); // 임시: Top=Bottom=Left=Right=전체영역
-                // TODO: FEditorViewportClient::ResizeViewport에서 단일 뷰포트 모드 처리 로직 확인/수정 필요
+                // 너비 제한을 제거하고, 상/하단 패딩 유지
+                const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
+                ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
             }
         }
     }
