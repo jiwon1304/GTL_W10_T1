@@ -93,10 +93,9 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
     GEngine->Init();
 
-
     FSoundManager::GetInstance().Initialize();
-    FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");
-    FSoundManager::GetInstance().LoadSound("sizzle", "Contents/Sounds/sizzle.mp3");
+    //FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");
+    //FSoundManager::GetInstance().LoadSound("sizzle", "Contents/Sounds/sizzle.mp3");
     //FSoundManager::GetInstance().PlaySound("fishdream");
 
     UpdateUI();
@@ -277,7 +276,7 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
             
                 LevelEditor->ResizeEditor(ClientWidth, ClientHeight);
                 FEngineLoop::Renderer.TileLightCullingPass->ResizeViewBuffers(
-                  static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Width),
+                    static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Width),
                     static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Height)
                 );
             }

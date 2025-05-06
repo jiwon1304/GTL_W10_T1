@@ -24,21 +24,13 @@ SLevelEditor::SLevelEditor()
 
 void SLevelEditor::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
 {
-    ResizeEditor(InEditorWidth, InEditorHeight);
-
     // @note Splitter들의 SplitRatio는 LoadConfig의 DefaultValue에 의해 결정됨. 이곳에서 변경하지 말 것.
-
-    // 1. 메인 수직 스플리터 생성 (전체 창 분할)
     MainVSplitter = new SSplitterV();
     MainVSplitter->Initialize(FRect(0.0f, 0.f, static_cast<float>(InEditorWidth), static_cast<float>(InEditorHeight)));
 
-    // 2. 뷰포트 영역 (메인 스플리터의 위쪽) 가져오기
     FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
-
-    // 3. 뷰포트 영역 내에서 기존 스플리터 생성
     ViewportHSplitter = new SSplitterH();
     ViewportHSplitter->Initialize(ViewportAreaRect);
-
     ViewportVSplitter = new SSplitterV();
     ViewportVSplitter->Initialize(ViewportAreaRect);
 
@@ -77,15 +69,9 @@ void SLevelEditor::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
 
     ActiveViewportClient = ViewportClients[0];
 
-    // 5. 패널 영역 (메인 스플리터의 아래쪽) 가져오기 - 추후 사용
     FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
-
-    // 6. 패널 영역에 대한 스플리터 생성 - 추후 사용
     EditorHSplitter = new SSplitterH();
     EditorHSplitter->Initialize(PanelAreaRect);
-
-    // 7. ...
-    // TODO: 이 PanelAreaRect를 UnrealEd 또는 패널 관리자에게 전달하는 로직 추가 필요
 
     // @todo Load 이후 Resize 호출을 통해 갱신 안해주어도 되는지 체크 (현재는 무조건 resize가 호출되는 상황이기에 문제 없이 넘어가고는 있음)
     LoadConfig();
@@ -200,28 +186,34 @@ FRect SLevelEditor::GetPanelAreaRect() const
 
 void SLevelEditor::ResizeViewports()
 {
-    FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
-
-    if (bMultiViewportMode)
+    if (MainVSplitter)
     {
-        if (GetViewports()[0])
-        {
-            const FRect Top = ViewportHSplitter->SideLT->GetRect();
-            const FRect Bottom = ViewportHSplitter->SideRB->GetRect();
-            const FRect Left = ViewportVSplitter->SideLT->GetRect();
-            const FRect Right = ViewportVSplitter->SideRB->GetRect();
+        FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
 
-            for (int i = 0; i < 4; ++i)
+        if (bMultiViewportMode)
+        {
+            if (GetViewports()[0])
             {
-                GetViewports()[i]->ResizeViewport(Top, Bottom, Left, Right);
+                const FRect Top = ViewportHSplitter->SideLT->GetRect();
+                const FRect Bottom = ViewportHSplitter->SideRB->GetRect();
+                const FRect Left = ViewportVSplitter->SideLT->GetRect();
+                const FRect Right = ViewportVSplitter->SideRB->GetRect();
+
+                for (int i = 0; i < 4; ++i)
+                {
+                    GetViewports()[i]->ResizeViewport(Top, Bottom, Left, Right);
+                }
             }
         }
-    }
-    else
-    {
-        const FRect FullRect(0.f, 0.f, ViewportAreaRect.Width, ViewportAreaRect.Height);
-        ActiveViewportClient->GetViewport()->ResizeViewport(FullRect); // 임시: Top=Bottom=Left=Right=전체영역
-        // TODO: FEditorViewportClient::ResizeViewport에서 단일 뷰포트 모드 처리 로직 확인/수정 필요
+        else
+        {
+            if (ActiveViewportClient)
+            {
+                const FRect FullRect(0.f, 0.f, ViewportAreaRect.Width, ViewportAreaRect.Height);
+                ActiveViewportClient->GetViewport()->ResizeViewport(FullRect); // 임시: Top=Bottom=Left=Right=전체영역
+                // TODO: FEditorViewportClient::ResizeViewport에서 단일 뷰포트 모드 처리 로직 확인/수정 필요
+            }
+        }
     }
 }
 
@@ -276,23 +268,25 @@ void SLevelEditor::LoadConfig()
     }
 
     // @todo 더 깔끔한 LoadConfig 구현 필요
-    if (MainVSplitter) // 메인 스플리터 로드 추가
+    if (MainVSplitter)
     {
         MainVSplitter->LoadConfig(Config, "MainSplitterV.SplitRatio", 0.8f);
-    }
-    if (EditorHSplitter)
-    {
-        EditorHSplitter->LoadConfig(Config, "EditorSplitterH.SplitRatio", 0.3f);
-    }
-    if (ViewportVSplitter)
-    {
-        ViewportVSplitter->LoadConfig(Config, "ViewportSplitterV.SplitRatio", 0.5f);
-    }
-    if (ViewportHSplitter)
-    {
-        ViewportHSplitter->LoadConfig(Config, "ViewportSplitterH.SplitRatio", 0.5f);
-    }
 
+        if (ViewportVSplitter && ViewportHSplitter)
+        {
+            FRect ViewportAreaRect = MainVSplitter->SideLT->GetRect();
+            ViewportVSplitter->SetRect(ViewportAreaRect);
+            ViewportHSplitter->SetRect(ViewportAreaRect);
+            ViewportVSplitter->LoadConfig(Config, "ViewportSplitterV.SplitRatio", 0.5f);
+            ViewportHSplitter->LoadConfig(Config, "ViewportSplitterH.SplitRatio", 0.5f);
+        }
+        if (EditorHSplitter)
+        {
+            FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
+            EditorHSplitter->SetRect(PanelAreaRect);
+            EditorHSplitter->LoadConfig(Config, "EditorSplitterH.SplitRatio", 0.3f);
+        }
+    }
     ResizeViewports();
 }
 
@@ -516,14 +510,7 @@ void SLevelEditor::RegisterEditorInputDelegates()
                         }
                     }
 
-                    // 드래그 발생 시, 메인 스플리터부터 업데이트 전파
-                    if (MainVSplitter)      MainVSplitter->UpdateChildRects();
-                    if (EditorHSplitter)    EditorHSplitter->UpdateChildRects(); // Update internal split based on current size
-                    if (ViewportHSplitter)  ViewportHSplitter->UpdateChildRects(); // Update internal split based on current size
-                    if (ViewportVSplitter)  ViewportVSplitter->UpdateChildRects(); // Update internal split based on current size
-
-
-                    ResizeViewports(); // 최종 뷰포트 크기 적용 (이제 부모 스플리터 크기가 올바름)
+                    ResizeViewports();
                 }
             }
 
