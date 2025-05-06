@@ -43,6 +43,7 @@
 #include "Contents/Actors/PlatformActor.h"
 #include "Contents/Actors/GoalPlatformActor.h"
 #include "Contents/Actors/TriggerBox.h"
+#include "Engine/SkeletalMeshActor.h"
 #include "Renderer/CompositingPass.h"
 #include "Serialization/SerializeMeshAsset.h"
 #include "UnrealEd/Fbx/FbxImporter.h"
@@ -383,24 +384,25 @@ void ControlEditorPanel::CreateModifyButton(const ImVec2 ButtonSize, ImFont* Ico
 
         static const Primitive primitives[] = 
         {
-            { .Label= "Cube",      .OBJ= OBJ_CUBE },
-            { .Label= "Sphere",    .OBJ= OBJ_SPHERE },
-            { .Label= "PointLight", .OBJ= OBJ_POINTLIGHT },
-            { .Label= "SpotLight", .OBJ= OBJ_SPOTLIGHT },
-            { .Label= "DirectionalLight", .OBJ= OBJ_DIRECTIONALLGIHT },
-            { .Label= "AmbientLight", .OBJ= OBJ_AMBIENTLIGHT },
-            { .Label= "Particle",  .OBJ= OBJ_PARTICLE },
-            { .Label= "Text",      .OBJ= OBJ_TEXT },
-            { .Label= "Fireball",  .OBJ = OBJ_FIREBALL},
-            { .Label= "Fog",       .OBJ= OBJ_FOG },
-            {.Label = "BoxCol", .OBJ = OBJ_BOX_COLLISION},
-            {.Label = "SphereCol", .OBJ = OBJ_SPHERE_COLLISION},
-            {.Label = "CapsuleCol", .OBJ = OBJ_CAPSULE_COLLISION},
-            {.Label = "Fish", .OBJ = OBJ_FISH},
-            {.Label = "Platform", .OBJ = OBJ_PLATFORM},
-            {.Label = "GoalPlatform", .OBJ = OBJ_GOALPLATFORM},
-            {.Label = "Coin", .OBJ = OBJ_COIN},
-            {.Label = "TriggerBox", .OBJ = OBJ_TRIGGERBOX},
+            { .Label = "Cube",              .OBJ = OBJ_CUBE },
+            { .Label = "Sphere",            .OBJ = OBJ_SPHERE },
+            { .Label = "SkeletalMeshActor", .OBJ = OBJ_SKELETALMESHACTOR },
+            { .Label = "PointLight",        .OBJ = OBJ_POINTLIGHT },
+            { .Label = "SpotLight",         .OBJ = OBJ_SPOTLIGHT },
+            { .Label = "DirectionalLight",  .OBJ = OBJ_DIRECTIONALLGIHT },
+            { .Label = "AmbientLight",      .OBJ = OBJ_AMBIENTLIGHT },
+            { .Label = "Particle",          .OBJ = OBJ_PARTICLE },
+            { .Label = "Text",              .OBJ = OBJ_TEXT },
+            { .Label = "Fireball",          .OBJ = OBJ_FIREBALL},
+            { .Label = "Fog",               .OBJ = OBJ_FOG },
+            { .Label = "BoxCol",            .OBJ = OBJ_BOX_COLLISION},
+            { .Label = "SphereCol",         .OBJ = OBJ_SPHERE_COLLISION},
+            { .Label = "CapsuleCol",        .OBJ = OBJ_CAPSULE_COLLISION},
+            { .Label = "Fish",              .OBJ = OBJ_FISH},
+            { .Label = "Platform",          .OBJ = OBJ_PLATFORM},
+            { .Label = "GoalPlatform",      .OBJ = OBJ_GOALPLATFORM},
+            { .Label = "Coin",              .OBJ = OBJ_COIN},
+            { .Label = "TriggerBox",        .OBJ = OBJ_TRIGGERBOX},
         };
 
         for (const auto& primitive : primitives)
@@ -426,7 +428,14 @@ void ControlEditorPanel::CreateModifyButton(const ImVec2 ButtonSize, ImFont* Ico
                     CubeActor->SetActorLabel(TEXT("OBJ_CUBE"));
                     break;
                 }
+                case OBJ_SKELETALMESHACTOR:
+                {
+                    ASkeletalMeshActor* NewActor = World->SpawnActor<ASkeletalMeshActor>();
+                    NewActor->SetActorLabel(TEXT("ASkeletalMeshActor"));
 
+                    SpawnedActor = NewActor;
+                    break;
+                }
                 case OBJ_SPOTLIGHT:
                 {
                     ASpotLight* SpotActor = World->SpawnActor<ASpotLight>();
