@@ -12,11 +12,7 @@ public:
     void Draw(const std::shared_ptr<FEditorViewportClient>& ActiveViewport) const;
     void OnResize(HWND hWnd);
 
-    virtual void Toggle() override {
-        if (bWasOpen) {
-            bWasOpen = false;
-        }
-    }
+    virtual void Toggle() override { bWasOpen = !bWasOpen; }
 
 private:
     bool bWasOpen = true;
