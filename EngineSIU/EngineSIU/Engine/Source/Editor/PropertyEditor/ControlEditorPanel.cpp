@@ -36,6 +36,7 @@
 #include "Actors/CubeActor.h"
 #include "Actors/SphereActor.h"
 #include "Actors/CapsuleActor.h"
+#include "Components/Mesh/SkeletalMesh.h"
 #include "GameFramework/PlayerController.h"
 #include "Contents/Actors/Fish.h"
 #include "Contents/Actors/ItemActor.h"
@@ -43,6 +44,8 @@
 #include "Contents/Actors/GoalPlatformActor.h"
 #include "Contents/Actors/TriggerBox.h"
 #include "Renderer/CompositingPass.h"
+#include "Serialization/SerializeMeshAsset.h"
+#include "UnrealEd/Fbx/FbxImporter.h"
 
 void ControlEditorPanel::Render()
 {
@@ -230,9 +233,35 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                 ))
                 {
                     const FString FileName = FileNames.Pop();
-                    UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
+                    UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), FileName.ToAnsiString().c_str());
 
                     // TODO: FBX Import 구현
+                    // UStaticMeshTest* StaticMesh;
+                    USkeletalMesh* SkeletalMesh;
+                    if (FFbxImporter::GetInstance().ImportFromFile(FileName, SkeletalMesh))
+                    {
+                        UE_LOG(ELogLevel::Display, TEXT("FBX Import Success"));
+                        // std::filesystem::path TempPath = FileName.ToWideString();
+                        // TempPath.replace_extension(L".bin");
+
+                        // if (FSerializeMeshAsset::SaveSkeletalMeshToBinary(TempPath.generic_wstring(), SkeletalMesh))
+                        // {
+                        //     UE_LOG(ELogLevel::Display, "Binary Saved Success");
+                        //     // if (FSerializeMeshAsset::LoadSkeletalMeshFromBinary())
+                        // }
+                        // if (USkeletalMesh* Mesh = FSerializeMeshAsset::LoadSkeletalMeshFromBinary(TempPath.generic_wstring()))
+                        // {
+                        //     assert(Mesh->Vertices.Num() == SkeletalMesh->Vertices.Num());
+                        //     for (int32 Idx = 0; Idx < Mesh->Vertices.Num(); ++Idx)
+                        //     {
+                        //         assert(Mesh->Vertices[Idx].Position == SkeletalMesh->Vertices[Idx].Position);
+                        //     }
+                        // }
+                    }
+                    else
+                    {
+                        UE_LOG(ELogLevel::Error, TEXT("FBX Import Failed"));
+                    }
                 }
             }
 
