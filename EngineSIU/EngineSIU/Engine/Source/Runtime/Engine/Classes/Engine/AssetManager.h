@@ -17,7 +17,7 @@ struct FAssetInfo
     EAssetType AssetType; // Asset의 타입
     uint32 Size;          // Asset의 크기 (바이트 단위)
 
-    FString GetFullPath() const { return AssetName.ToString() + "/" + PackagePath.ToString(); }
+    FString GetFullPath() const { return PackagePath.ToString() / AssetName.ToString(); }
 };
 
 struct FAssetRegistry
