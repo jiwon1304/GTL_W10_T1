@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <fbxsdk.h>
 
+#include "FbxObject.h"
 #include "Container/Array.h"
 #include "Container/Map.h"
 #include "Container/String.h"
@@ -38,6 +39,7 @@ private:
         FbxNode* node
     );
     static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
+    static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
     inline static TMap<FString, FSkinnedMesh*> fbxMap;
     static FSkinnedMesh* ParseFBX(const FString& FBXFilePath);
 };
