@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include "Container/Map.h"
 #include "UObject/NameTypes.h"
+#include "UObject/WeakObjectPtr.h"
 
 class FRenderer;
 class FGraphicsDevice;
@@ -19,14 +20,14 @@ public:
     HRESULT LoadTextureFromDDS(ID3D11Device* device, ID3D11DeviceContext* context, const wchar_t* filename);
 
     std::shared_ptr<FTexture> GetTexture(const FWString& name) const;
-    std::shared_ptr<UStaticMeshTest> GetStaticMesh(FName InName) const;
-    std::shared_ptr<USkeletalMesh> GetSkeletalMesh(FName InName) const;
+    UStaticMeshTest* GetStaticMesh(FName InName) const;
+    USkeletalMesh* GetSkeletalMesh(FName InName) const;
 
-    void AddStaticMesh(FName InName, const std::shared_ptr<UStaticMeshTest>& InStaticMesh);
-    void AddSkeletalMesh(FName InName, const std::shared_ptr<USkeletalMesh>& InSkeletalMesh);
+    void AddAssignStaticMeshMap(FName InName, UStaticMeshTest* InStaticMesh);
+    void AddAssignSkeletalMeshMap(FName InName, USkeletalMesh* InSkeletalMesh);
 
 private:
     TMap<FWString, std::shared_ptr<FTexture>> textureMap;
-    TMap<FName, std::shared_ptr<UStaticMeshTest>> StaticMeshMap;
-    TMap<FName, std::shared_ptr<USkeletalMesh>> SkeletalMeshMap;
+    TMap<FName, TWeakObjectPtr<UStaticMeshTest>> StaticMeshMap;
+    TMap<FName, TWeakObjectPtr<USkeletalMesh>> SkeletalMeshMap;
 };
