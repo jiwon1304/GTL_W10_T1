@@ -269,9 +269,10 @@ void FFbxLoader::LoadFBXMesh(
         for (int vertexIndex = 0; vertexIndex < 3; ++vertexIndex)
         {
             FFbxVertex v;
+            int controlPointIndex = mesh->GetPolygonVertex(polygonIndex, vertexIndex);
+            int vertexIdx = polygonIndex * 3 + vertexIndex;
             
             // vertex
-            int controlPointIndex = mesh->GetPolygonVertex(polygonIndex, vertexIndex);
             FbxVector4 pos = controlPoints[controlPointIndex];
             FVector convertPos(pos[0], pos[1], pos[2]);
             v.position = convertPos;
@@ -286,9 +287,25 @@ void FFbxLoader::LoadFBXMesh(
             // Normal
             FbxVector4 normal = {0, 0, 0};
             if (normalElement) {
+                int index;
+                switch (normalElement->GetMappingMode())
+                {
+                case FbxLayerElement::eByControlPoint:
+                    index = controlPointIndex;
+                    break;
+                case FbxLayerElement::eByPolygonVertex:
+                    index = vertexIndex;
+                    break;
+                case FbxLayerElement::eByPolygon:
+                    index = polygonIndex;
+                    break;
+                default:
+                    index = 0;
+                    break;
+                }
                 int normIdx = (normalElement->GetReferenceMode() == FbxLayerElement::eDirect)
-                            ? polygonIndex * 3 + vertexIndex
-                            : normalElement->GetIndexArray().GetAt(polygonIndex * 3 + vertexIndex);
+                            ? index
+                            : normalElement->GetIndexArray().GetAt(index);
                 normal = normalElement->GetDirectArray().GetAt(normIdx);
             }
             FVector convertNormal(normal[0], normal[1], normal[2]);
@@ -298,9 +315,25 @@ void FFbxLoader::LoadFBXMesh(
             FbxVector4 tangent = {0, 0, 0};
             if (tangentElement)
             {
+                int index;
+                switch (tangentElement->GetMappingMode())
+                {
+                case FbxLayerElement::eByControlPoint:
+                    index = controlPointIndex;
+                    break;
+                case FbxLayerElement::eByPolygonVertex:
+                    index = vertexIndex;
+                    break;
+                case FbxLayerElement::eByPolygon:
+                    index = polygonIndex;
+                    break;
+                default:
+                    index = 0;
+                    break;
+                }
                 int tangentIdx = (tangentElement->GetReferenceMode() == FbxLayerElement::eDirect)
-                                ? polygonIndex * 3 + vertexIndex
-                                : tangentElement->GetIndexArray().GetAt(polygonIndex * 3 + vertexIndex);
+                                ? index
+                                : tangentElement->GetIndexArray().GetAt(index);
                 tangent = tangentElement->GetDirectArray().GetAt(tangentIdx);
             }
             FVector convertTangent = FVector(tangent[0], tangent[1], tangent[2]);
