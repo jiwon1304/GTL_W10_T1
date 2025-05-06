@@ -30,4 +30,5 @@ protected:
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
+    FDXDShaderManager* ShaderManager;
 };
