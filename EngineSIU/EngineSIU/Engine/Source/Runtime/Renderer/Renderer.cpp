@@ -338,6 +338,11 @@ void FRenderer::RenderWorldScene(const std::shared_ptr<FEditorViewportClient>& V
             QUICK_GPU_SCOPE_CYCLE_COUNTER(StaticMeshPass_GPU, *GPUTimingManager)
             StaticMeshRenderPass->Render(Viewport);
         }
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(SkinnedMeshPass_CPU)
+            QUICK_GPU_SCOPE_CYCLE_COUNTER(SkinnedMeshPass_GPU, *GPUTimingManager)
+            SkinnedMeshRenderPass->Render(Viewport);
+        }
     }
     
     // Render World Billboard
