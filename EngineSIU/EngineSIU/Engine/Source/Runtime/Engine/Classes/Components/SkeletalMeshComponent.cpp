@@ -91,15 +91,14 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
             // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
             ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose;
 
-            if (jointIndex == -14)
+            if (jointIndex == SelectedBoneIndex)
             {
-                static float deg = 0;
-                deg += 5.f;
 
-                // 어깨의 로컬축에서 회전(Rot * BindPoseMatrix)
-                FMatrix Rot = FMatrix::CreateRotationMatrix(0, deg, -90);
+                FMatrix Translation = FMatrix::CreateTranslationMatrix(SelectedLocation);
+                FMatrix Rotation = FMatrix::CreateRotationMatrix(SelectedRotation.Roll, SelectedRotation.Pitch, SelectedRotation.Yaw);
+                FMatrix Scale = FMatrix::CreateScaleMatrix(SelectedScale.X, SelectedScale.Y, SelectedScale.Z);
 
-                ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose * Rot;
+                ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose * Scale * Rotation * Translation;
             }
         }
         else
@@ -111,4 +110,20 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
         const FMatrix& InverseBindPose = joint.inverseBindPose;
         OutBoneMatrices[jointIndex] = ModelToBone * InverseBindPose;
     }
+}
+
+const TMap<int, FString>& USkeletalMeshComponent::GetBoneIndexToName()
+{
+    BoneIndexToName.Empty();
+    BoneIndexToName.Add(-1, "None");
+    if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
+    {
+        return BoneIndexToName;
+    }
+    
+    for (int i = 0 ; i < SkeletalMesh->skeleton.joints.Num(); ++i)
+    {
+        BoneIndexToName.Add(i, SkeletalMesh->skeleton.joints[i].name);
+    }
+    return BoneIndexToName;
 }

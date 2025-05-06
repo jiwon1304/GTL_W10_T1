@@ -38,13 +38,25 @@ FSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         iosettings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
     }
 
-    FbxAxisSystem targetAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded);
-    targetAxisSystem.ConvertScene(scene);
     bool bIsImported = importer->Import(scene);
     importer->Destroy();
     if (!bIsImported)
     {
         return nullptr;   
+    }
+
+    // convert scene
+    FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
+    FbxAxisSystem targetAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded);
+    if (sceneAxisSystem != targetAxisSystem)
+    {
+        targetAxisSystem.ConvertScene(scene);
+    }
+    
+    FbxSystemUnit SceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();
+    if( SceneSystemUnit.GetScaleFactor() != 1.0 )
+    {
+        FbxSystemUnit::cm.ConvertScene(scene);
     }
     
     FbxGeometryConverter converter(GetFbxManager());
@@ -118,11 +130,6 @@ FSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
         LoadFBXMaterials(result, node);
     }
 
-    // // parse materials
-    // for (auto& node: meshes)
-    // {
-    // }
-    
     return result;
 }
 

@@ -16,8 +16,13 @@ public:
     FSkeletalMesh* GetSkinnedMesh() const { return SkeletalMesh; }
     void SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh);
     void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
+    const TMap<int, FString>& GetBoneIndexToName();
     
+    int SelectedBoneIndex = -1;
+    FVector SelectedLocation;
+    FRotator SelectedRotation;
+    FVector SelectedScale = FVector::OneVector;
 protected:
     FSkeletalMesh* SkeletalMesh = nullptr;
-    int SelectedBoneIndex = -1;
+    TMap<int, FString> BoneIndexToName;
 };

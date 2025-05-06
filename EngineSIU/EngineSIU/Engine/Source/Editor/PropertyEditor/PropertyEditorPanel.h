@@ -60,7 +60,8 @@ private:
     
     /* Static Mesh Settings */
     void RenderForStaticMesh(UStaticMeshComponent* StaticMeshComp) const;
-    void RenderForSkinnedMesh(USkeletalMeshComponent* SkinnedMeshComp) const;
+    void RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp) const;
+    void RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent);
 
     void RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const;
     void RenderForDirectionalLightComponent(UDirectionalLightComponent* DirectionalLightComponent) const;
