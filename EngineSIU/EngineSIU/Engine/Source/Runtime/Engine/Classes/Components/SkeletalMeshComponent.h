@@ -1,23 +1,23 @@
 ﻿#pragma once
 #include "MeshComponent.h"
 
-struct FSkinnedMesh;
+struct FSkeletalMesh;
 
-class USkinnedMeshComponent: public UMeshComponent
+class USkeletalMeshComponent: public UMeshComponent
 {
-    DECLARE_CLASS(USkinnedMeshComponent, UMeshComponent)
+    DECLARE_CLASS(USkeletalMeshComponent, UMeshComponent)
 public:
-    USkinnedMeshComponent() = default;
+    USkeletalMeshComponent() = default;
     
     virtual UObject* Duplicate(UObject* InOuter) override;
     virtual void GetProperties(TMap<FString, FString>& OutProperties) const override;
     virtual void SetProperties(const TMap<FString, FString>& InProperties) override;
 
-    FSkinnedMesh* GetSkinnedMesh() const { return SkinnedMesh; }
-    void SetSkinnedMesh(FSkinnedMesh* InSkinnedMesh);
+    FSkeletalMesh* GetSkinnedMesh() const { return SkeletalMesh; }
+    void SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh);
     void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
     
 protected:
-    FSkinnedMesh* SkinnedMesh = nullptr;
+    FSkeletalMesh* SkeletalMesh = nullptr;
     int SelectedBoneIndex = -1;
 };

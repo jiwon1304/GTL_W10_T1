@@ -49,7 +49,7 @@ struct FFbxSkeletonData
     TArray<FFbxJoint> joints;
 };
 
-struct FSkinnedMesh {
+struct FSkeletalMesh {
     FString name;
     TArray<FFbxMeshData> mesh;
     FFbxSkeletonData skeleton;

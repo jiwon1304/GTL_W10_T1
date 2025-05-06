@@ -58,7 +58,7 @@ private:
 
     
     TArray<class UStaticMeshComponent*> StaticMeshComponents;
-    TArray<class USkinnedMeshComponent*> SkeletalMeshComponents;
+    TArray<class USkeletalMeshComponent*> SkeletalMeshComponents;
     TArray<UPointLightComponent*> PointLights;
     TArray<USpotLightComponent*> SpotLights;
     

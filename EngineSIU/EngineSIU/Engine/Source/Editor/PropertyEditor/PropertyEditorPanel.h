@@ -4,7 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
-#include "Components/SkinnedMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Actor.h"
 #include "UnrealEd/EditorPanel.h"
 #include "Math/Rotator.h"
@@ -60,7 +60,7 @@ private:
     
     /* Static Mesh Settings */
     void RenderForStaticMesh(UStaticMeshComponent* StaticMeshComp) const;
-    void RenderForSkinnedMesh(USkinnedMeshComponent* SkinnedMeshComp) const;
+    void RenderForSkinnedMesh(USkeletalMeshComponent* SkinnedMeshComp) const;
 
     void RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const;
     void RenderForDirectionalLightComponent(UDirectionalLightComponent* DirectionalLightComponent) const;

@@ -1,26 +1,25 @@
-#include "SkinnedMeshComponent.h"
+#include "SkeletalMeshComponent.h"
 
 #include "Engine/AssetManager.h"
 #include "Engine/FbxObject.h"
 #include "Engine/FFbxLoader.h"
-#include "Mesh/SkeletalMeshRenderData.h"
 #include "UObject/Casts.h"
 
-UObject* USkinnedMeshComponent::Duplicate(UObject* InOuter)
+UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 {
     ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
-    NewComponent->SkinnedMesh = SkinnedMesh;
+    NewComponent->SkeletalMesh = SkeletalMesh;
     NewComponent->SelectedBoneIndex = SelectedBoneIndex;
     return NewComponent;
 }
 
-void USkinnedMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) const
+void USkeletalMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) const
 {
     Super::GetProperties(OutProperties);
         
-    if (SkinnedMesh != nullptr)
+    if (SkeletalMesh != nullptr)
     {
-        FString PathFString = SkinnedMesh->name;
+        FString PathFString = SkeletalMesh->name;
         OutProperties.Add(TEXT("SkeletalMeshPath"), PathFString);
     }
     else
@@ -29,7 +28,7 @@ void USkinnedMeshComponent::GetProperties(TMap<FString, FString>& OutProperties)
     }
 }
 
-void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& InProperties)
+void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InProperties)
 {
     Super::SetProperties(InProperties);
 
@@ -40,7 +39,7 @@ void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& InProper
         {
             if (UAssetManager::Get().AddAsset(StringToWString(SkeletalMeshPath->ToAnsiString())))
             {
-                FSkinnedMesh* MeshToSet = FFbxLoader::GetFbxObject(SkeletalMeshPath->ToAnsiString());
+                FSkeletalMesh* MeshToSet = FFbxLoader::GetFbxObject(SkeletalMeshPath->ToAnsiString());
                 SetSkinnedMesh(MeshToSet);
                 UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
             }
@@ -58,10 +57,10 @@ void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& InProper
     }
 }
 
-void USkinnedMeshComponent::SetSkinnedMesh(FSkinnedMesh* InSkinnedMesh)
+void USkeletalMeshComponent::SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh)
 {
-    SkinnedMesh = InSkinnedMesh;
-    if (SkinnedMesh == nullptr)
+    SkeletalMesh = InSkinnedMesh;
+    if (SkeletalMesh == nullptr)
     {
         AABB = FBoundingBox(FVector::ZeroVector, FVector::ZeroVector);
     } else
@@ -69,15 +68,15 @@ void USkinnedMeshComponent::SetSkinnedMesh(FSkinnedMesh* InSkinnedMesh)
         AABB = FBoundingBox(InSkinnedMesh->AABBmin, InSkinnedMesh->AABBmax);
     }
 }
-void USkinnedMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
+void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
 {
-    if (!SkinnedMesh || SkinnedMesh->skeleton.joints.Num() == 0)
+    if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
     {
         OutBoneMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const TArray<FFbxJoint>& joints = SkinnedMesh->skeleton.joints;
+    const TArray<FFbxJoint>& joints = SkeletalMesh->skeleton.joints;
 
     OutBoneMatrices.SetNum(joints.Num());
 

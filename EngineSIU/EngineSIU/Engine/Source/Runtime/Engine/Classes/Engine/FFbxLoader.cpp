@@ -12,7 +12,7 @@ struct BoneWeights
     float weight;
 };
 
-FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
+FSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     if (fbxMap.Contains(FBXFilePath))
         return fbxMap[FBXFilePath];
@@ -50,23 +50,23 @@ FSkinnedMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     FbxGeometryConverter converter(GetFbxManager());
     converter.Triangulate(scene, true);
 
-    FSkinnedMesh* result = LoadFBXObject(scene);
+    FSkeletalMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
     fbxMap[FBXFilePath] = result;
     return result;
 }
 
-FSkinnedMesh* FFbxLoader::GetFbxObject(const FString& filename)
+FSkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
 {
     if (!fbxMap.Contains(filename))
         ParseFBX(filename);
     return fbxMap[filename];
 }
 
-FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
+FSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
-    FSkinnedMesh* result = new FSkinnedMesh();
+    FSkeletalMesh* result = new FSkeletalMesh();
 
     TMap<int, TArray<BoneWeights>> weightMap;
     TMap<FString, int> boneNameToIndex;
@@ -143,7 +143,7 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
 
 
 void FFbxLoader::LoadFbxSkeleton(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     int parentIndex = -1
@@ -239,7 +239,7 @@ void FFbxLoader::LoadSkinWeights(
 }
 
 void FFbxLoader::LoadFBXMesh(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& boneWeight
@@ -444,7 +444,7 @@ void FFbxLoader::LoadFBXMesh(
 }
 
 void FFbxLoader::LoadFBXMaterials(
-    FSkinnedMesh* fbxObject,
+    FSkeletalMesh* fbxObject,
     FbxNode* node
 )
 {

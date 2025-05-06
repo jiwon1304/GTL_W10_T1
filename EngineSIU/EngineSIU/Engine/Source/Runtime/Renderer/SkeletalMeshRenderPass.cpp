@@ -10,7 +10,7 @@
 #include "D3D11RHI/DXDBufferManager.h"
 #include "D3D11RHI/GraphicDevice.h"
 #include "D3D11RHI/DXDShaderManager.h"
-#include "Components/SkinnedMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "BaseGizmos/GizmoBaseComponent.h"
 #include "Engine/EditorEngine.h"
 #include "Engine/FbxObject.h"
@@ -36,9 +36,9 @@ void FSkeletalMeshRenderPass::Initialize(FDXDBufferManager* InBufferManager, FGr
 
 void FSkeletalMeshRenderPass::PrepareRenderArr()
 {
-    for (const auto& Component : TObjectRange<USkinnedMeshComponent>())
+    for (const auto& Component : TObjectRange<USkeletalMeshComponent>())
     {
-        SkinnedMeshComponent.Add(Component);
+        SkeletalMeshComponents.Add(Component);
     }
 }
 
@@ -195,13 +195,13 @@ void FSkeletalMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient
 
 void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
-    for (USkinnedMeshComponent* SkinnedMeshData : SkinnedMeshComponent)
+    for (USkeletalMeshComponent* SkinnedMeshData : SkeletalMeshComponents)
     {
         if (!SkinnedMeshData) continue;
         if (!SkinnedMeshData->GetSkinnedMesh()) continue;
 
         // FSkeletalMeshRenderData* RenderData = SkinnedMeshData->GetSkeletalMesh()->GetRenderData();
-        FSkinnedMesh* RenderData = SkinnedMeshData->GetSkinnedMesh();
+        FSkeletalMesh* RenderData = SkinnedMeshData->GetSkinnedMesh();
         if (!RenderData) continue;
 
         // Bone Matrix는 CPU에서 처리
@@ -333,5 +333,5 @@ void FSkeletalMeshRenderPass::UpdateVertexBuffer(FFbxMeshData& meshData, const T
 
 void FSkeletalMeshRenderPass::ClearRenderArr()
 {
-    SkinnedMeshComponent.Empty();
+    SkeletalMeshComponents.Empty();
 }
