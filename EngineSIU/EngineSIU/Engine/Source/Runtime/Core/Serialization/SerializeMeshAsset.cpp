@@ -68,7 +68,7 @@ USkeletalMesh* FSerializeMeshAsset::LoadSkeletalMeshFromBinary(const FString& Fi
     Info.PackagePath = FName(Path.parent_path().generic_wstring());
     Info.Size = static_cast<uint32>(std::filesystem::file_size(Path));
 
-    FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(Info.AssetName, NewSkeletalMesh);
+    FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(Path.generic_wstring()), NewSkeletalMesh);
     return NewSkeletalMesh;
 }
 
