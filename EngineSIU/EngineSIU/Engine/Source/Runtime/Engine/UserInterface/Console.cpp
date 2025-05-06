@@ -189,6 +189,8 @@ void FConsole::AddLog(ELogLevel Level, const ANSICHAR* Fmt, ...)
 
     Items.Emplace(Level, std::string(Buf));
     va_end(Args);
+
+    ScrollToBottom = true;
 }
 
 void FConsole::AddLog(ELogLevel Level, const WIDECHAR* Fmt, ...)
@@ -202,11 +204,14 @@ void FConsole::AddLog(ELogLevel Level, const WIDECHAR* Fmt, ...)
 
     Items.Emplace(Level, FString(Buf).ToAnsiString());
     va_end(Args);
+
+    ScrollToBottom = true;
 }
 
 void FConsole::AddLog(ELogLevel Level, const FString& Message)
 {
     Items.Emplace(Level, Message);
+    ScrollToBottom = true;
 }
 
 // 콘솔 창 렌더링
