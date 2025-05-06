@@ -965,10 +965,11 @@ void PropertyEditorPanel::RenderForSkinnedMeshComponent(USkinnedMeshComponent* S
             const TMap<FName, FAssetInfo>& Assets = UAssetManager::Get().GetAssetRegistry();
             for (const auto& Asset : Assets)
             {
+                if (Asset.Value.AssetType != EAssetType::SkeletalMesh) continue;
                 if (ImGui::Selectable(*Asset.Value.AssetName.ToString(), false))
                 {
                     FString MeshName = Asset.Value.GetFullPath();
-                    if (USkeletalMesh* SkeletalMesh = FEngineLoop::ResourceManager.GetSkeletalMesh(Asset.Value.GetFullPath()))
+                    if (USkeletalMesh* SkeletalMesh = FEngineLoop::ResourceManager.GetSkeletalMesh(MeshName))
                     {
                         SkinnedMeshComponent->SetSkeletalMesh(SkeletalMesh);
                     }
