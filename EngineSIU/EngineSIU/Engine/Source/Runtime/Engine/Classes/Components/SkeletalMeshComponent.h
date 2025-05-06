@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "MeshComponent.h"
 
 struct FSkeletalMesh;
@@ -16,6 +16,7 @@ public:
     FSkeletalMesh* GetSkinnedMesh() const { return SkeletalMesh; }
     void SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh);
     void CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const;
+    void GetGlobalPoses(TArray<FMatrix>& OutMatrices) const;
     const TMap<int, FString>& GetBoneIndexToName();
     
     int SelectedBoneIndex = -1;

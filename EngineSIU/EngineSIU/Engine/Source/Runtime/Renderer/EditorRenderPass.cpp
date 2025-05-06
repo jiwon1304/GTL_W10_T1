@@ -19,10 +19,11 @@
 #include "Engine/Classes/Components/BoxComponent.h"
 #include "Engine/Classes/Components/SphereComponent.h"
 #include "Engine/Classes/Components/CapsuleComponent.h"
-#include "Engine/Classes/Components/SkinnedMeshComponent.h"
+#include "Engine/Classes/Components/SkeletalMeshComponent.h"
 #include "Runtime/Engine/World/World.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UObject/UObjectIterator.h"
+#include "Engine/FbxObject.h"
 
 #include "PropertyEditor/ShowFlags.h"
 #include "Engine/EditorEngine.h"
@@ -353,7 +354,7 @@ void FEditorRenderPass::PrepareRenderArr()
         }
     }
 
-    for (const auto iter : TObjectRange<USkinnedMeshComponent>())
+    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
     {
         if (iter->GetWorld() == GEngine->ActiveWorld)
         {
@@ -574,6 +575,7 @@ void FEditorRenderPass::RenderPointlightInstanced()
                 FConstantBufferDebugSphere b;
                 b.Position = PointLightComp->GetWorldLocation();
                 b.Radius = PointLightComp->GetRadius();
+                b.Color = FLinearColor(149.f / 255.f, 198.f / 255.f, 255.f / 255.f, 255.f / 255.f);
                 BufferAll.Add(b);
                 break;
             }
@@ -934,21 +936,128 @@ void FEditorRenderPass::RenderShapes()
 
 void FEditorRenderPass::RenderSkinnedMeshs()
 {
+    TArray<FConstantBufferDebugPyramid> Pyramids;
+    TArray<FConstantBufferDebugSphere> Spheres;
+
+    for (USkeletalMeshComponent* Comp : Resources.Components.SkinnedMesh)
+    {
+        if (Comp->GetSkinnedMesh() == nullptr)
+            return;
+        FSkeletalMesh* SkeletalMesh = Comp->GetSkinnedMesh();
+
+        FConstantBufferDebugSphere SphereBuffer;
+        SphereBuffer.Color = FLinearColor::Green;
+        SphereBuffer.Radius = 1;
+
+        for (int i = 0; i < SkeletalMesh->skeleton.joints.Num(); ++i)
+        {
+            // Start with the current joint's local position
+            FVector GlobalPosition = SkeletalMesh->skeleton.joints[i].position;
+
+            // Traverse up the hierarchy to accumulate parent transformations
+            int ParentIndex = SkeletalMesh->skeleton.joints[i].parentIndex;
+            while (ParentIndex >= 0) // -1 indicates no parent
+            {
+                const FFbxJoint& ParentJoint = SkeletalMesh->skeleton.joints[ParentIndex];
+
+                // Apply parent's transform to the current position
+                GlobalPosition = ParentJoint.localBindPose.TransformPosition(GlobalPosition);
+
+                // Move to the next parent
+                ParentIndex = ParentJoint.parentIndex;
+            }
+
+            // Use the globally transformed position for the current joint
+            SphereBuffer.Position = GlobalPosition;
+            Spheres.Add(SphereBuffer);
+
+            // Create pyramids connecting the current joint to its parent joint
+            int CurrentParentIndex = SkeletalMesh->skeleton.joints[i].parentIndex;
+            if (CurrentParentIndex >= 0) // If the joint has a parent
+            {
+                FConstantBufferDebugPyramid PyramidBuffer;
+
+                // Calculate the global position of the parent joint
+                FVector ParentGlobalPosition = SkeletalMesh->skeleton.joints[CurrentParentIndex].position;
+                int GrandParentIndex = SkeletalMesh->skeleton.joints[CurrentParentIndex].parentIndex;
+                int Depth = 0;
+                while (GrandParentIndex >= 0) // -1 indicates no parent
+                {
+                    const FFbxJoint& GrandParentJoint = SkeletalMesh->skeleton.joints[GrandParentIndex];
+                    ParentGlobalPosition = GrandParentJoint.inverseBindPose.TransformPosition(ParentGlobalPosition);
+                    GrandParentIndex = GrandParentJoint.parentIndex;
+                    Depth++;
+                }
+                PyramidBuffer.Position = ParentGlobalPosition; // Current joint position
+                PyramidBuffer.Direction = (GlobalPosition - ParentGlobalPosition).GetSafeNormal(); // Parent joint position
+                PyramidBuffer.Height = (GlobalPosition - ParentGlobalPosition).Size(); // Parent joint position
+
+                float t = (float)Depth / 8.f;
+                PyramidBuffer.Color = FLinearColor::Red * (1 - t) + FLinearColor::Blue * (t); // Root에 가까울수록 빨간색
+                Pyramids.Add(PyramidBuffer);
+            }
+        }
+    }
+
+
+    ShaderManager->SetVertexShaderAndInputLayout(SphereKeyW, Graphics->DeviceContext);
+    ShaderManager->SetPixelShader(SphereKeyW, Graphics->DeviceContext);
+    BufferManager->SetVertexBuffer(SphereKey);
+    BufferManager->SetIndexBuffer(SphereKey);
+    BufferManager->BindConstantBuffer(SphereKey, 11, EShaderStage::Vertex);
+    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+    int BufferIndex = 0;
+    uint32 NumIndices = BufferManager->GetIndexBuffer(SphereKey).NumIndices;
+    for (int i = 0; i < (1 + Spheres.Num() / ConstantBufferSizeSphere) * ConstantBufferSizeSphere; ++i)
+    {
+        TArray<FConstantBufferDebugSphere> SubBuffer;
+        for (int j = 0; j < ConstantBufferSizeAABB; ++j)
+        {
+            if (BufferIndex < Spheres.Num())
+            {
+                SubBuffer.Add(Spheres[BufferIndex]);
+                ++BufferIndex;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (SubBuffer.Num() > 0)
+        {
+            BufferManager->UpdateConstantBuffer(SphereKey, SubBuffer);
+            Graphics->DeviceContext->DrawIndexedInstanced(NumIndices, SubBuffer.Num(), 0, 0, 0);
+        }
+    }
+
+
     ShaderManager->SetVertexShader(PyramidKeyW, Graphics->DeviceContext);
     ShaderManager->SetPixelShader(PyramidKeyW, Graphics->DeviceContext);
     Graphics->DeviceContext->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
     Graphics->DeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
     BufferManager->BindConstantBuffer(PyramidKey, 11, EShaderStage::Vertex);
-    FConstantBufferDebugPyramid Test;
-    Test.Color = FLinearColor::Red;
-    Test.Position = FVector(0, 1, 1);
-    Test.Height = 3;
-    Test.SquareSize = 1;
-    Test.Direction = FVector(0, 1, 1);
-
-    BufferManager->UpdateConstantBuffer(PyramidKey, Test);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-    const uint32 NumVertices = 16;
 
-    Graphics->DeviceContext->DrawInstanced(NumVertices, 1, 0, 0);
+    for (int i = 0; i < (1 + Pyramids.Num() / ConstantBufferSizePyramid) * ConstantBufferSizePyramid; ++i)
+    {
+        TArray<FConstantBufferDebugPyramid> SubBuffer;
+        for (int j = 0; j < ConstantBufferSizePyramid; ++j)
+        {
+            if (i * ConstantBufferSizePyramid + j < Pyramids.Num())
+            {
+                SubBuffer.Add(Pyramids[i * ConstantBufferSizePyramid + j]);
+            }
+            else
+            {
+                break;
+            }
+        }
+        if (SubBuffer.Num() > 0)
+        {
+            BufferManager->UpdateConstantBuffer(PyramidKey, SubBuffer);
+            Graphics->DeviceContext->DrawInstanced(16, SubBuffer.Num(), 0, 0); // 내부에서 버텍스 사용중
+        }
+    }
 }

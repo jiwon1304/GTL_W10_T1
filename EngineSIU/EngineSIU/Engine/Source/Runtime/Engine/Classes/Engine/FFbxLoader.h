@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <fbxsdk.h>
 
 #include "FbxObject.h"
@@ -42,5 +42,19 @@ private:
     static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
     inline static TMap<FString, FSkeletalMesh*> fbxMap;
     static FSkeletalMesh* ParseFBX(const FString& FBXFilePath);
-};
 
+    inline static FMatrix ConvertMatrix(const FbxAMatrix& Mat)
+    {
+        FMatrix Result;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                Result.M[i][j] = Mat[i][j];
+            }
+        }
+
+        return Result;
+    }
+};

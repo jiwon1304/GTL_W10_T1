@@ -19,11 +19,12 @@ struct SphereData
 {
     float3 Position;
     float Radius;
+    float4 Color;
 };
 
 cbuffer ConstantBufferDebugSphere : register(b11)
 {
-    SphereData DataSphere[8];
+    SphereData DataSphere[32];
 }
 
 struct ConeData
