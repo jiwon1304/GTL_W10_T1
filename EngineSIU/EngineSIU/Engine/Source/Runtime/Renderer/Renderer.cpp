@@ -69,10 +69,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     PostProcessCompositingPass = AddRenderPass<FPostProcessCompositingPass>();
     SlateRenderPass = AddRenderPass<FSlateRenderPass>();
 
-    if (false == ShadowManager->Initialize(Graphics, BufferManager))
-    {
-        static_assert(true, "ShadowManager Initialize Failed");
-    }
+    assert(ShadowManager->Initialize(Graphics, BufferManager) && "ShadowManager Initialize Failed");
 
     for (IRenderPass* RenderPass : RenderPasses)
     {
