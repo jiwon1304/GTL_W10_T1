@@ -1,8 +1,11 @@
 ﻿#include "FbxImporter.h"
+#include <filesystem>
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Components/Mesh/StaticMesh.h"
+#include "Engine/AssetManager.h"
 
 using namespace NS_FbxTypeConverter;
+namespace fs = std::filesystem;
 
 std::shared_ptr<FFbxImporter> FFbxImporter::StaticInstance = nullptr;
 
@@ -65,7 +68,49 @@ void FFbxImporter::ReleaseSdk()
     }
 }
 
-bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh)
+bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& OutStaticMesh)
+{
+    const fs::path FilePath = InFilePath.ToWideString();
+
+    std::shared_ptr<UStaticMeshTest> SharedStaticMesh = std::make_shared<UStaticMeshTest>();
+    if (ImportFromFileInternal(InFilePath, SharedStaticMesh.get(), nullptr))
+    {
+        UAssetManager& AssetManager = UAssetManager::Get();
+        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
+        Info.AssetName = FName(FilePath.filename().wstring());
+        Info.AssetType = EAssetType::StaticMesh;
+        Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
+        Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
+
+        FEngineLoop::ResourceManager.AddStaticMesh(FName(FilePath.filename().wstring()), SharedStaticMesh);
+        OutStaticMesh = SharedStaticMesh.get();
+        return true;
+    }
+    return false;
+}
+
+bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& OutSkeletalMesh)
+{
+    const fs::path FilePath = InFilePath.ToWideString();
+
+    std::shared_ptr<USkeletalMesh> SharedSkeletalMesh = std::make_shared<USkeletalMesh>();
+    if (ImportFromFileInternal(InFilePath, nullptr, SharedSkeletalMesh.get()))
+    {
+        UAssetManager& AssetManager = UAssetManager::Get();
+        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
+        Info.AssetName = FName(FilePath.filename().wstring());
+        Info.AssetType = EAssetType::SkeletalMesh;
+        Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
+        Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
+
+        FEngineLoop::ResourceManager.AddSkeletalMesh(FName(FilePath.filename().wstring()), SharedSkeletalMesh);
+        OutSkeletalMesh = SharedSkeletalMesh.get();
+        return true;
+    }
+    return false;
+}
+
+bool FFbxImporter::ImportFromFileInternal(const FString& InFilePath, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh)
 {
 	if (!SdkManager)
 	{
@@ -140,14 +185,13 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest* Ou
 void FFbxImporter::ProcessNodeRecursive(FbxNode* InNode, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh)
 {
 	if (!InNode) return;
-
 	const FbxNodeAttribute* NodeAttribute = InNode->GetNodeAttribute();
 	if (NodeAttribute)
 	{
-		if (NodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh)
+        const FbxNodeAttribute::EType AttributeType = NodeAttribute->GetAttributeType();
+		if (AttributeType == FbxNodeAttribute::eMesh)
 		{
-			FbxMesh* Mesh = InNode->GetMesh();
-			if (Mesh)
+            if (FbxMesh* Mesh = InNode->GetMesh())
 			{
 				// 이 노드의 메쉬 처리
 				ProcessMeshNode(InNode, Mesh, OutStaticMesh, OutSkeletalMesh);

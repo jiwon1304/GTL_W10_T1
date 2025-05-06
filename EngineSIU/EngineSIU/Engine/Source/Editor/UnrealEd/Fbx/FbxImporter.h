@@ -66,11 +66,14 @@ public:
     bool InitializeSdk();
     void ReleaseSdk();
 
-    // 파일을 로드하여 StaticMesh 또는 SkeletalMesh 에셋을 채웁니다.
-    // 둘 중 하나만 null이 아니어야 합니다.
-    bool ImportFromFile(const FString& InFilePath, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh);
+    bool ImportFromFile(const FString& InFilePath, UStaticMeshTest*& OutStaticMesh);
+    bool ImportFromFile(const FString& InFilePath, USkeletalMesh*& OutSkeletalMesh);
 
 private:
+    // 파일을 로드하여 StaticMesh 또는 SkeletalMesh 에셋을 채웁니다.
+    // 둘 중 하나만 null이 아니어야 합니다.
+    bool ImportFromFileInternal(const FString& InFilePath, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh);
+
     // 씬 그래프 순회 및 처리
     void ProcessNodeRecursive(FbxNode* InNode, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh);
     void ProcessMeshNode(const FbxNode* InNode, FbxMesh* InMesh, UStaticMeshTest* OutStaticMesh, USkeletalMesh* OutSkeletalMesh);
