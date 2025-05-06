@@ -1,39 +1,34 @@
-
 #include "Renderer.h"
 
-#include <array>
-#include "World/World.h"
-#include "Engine/EditorEngine.h"
-#include "UnrealEd/EditorViewportClient.h"
-#include "D3D11RHI/DXDShaderManager.h"
-#include "RendererHelpers.h"
-#include "StaticMeshRenderPass.h"
-#include "WorldBillboardRenderPass.h"
-#include "EditorBillboardRenderPass.h"
-#include "GizmoRenderPass.h"
-#include "UpdateLightBufferPass.h"
-#include "LineRenderPass.h"
-#include "FogRenderPass.h"
-#include "CameraEffectRenderPass.h"
-#include "SlateRenderPass.h"
-#include "EditorRenderPass.h"
-#include "DepthPrePass.h"
-#include "TileLightCullingPass.h"
-#include <UObject/UObjectIterator.h>
 #include <UObject/Casts.h>
-
+#include <UObject/UObjectIterator.h>
+#include "CameraEffectRenderPass.h"
 #include "CompositingPass.h"
+#include "DepthPrePass.h"
+#include "EditorBillboardRenderPass.h"
+#include "EditorRenderPass.h"
+#include "FogRenderPass.h"
+#include "GizmoRenderPass.h"
 #include "LightHeatMapRenderPass.h"
+#include "LineRenderPass.h"
 #include "PostProcessCompositingPass.h"
+#include "RendererHelpers.h"
 #include "ShadowManager.h"
 #include "ShadowRenderPass.h"
+#include "SkeletalMeshRenderPass.h"
 #include "SlateRenderPass.h"
+#include "StaticMeshRenderPass.h"
+#include "TileLightCullingPass.h"
 #include "UnrealClient.h"
-#include "GameFrameWork/Actor.h"
-
+#include "UpdateLightBufferPass.h"
+#include "WorldBillboardRenderPass.h"
+#include "D3D11RHI/DXDShaderManager.h"
 #include "PropertyEditor/ShowFlags.h"
-#include "Stats/Stats.h"
 #include "Stats/GPUTimingManager.h"
+#include "Stats/Stats.h"
+#include "UnrealEd/EditorViewportClient.h"
+#include "World/World.h"
+
 
 //------------------------------------------------------------------------------
 // 초기화 및 해제 관련 함수
@@ -52,6 +47,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     CreateCommonShader();
     
     StaticMeshRenderPass = AddRenderPass<FStaticMeshRenderPass>();
+    SkeletalMeshRenderPass = AddRenderPass<FSkeletalMeshRenderPass>();
     WorldBillboardRenderPass = AddRenderPass<FWorldBillboardRenderPass>();
     EditorBillboardRenderPass = AddRenderPass<FEditorBillboardRenderPass>();
     GizmoRenderPass = AddRenderPass<FGizmoRenderPass>();

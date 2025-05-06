@@ -15,6 +15,7 @@
 #include "D3D11RHI/DXDBufferManager.h"
 
 
+class FSkeletalMeshRenderPass;
 class IRenderPass;
 class FLightHeatMapRenderPass;
 class FPostProcessCompositingPass;
@@ -34,8 +35,6 @@ class FWorldBillboardRenderPass;
 class FEditorBillboardRenderPass;
 class FGizmoRenderPass;
 class FUpdateLightBufferPass;
-class FDepthBufferDebugPass;
-class FWorldNormalDebugPass;
 class FLineRenderPass;
 class FFogRenderPass;
 class FCameraEffectRenderPass;
@@ -98,6 +97,7 @@ public:
     class FShadowRenderPass* ShadowRenderPass;
 
     FStaticMeshRenderPass* StaticMeshRenderPass = nullptr;
+    FSkeletalMeshRenderPass* SkeletalMeshRenderPass = nullptr;
     FWorldBillboardRenderPass* WorldBillboardRenderPass = nullptr;
     FEditorBillboardRenderPass* EditorBillboardRenderPass = nullptr;
     FGizmoRenderPass* GizmoRenderPass = nullptr;
