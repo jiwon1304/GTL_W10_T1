@@ -204,6 +204,11 @@ void FConsole::AddLog(ELogLevel Level, const WIDECHAR* Fmt, ...)
     va_end(Args);
 }
 
+void FConsole::AddLog(ELogLevel Level, const FString& Message)
+{
+    Items.Emplace(Level, Message);
+}
+
 // 콘솔 창 렌더링
 void FConsole::Draw() {
     if (!bWasOpen)
