@@ -35,7 +35,12 @@ void UAssetManager::InitAssetManager()
     LoadObjFiles();
 }
 
-const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
+const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry() const
+{
+    return AssetRegistry->PathNameToAssetInfo;
+}
+
+TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
 {
     return AssetRegistry->PathNameToAssetInfo;
 }
