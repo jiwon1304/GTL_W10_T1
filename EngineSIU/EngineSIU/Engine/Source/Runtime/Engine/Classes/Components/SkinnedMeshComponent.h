@@ -13,5 +13,5 @@ public:
     void SetSkeletalMesh(USkeletalMesh* NewSkeletalMesh) { SkeletalMesh = NewSkeletalMesh; }
 
 private:
-    USkeletalMesh* SkeletalMesh;
+    USkeletalMesh* SkeletalMesh = nullptr;
 };
