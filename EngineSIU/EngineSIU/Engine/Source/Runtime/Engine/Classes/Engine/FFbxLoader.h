@@ -16,6 +16,7 @@ struct FFbxLoader
 private:
     static FbxManager* GetFbxManager();
     static FbxIOSettings* GetFbxIOSettings();
+    static FbxCluster* FindClusterForBone(FbxNode* boneNode);
     static FSkeletalMesh* LoadFBXObject(FbxScene* InFbxInfo);
     static void LoadFbxSkeleton(
         FSkeletalMesh* fbxObject,

@@ -1,4 +1,4 @@
-﻿#include "Matrix.h"
+#include "Matrix.h"
 
 #include "MathSSE.h"
 #include "MathUtility.h"
@@ -271,6 +271,11 @@ FVector FMatrix::TransformPosition(const FVector& vector) const
     float z = M[0][2] * vector.X + M[1][2] * vector.Y + M[2][2] * vector.Z + M[3][2];
     float w = M[0][3] * vector.X + M[1][3] * vector.Y + M[2][3] * vector.Z + M[3][3];
     return w != 0.0f ? FVector{x / w, y / w, z / w} : FVector{x, y, z};
+}
+
+FVector FMatrix::TransformVector(const FVector& vector) const
+{
+    return TransformVector(vector, *this);
 }
 
 FMatrix FMatrix::GetScaleMatrix(const FVector& InScale)

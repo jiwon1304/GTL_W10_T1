@@ -195,7 +195,7 @@ private:
         FVector Position;
         float Height = 1;
         FVector Direction;
-        float SquareSize = 1;
+        float BaseSize = 1;
         FLinearColor Color = FLinearColor::White;
     };
     const FWString PyramidKeyW = L"DebugPyramid";

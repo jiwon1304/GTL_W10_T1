@@ -41,6 +41,7 @@ public:
 
     FVector4 TransformFVector4(const FVector4& vector) const;
     FVector TransformPosition(const FVector& vector) const;
+    FVector TransformVector(const FVector& vector) const;
 
     static FMatrix GetScaleMatrix(const FVector& InScale);
     static FMatrix GetTranslationMatrix(const FVector& InPosition);

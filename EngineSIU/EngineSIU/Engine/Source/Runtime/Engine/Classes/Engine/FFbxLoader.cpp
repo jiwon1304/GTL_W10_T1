@@ -153,6 +153,31 @@ FbxIOSettings* FFbxLoader::GetFbxIOSettings()
     return GetFbxManager()->GetIOSettings();
 }
 
+FbxCluster* FFbxLoader::FindClusterForBone(FbxNode* boneNode)
+{
+    if (!boneNode || !boneNode->GetScene()) return nullptr;
+    FbxScene* scene = boneNode->GetScene();
+
+    for (int i = 0; i < scene->GetRootNode()->GetChildCount(); ++i)
+    {
+        FbxNode* meshNode = scene->GetRootNode()->GetChild(i);
+        FbxMesh* mesh = meshNode ? meshNode->GetMesh() : nullptr;
+        if (!mesh) continue;
+
+        int skinCount = mesh->GetDeformerCount(FbxDeformer::eSkin);
+        for (int s = 0; s < skinCount; ++s)
+        {
+            FbxSkin* skin = static_cast<FbxSkin*>(mesh->GetDeformer(s, FbxDeformer::eSkin));
+            for (int c = 0; c < skin->GetClusterCount(); ++c)
+            {
+                FbxCluster* cluster = skin->GetCluster(c);
+                if (cluster->GetLink() == boneNode)
+                    return cluster;
+            }
+        }
+    }
+    return nullptr;
+}
 
 void FFbxLoader::LoadFbxSkeleton(
     FSkeletalMesh* fbxObject,
@@ -161,12 +186,9 @@ void FFbxLoader::LoadFbxSkeleton(
     int parentIndex = -1
 )
 {
-    if (!node)
+    if (!node || boneNameToIndex.Contains(node->GetName()))
         return;
 
-    if (boneNameToIndex.Contains(node->GetName()))
-        return;
-    
     FbxNodeAttribute* attr = node->GetNodeAttribute();
     if (!attr || attr->GetAttributeType() != FbxNodeAttribute::eSkeleton)
     {
@@ -181,31 +203,57 @@ void FFbxLoader::LoadFbxSkeleton(
     joint.name = node->GetName();
     joint.parentIndex = parentIndex;
 
-    FbxAMatrix m = node->EvaluateGlobalTransform();
-    for (int i = 0; i < 4; ++i)
+    // 👉 바인드 포즈 행렬 계산을 위해 클러스터를 찾음
+    FbxCluster* cluster = FindClusterForBone(node);
+    if (cluster)
     {
-        for (int j = 0; j < 4; ++j)
-        {
-            joint.localBindPose.M[i][j] = m[i][j];
-        }
+        FbxAMatrix LinkMatrix, Matrix;
+        cluster->GetTransformLinkMatrix(LinkMatrix);  // !!! 실제 joint Matrix : joint->model space 변환 행렬
+        cluster->GetTransformMatrix(Matrix);      // Fbx 모델의 전역 오프셋: 모든 joint가 같은 값을 가짐
+        FbxAMatrix InverseMatrix = LinkMatrix.Inverse() * Matrix;
+
+        FbxAMatrix bindLocal = node->EvaluateLocalTransform();
+
+        // FBX 행렬을 Unreal 형식으로 복사
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                joint.localBindPose.M[i][j] = static_cast<float>(bindLocal[i][j]);
+
+        // FBX 행렬을 Unreal 형식으로 복사
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                joint.inverseBindPose.M[i][j] = static_cast<float>(InverseMatrix[i][j]);
     }
-    joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
+    else
+    {
+        // ⚠ 클러스터가 없는 경우에는 fallback으로 EvaluateLocalTransform 사용
+        FbxAMatrix m = node->EvaluateLocalTransform();
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                joint.localBindPose.M[i][j] = static_cast<float>(m[i][j]);
+
+        joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
+    }
+
+    // Transform 정보도 저장 (Lcl만 사용)
     auto t = node->LclTranslation.Get();
     joint.position = FVector(t[0], t[1], t[2]);
+
     auto r = node->LclRotation.Get();
     joint.rotation = FQuat::CreateRotation(
         FMath::RadiansToDegrees(r[0]),
         FMath::RadiansToDegrees(r[1]),
         FMath::RadiansToDegrees(r[2])
     );
+
     auto s = node->LclScaling.Get();
     joint.scale = FVector(s[0], s[1], s[2]);
 
     int thisIndex = fbxObject->skeleton.joints.Num();
-    
     fbxObject->skeleton.joints.Add(joint);
     boneNameToIndex.Add(joint.name, thisIndex);
-    
+
+    // 재귀적으로 하위 노드 순회
     for (int i = 0; i < node->GetChildCount(); ++i)
     {
         LoadFbxSkeleton(fbxObject, node->GetChild(i), boneNameToIndex, thisIndex);

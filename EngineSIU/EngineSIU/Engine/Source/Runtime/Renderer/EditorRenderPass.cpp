@@ -941,63 +941,56 @@ void FEditorRenderPass::RenderSkinnedMeshs()
 
     for (USkeletalMeshComponent* Comp : Resources.Components.SkinnedMesh)
     {
+        TArray<FConstantBufferDebugPyramid> PyramidsPerComp;
+        TArray<FConstantBufferDebugSphere> SpheresPerComp;
+
+        PyramidsPerComp.SetNum(Comp->GetSkinnedMesh()->skeleton.joints.Num());
+        SpheresPerComp.SetNum(Comp->GetSkinnedMesh()->skeleton.joints.Num());
+
         if (Comp->GetSkinnedMesh() == nullptr)
             return;
         FSkeletalMesh* SkeletalMesh = Comp->GetSkinnedMesh();
+        
+        TArray<FMatrix> CurrentPoseMatrices;
+        Comp->GetCurrentPoseMatrices(CurrentPoseMatrices);
 
         FConstantBufferDebugSphere SphereBuffer;
         SphereBuffer.Color = FLinearColor::Green;
         SphereBuffer.Radius = 1;
 
+        FConstantBufferDebugPyramid PyramidBuffer;
+        PyramidBuffer.Color = FLinearColor::Red;
+        PyramidBuffer.BaseSize = 1;
+
         for (int i = 0; i < SkeletalMesh->skeleton.joints.Num(); ++i)
         {
-            // Start with the current joint's local position
-            FVector GlobalPosition = SkeletalMesh->skeleton.joints[i].position;
+            SphereBuffer.Position = CurrentPoseMatrices[i].GetTranslationVector();
+            SpheresPerComp.Add(SphereBuffer);
 
-            // Traverse up the hierarchy to accumulate parent transformations
             int ParentIndex = SkeletalMesh->skeleton.joints[i].parentIndex;
-            while (ParentIndex >= 0) // -1 indicates no parent
+            if (ParentIndex >= 0) // If the joint has a parent
             {
-                const FFbxJoint& ParentJoint = SkeletalMesh->skeleton.joints[ParentIndex];
-
-                // Apply parent's transform to the current position
-                GlobalPosition = ParentJoint.localBindPose.TransformPosition(GlobalPosition);
-
-                // Move to the next parent
-                ParentIndex = ParentJoint.parentIndex;
-            }
-
-            // Use the globally transformed position for the current joint
-            SphereBuffer.Position = GlobalPosition;
-            Spheres.Add(SphereBuffer);
-
-            // Create pyramids connecting the current joint to its parent joint
-            int CurrentParentIndex = SkeletalMesh->skeleton.joints[i].parentIndex;
-            if (CurrentParentIndex >= 0) // If the joint has a parent
-            {
-                FConstantBufferDebugPyramid PyramidBuffer;
-
-                // Calculate the global position of the parent joint
-                FVector ParentGlobalPosition = SkeletalMesh->skeleton.joints[CurrentParentIndex].position;
-                int GrandParentIndex = SkeletalMesh->skeleton.joints[CurrentParentIndex].parentIndex;
-                int Depth = 0;
-                while (GrandParentIndex >= 0) // -1 indicates no parent
-                {
-                    const FFbxJoint& GrandParentJoint = SkeletalMesh->skeleton.joints[GrandParentIndex];
-                    ParentGlobalPosition = GrandParentJoint.inverseBindPose.TransformPosition(ParentGlobalPosition);
-                    GrandParentIndex = GrandParentJoint.parentIndex;
-                    Depth++;
-                }
-                PyramidBuffer.Position = ParentGlobalPosition; // Current joint position
-                PyramidBuffer.Direction = (GlobalPosition - ParentGlobalPosition).GetSafeNormal(); // Parent joint position
-                PyramidBuffer.Height = (GlobalPosition - ParentGlobalPosition).Size(); // Parent joint position
-
-                float t = (float)Depth / 8.f;
-                PyramidBuffer.Color = FLinearColor::Red * (1 - t) + FLinearColor::Blue * (t); // Root에 가까울수록 빨간색
-                Pyramids.Add(PyramidBuffer);
+                PyramidBuffer.Position = CurrentPoseMatrices[ParentIndex].GetTranslationVector();
+                PyramidBuffer.Direction = (CurrentPoseMatrices[i].GetTranslationVector() - CurrentPoseMatrices[ParentIndex].GetTranslationVector()).GetSafeNormal();
+                PyramidBuffer.Height = (CurrentPoseMatrices[i].GetTranslationVector() - CurrentPoseMatrices[ParentIndex].GetTranslationVector()).Size();
+                PyramidsPerComp.Add(PyramidBuffer);
             }
         }
+        for (auto Pyramid : PyramidsPerComp)
+        {
+            Pyramid.Position = Comp->GetWorldMatrix().TransformPosition(Pyramid.Position);
+            Pyramid.Direction = Comp->GetWorldMatrix().TransformVector(Pyramid.Direction);
+            //Pyramid.Height = Comp->GetWorldMatrix().TransformVector(Pyramid.Height);
+            Pyramids.Add(Pyramid);
+        }
+        for (auto Sphere : SpheresPerComp)
+        {
+            Sphere.Position = Comp->GetWorldMatrix().TransformPosition(Sphere.Position);
+            //Sphere.Radius = Comp->GetWorldMatrix().TransformVector(Sphere.Radius);
+            Spheres.Add(Sphere);
+        }
     }
+
 
 
     ShaderManager->SetVertexShaderAndInputLayout(SphereKeyW, Graphics->DeviceContext);

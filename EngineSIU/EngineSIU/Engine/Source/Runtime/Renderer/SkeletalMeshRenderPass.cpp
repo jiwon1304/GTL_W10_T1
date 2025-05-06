@@ -203,8 +203,10 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         if (!RenderData) continue;
 
         // Bone Matrix는 CPU에서 처리
-        TArray<FMatrix> BoneMatrices;
-        SkinnedMeshData->CalculateBoneMatrices(BoneMatrices);
+        // Model -> j -> transform -> model space로 변환하는 행렬
+        // 즉, transform을 적용해주는 행렬
+        TArray<FMatrix> SkinningMatrices;
+        SkinnedMeshData->GetSkinningMatrices(SkinningMatrices);
 
         // Update constant buffers
         UpdateObjectConstant(
@@ -225,12 +227,12 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
             if (bIsCPUSkinning)
             {
                 BufferManager->CreateDynamicVertexBuffer(MeshData.name, MeshData.vertices, VertexInfo);
-                UpdateVertexBuffer(RenderData->mesh[i], BoneMatrices);
+                UpdateVertexBuffer(RenderData->mesh[i], SkinningMatrices);
             }
             else
             {
                 BufferManager->CreateVertexBuffer(MeshData.name, MeshData.vertices, VertexInfo);
-                UpdateBoneMatrices(BoneMatrices);
+                UpdateBoneMatrices(SkinningMatrices);
             }
 
             Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);

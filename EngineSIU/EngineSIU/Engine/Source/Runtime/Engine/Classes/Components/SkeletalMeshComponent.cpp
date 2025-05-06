@@ -68,17 +68,18 @@ void USkeletalMeshComponent::SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh)
         AABB = FBoundingBox(InSkinnedMesh->AABBmin, InSkinnedMesh->AABBmax);
     }
 }
-void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatrices) const
+void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const
 {
     if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
     {
-        OutBoneMatrices.Add(FMatrix::Identity);
+        OutMatrices.Add(FMatrix::Identity);
         return;
     }
 
     const TArray<FFbxJoint>& joints = SkeletalMesh->skeleton.joints;
-
-    OutBoneMatrices.SetNum(joints.Num());
+    TArray<FMatrix> CurrentPose; // joint -> model space
+    OutMatrices.SetNum(joints.Num());
+    CurrentPose.SetNum(joints.Num());
 
     for (int jointIndex = 0; jointIndex < joints.Num(); ++jointIndex)
     {
@@ -88,9 +89,6 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
 
         if (joint.parentIndex != -1)
         {
-            // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
-            ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose;
-
             if (jointIndex == SelectedBoneIndex)
             {
 
@@ -98,17 +96,66 @@ void USkeletalMeshComponent::CalculateBoneMatrices(TArray<FMatrix>& OutBoneMatri
                 FMatrix Rotation = FMatrix::CreateRotationMatrix(SelectedRotation.Roll, SelectedRotation.Pitch, SelectedRotation.Yaw);
                 FMatrix Scale = FMatrix::CreateScaleMatrix(SelectedScale.X, SelectedScale.Y, SelectedScale.Z);
 
-                ModelToBone = OutBoneMatrices[joint.parentIndex] * joint.localBindPose * Scale * Rotation * Translation;
+                ModelToBone = Scale * Rotation * Translation * joint.localBindPose * CurrentPose[joint.parentIndex];
+            }
+            else
+            {
+                ModelToBone = joint.localBindPose * CurrentPose[joint.parentIndex]; // j->p(j)->model space
             }
         }
         else
         {
-            ModelToBone = joint.localBindPose;
+            ModelToBone = joint.localBindPose; // j -> model space
+        }
+
+        // Current pose 행렬 : j -> model space
+        const FMatrix& InverseBindPose = joint.inverseBindPose;
+        CurrentPose[jointIndex] = ModelToBone;
+        OutMatrices[jointIndex] = InverseBindPose * ModelToBone;
+    }
+}
+
+void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const
+{
+    if (!SkeletalMesh || SkeletalMesh->skeleton.joints.Num() == 0)
+    {
+        OutMatrices.Add(FMatrix::Identity);
+        return;
+    }
+
+    const TArray<FFbxJoint>& joints = SkeletalMesh->skeleton.joints;
+    OutMatrices.SetNum(joints.Num());
+
+    for (int jointIndex = 0; jointIndex < joints.Num(); ++jointIndex)
+    {
+        const FFbxJoint& joint = joints[jointIndex];
+
+        FMatrix ModelToBone = FMatrix::Identity;
+
+        if (joint.parentIndex != -1)
+        {
+            if (jointIndex == SelectedBoneIndex)
+            {
+
+                FMatrix Translation = FMatrix::CreateTranslationMatrix(SelectedLocation);
+                FMatrix Rotation = FMatrix::CreateRotationMatrix(SelectedRotation.Roll, SelectedRotation.Pitch, SelectedRotation.Yaw);
+                FMatrix Scale = FMatrix::CreateScaleMatrix(SelectedScale.X, SelectedScale.Y, SelectedScale.Z);
+
+                ModelToBone = Scale * Rotation * Translation * joint.localBindPose * OutMatrices[joint.parentIndex];
+            }
+            else
+            {
+                ModelToBone = joint.localBindPose * OutMatrices[joint.parentIndex]; // j->p(j)->model space
+            }
+        }
+        else
+        {
+            ModelToBone = joint.localBindPose; // j -> model space
         }
 
         // 스키닝 행렬: 
         const FMatrix& InverseBindPose = joint.inverseBindPose;
-        OutBoneMatrices[jointIndex] = ModelToBone * InverseBindPose;
+        OutMatrices[jointIndex] = ModelToBone;
     }
 }
 
