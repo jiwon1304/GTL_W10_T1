@@ -15,7 +15,7 @@
 #include "RendererHelpers.h"
 #include "ShadowManager.h"
 #include "ShadowRenderPass.h"
-#include "SkeletalMeshRenderPass.h"
+#include "SkinnedMeshRenderPass.h"
 #include "SlateRenderPass.h"
 #include "StaticMeshRenderPass.h"
 #include "TileLightCullingPass.h"
@@ -47,7 +47,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     CreateCommonShader();
     
     StaticMeshRenderPass = AddRenderPass<FStaticMeshRenderPass>();
-    SkeletalMeshRenderPass = AddRenderPass<FSkeletalMeshRenderPass>();
+    SkinnedMeshRenderPass = AddRenderPass<FSkinnedMeshRenderPass>();
     WorldBillboardRenderPass = AddRenderPass<FWorldBillboardRenderPass>();
     EditorBillboardRenderPass = AddRenderPass<FEditorBillboardRenderPass>();
     GizmoRenderPass = AddRenderPass<FGizmoRenderPass>();

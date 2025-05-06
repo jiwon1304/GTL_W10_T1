@@ -2,20 +2,20 @@
 #include "IRenderPass.h"
 #include "Container/Array.h"
 
-class USkeletalMeshComponent;
+class USkinnedMeshComponent;
 
 
-class FSkeletalMeshRenderPass : public IRenderPass
+class FSkinnedMeshRenderPass : public IRenderPass
 {
 public:
-    FSkeletalMeshRenderPass();
-    virtual ~FSkeletalMeshRenderPass() override = default;
+    FSkinnedMeshRenderPass();
+    virtual ~FSkinnedMeshRenderPass() override = default;
 
     // 이동 & 복사 생성자 제거
-    FSkeletalMeshRenderPass(const FSkeletalMeshRenderPass&) = delete;
-    FSkeletalMeshRenderPass& operator=(const FSkeletalMeshRenderPass&) = delete;
-    FSkeletalMeshRenderPass(FSkeletalMeshRenderPass&&) = delete;
-    FSkeletalMeshRenderPass& operator=(FSkeletalMeshRenderPass&&) = delete;
+    FSkinnedMeshRenderPass(const FSkinnedMeshRenderPass&) = delete;
+    FSkinnedMeshRenderPass& operator=(const FSkinnedMeshRenderPass&) = delete;
+    FSkinnedMeshRenderPass(FSkinnedMeshRenderPass&&) = delete;
+    FSkinnedMeshRenderPass& operator=(FSkinnedMeshRenderPass&&) = delete;
 
 public:
     // IRenderPass
@@ -26,7 +26,7 @@ public:
     // ~IRenderPass
 
 protected:
-    TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+    TArray<USkinnedMeshComponent*> SkinnedMeshComponents;
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
