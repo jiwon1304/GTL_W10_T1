@@ -366,12 +366,12 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
 {
     if  (GEngineLoop.MainUIManager)
     {
-        if (ImGui::GetCurrentContext() == GEngineLoop.MainUIManager->GetContext())
+        // 항상 메인 윈도우 컨텍스트로 설정하고 이벤트 처리
+        ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
+        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
         {
-            if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
-            {
-                return true;
-            }
+            return true;
         }
     }
 
@@ -410,12 +410,17 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
         GEngineLoop.UpdateUI();
         break;
     case WM_ACTIVATE:
-        if (ImGui::GetCurrentContext() == nullptr)
+        if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.MainUIManager)
         {
             break;
         }
-        ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
-        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        
+        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        {
+            ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
+            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        }
         break;
     default:
         GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
@@ -428,12 +433,12 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
 {
     if (GEngineLoop.SkeletalMeshViewerUIManager)
     {
-        if (ImGui::GetCurrentContext() == GEngineLoop.SkeletalMeshViewerUIManager->GetContext())
+        // 항상 서브 윈도우 컨텍스트로 설정하고 이벤트 처리
+        ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
+        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
         {
-            if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
-            {
-                return true;
-            }
+            return true;
         }
     }
 
@@ -449,12 +454,17 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         ShowWindow(hWnd, SW_HIDE);
         return 0;
     case WM_ACTIVATE:
-        if (ImGui::GetCurrentContext() == nullptr)
+        if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.SkeletalMeshViewerUIManager)
         {
             break;
         }
-        ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
-        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        
+        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        {
+            ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
+            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        }
         break;
     default:
         // @todo MessageHandler 수정
