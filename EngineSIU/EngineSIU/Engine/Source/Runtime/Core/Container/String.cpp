@@ -490,3 +490,85 @@ FString FString::Printf(const ElementType* Format, ...)
         }
     }
 }
+
+FString operator/(const FString& Lhs, const FString& Rhs)
+{
+    // Lhs가 비어있으면 Rhs만 반환 (Rhs가 절대 경로일 수 있음)
+    if (Lhs.IsEmpty())
+    {
+        return Rhs;
+    }
+
+    // Rhs가 비어있으면 Lhs만 반환
+    if (Rhs.IsEmpty())
+    {
+        return Lhs;
+    }
+
+    FString Result = Lhs; // Lhs 복사
+
+    // Lhs의 마지막 문자가 경로 구분자인지 확인
+    bool bLhsEndsWithSlash = false;
+    if (Result.Len() > 0)
+    {
+        const FString::ElementType LastChar = Result[Result.Len() - 1];
+        if (LastChar == TEXT('/') || LastChar == TEXT('\\')) // 두 종류의 구분자 모두 고려
+        {
+            bLhsEndsWithSlash = true;
+        }
+    }
+
+    // Rhs의 첫 번째 문자가 경로 구분자인지 확인
+    bool bRhsStartsWithSlash = false;
+    if (Rhs.Len() > 0)
+    {
+        const FString::ElementType FirstChar = Rhs[0];
+        if (FirstChar == TEXT('/') || FirstChar == TEXT('\\'))
+        {
+            bRhsStartsWithSlash = true;
+        }
+    }
+
+    // 경로 구분자 처리 로직
+    if (bLhsEndsWithSlash && bRhsStartsWithSlash)
+    {
+        // 예: "Dir/" / "/File.txt" -> "Dir/File.txt"
+        // Rhs에서 첫 번째 슬래시 제거 후 합침
+        Result += Rhs.Mid(1); // Mid(1)은 두 번째 문자부터 끝까지
+    }
+    else if (!bLhsEndsWithSlash && !bRhsStartsWithSlash)
+    {
+        // 예: "Dir" / "File.txt" -> "Dir/File.txt"
+        // 중간에 슬래시 추가 후 합침
+        Result += TEXT("/"); // 표준 경로 구분자로 '/' 사용 권장
+        Result += Rhs;
+    }
+    else // (bLhsEndsWithSlash && !bRhsStartsWithSlash) 또는 (!bLhsEndsWithSlash && bRhsStartsWithSlash)
+    {
+        // 예: "Dir/" / "File.txt" -> "Dir/File.txt"
+        // 예: "Dir" / "/File.txt" -> "Dir/File.txt"
+        // 그냥 합침
+        Result += Rhs;
+    }
+
+    return Result;
+}
+
+// FString과 C-스타일 문자열을 위한 오버로딩
+FString operator/(const FString& Lhs, const FString::ElementType* Rhs)
+{
+    if (Rhs == nullptr || *Rhs == TEXT('\0')) // Rhs가 비어있는지 확인
+    {
+        return Lhs;
+    }
+    return Lhs / FString(Rhs); // FString으로 변환 후 위임
+}
+
+FString operator/(const FString::ElementType* Lhs, const FString& Rhs)
+{
+    if (Lhs == nullptr || *Lhs == TEXT('\0')) // Lhs가 비어있는지 확인
+    {
+        return Rhs;
+    }
+    return FString(Lhs) / Rhs; // FString으로 변환 후 위임
+}
