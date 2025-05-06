@@ -270,7 +270,7 @@ void FFbxLoader::LoadFBXMesh(
         {
             FFbxVertex v;
             int controlPointIndex = mesh->GetPolygonVertex(polygonIndex, vertexIndex);
-            int vertexIdx = polygonIndex * 3 + vertexIndex;
+            int polygonVertexIndex = polygonIndex * 3 + vertexIndex;
             
             // vertex
             FbxVector4 pos = controlPoints[controlPointIndex];
@@ -294,7 +294,7 @@ void FFbxLoader::LoadFBXMesh(
                     index = controlPointIndex;
                     break;
                 case FbxLayerElement::eByPolygonVertex:
-                    index = vertexIndex;
+                    index = polygonVertexIndex;
                     break;
                 case FbxLayerElement::eByPolygon:
                     index = polygonIndex;
@@ -322,7 +322,7 @@ void FFbxLoader::LoadFBXMesh(
                     index = controlPointIndex;
                     break;
                 case FbxLayerElement::eByPolygonVertex:
-                    index = vertexIndex;
+                    index = polygonVertexIndex;
                     break;
                 case FbxLayerElement::eByPolygon:
                     index = polygonIndex;
@@ -425,28 +425,15 @@ void FFbxLoader::LoadFBXMesh(
     {
         for (int i = 0; i + 2 < meshData.indices.Num(); i += 3)
         {
-            uint32 i0 = meshData.indices[i];
-            uint32 i1 = meshData.indices[i + 1];
-            uint32 i2 = meshData.indices[i + 2];
+            FFbxVertex& Vertex0 = meshData.vertices[meshData.indices[i]];
+            FFbxVertex& Vertex1 = meshData.vertices[meshData.indices[i + 1]];
+            FFbxVertex& Vertex2 = meshData.vertices[meshData.indices[i + 2]];
 
-            FFbxVertex& v0 = meshData.vertices[i0];
-            FFbxVertex& v1 = meshData.vertices[i1];
-            FFbxVertex& v2 = meshData.vertices[i2];
-            
-            FVector dp1 = v1.position - v0.position;
-            FVector dp2 = v2.position - v0.position;
-            FVector2D duv1 = v1.uv - v0.uv;
-            FVector2D duv2 = v2.uv - v0.uv;
-
-            float r = 1.0f / (duv1.X * duv2.Y - duv1.Y * duv2.X);
-            FVector tangent = (dp1 * duv2.Y - dp2 * duv1.Y) * r;
-
-            v0.tangent += tangent;
-            v1.tangent += tangent;
-            v2.tangent += tangent;
+            CalculateTangent(Vertex0, Vertex1, Vertex2);
+            CalculateTangent(Vertex1, Vertex2, Vertex0);
+            CalculateTangent(Vertex2, Vertex0, Vertex1);
         }
-        for (int i = 0; i < meshData.vertices.Num(); ++i)
-            meshData.vertices[i].tangent = meshData.vertices[i].tangent * 1 / meshData.vertices[i].tangent.xyz().Length();
+        
     }
 
     // AABB 설정.
@@ -595,4 +582,65 @@ bool FFbxLoader::CreateTextureFromFile(const FWString& Filename, bool bIsSRGB)
     }
 
     return true;
+}
+
+void FFbxLoader::CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2)
+{
+    const float s1 = Vertex1.uv.X - PivotVertex.uv.X;
+    const float t1 = Vertex1.uv.Y - PivotVertex.uv.Y;
+    const float s2 = Vertex2.uv.X - PivotVertex.uv.X;
+    const float t2 = Vertex2.uv.Y - PivotVertex.uv.Y;
+    const float E1x = Vertex1.position.X - PivotVertex.position.X;
+    const float E1y = Vertex1.position.Y - PivotVertex.position.Y;
+    const float E1z = Vertex1.position.Z - PivotVertex.position.Z;
+    const float E2x = Vertex2.position.X - PivotVertex.position.X;
+    const float E2y = Vertex2.position.Y - PivotVertex.position.Y;
+    const float E2z = Vertex2.position.Z - PivotVertex.position.Z;
+
+    const float Denominator = s1 * t2 - s2 * t1;
+    FVector Tangent(1, 0, 0);
+    FVector BiTangent(0, 1, 0);
+    FVector Normal(PivotVertex.normal.X, PivotVertex.normal.Y, PivotVertex.normal.Z);
+    
+    if (FMath::Abs(Denominator) > SMALL_NUMBER)
+    {
+        // 정상적인 계산 진행
+        const float f = 1.f / Denominator;
+        
+        const float Tx = f * (t2 * E1x - t1 * E2x);
+        const float Ty = f * (t2 * E1y - t1 * E2y);
+        const float Tz = f * (t2 * E1z - t1 * E2z);
+        Tangent = FVector(Tx, Ty, Tz).GetSafeNormal();
+
+        const float Bx = f * (-s2 * E1x + s1 * E2x);
+        const float By = f * (-s2 * E1y + s1 * E2y);
+        const float Bz = f * (-s2 * E1z + s1 * E2z);
+        BiTangent = FVector(Bx, By, Bz).GetSafeNormal();
+    }
+    else
+    {
+        // 대체 탄젠트 계산 방법
+        // 방법 1: 다른 방향에서 탄젠트 계산 시도
+        FVector Edge1(E1x, E1y, E1z);
+        FVector Edge2(E2x, E2y, E2z);
+    
+        // 기하학적 접근: 두 에지 사이의 각도 이등분선 사용
+        Tangent = (Edge1.GetSafeNormal() + Edge2.GetSafeNormal()).GetSafeNormal();
+    
+        // 만약 두 에지가 평행하거나 반대 방향이면 다른 방법 사용
+        if (Tangent.IsNearlyZero())
+        {
+            // TODO: 기본 축 방향 중 하나 선택 (메시의 주 방향에 따라 선택)
+            Tangent = FVector(1.0f, 0.0f, 0.0f);
+        }
+    }
+
+    Tangent = (Tangent - Normal * FVector::DotProduct(Normal, Tangent)).GetSafeNormal();
+    
+    const float Sign = (FVector::DotProduct(FVector::CrossProduct(Normal, Tangent), BiTangent) < 0.f) ? -1.f : 1.f;
+
+    PivotVertex.tangent.X = Tangent.X;
+    PivotVertex.tangent.Y = Tangent.Y;
+    PivotVertex.tangent.Z = Tangent.Z;
+    PivotVertex.tangent.W = Sign;
 }
