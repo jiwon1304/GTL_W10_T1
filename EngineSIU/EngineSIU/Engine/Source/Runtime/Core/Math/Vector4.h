@@ -27,7 +27,9 @@ public:
     }
 
     FVector4 operator+(const FVector4& Other) const;
+    FVector4& operator+=(const FVector4& Other);
     FVector4 operator-(const FVector4& Other) const;
+    FVector4& operator-=(const FVector4& Other);
 
     FVector4 operator/(float Scalar) const;
 
@@ -64,6 +66,26 @@ inline FVector4 FVector4::operator+(const FVector4& Other) const
         Z + Other.Z,
         W + Other.W
     };
+}
+
+inline FVector4& FVector4::operator+=(const FVector4& Other)
+{
+    X += Other.X;
+    Y += Other.Y;
+    Z += Other.Z;
+    W += Other.W;
+
+    return *this;
+}
+
+inline FVector4& FVector4::operator-=(const FVector4& Other)
+{
+    X -= Other.X;
+    Y -= Other.Y;
+    Z -= Other.Z;
+    W -= Other.W;
+
+    return *this;
 }
 
 inline FVector4 FVector4::operator/(float Scalar) const
