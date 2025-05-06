@@ -34,7 +34,11 @@ void SLevelEditor::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
     ViewportVSplitter = new SSplitterV();
     ViewportVSplitter->Initialize(ViewportAreaRect);
 
-    // 4. 각 뷰포트 클라이언트 생성 및 초기화 (기존 로직 활용, 영역 계산 수정)
+    FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
+    EditorHSplitter = new SSplitterH();
+    EditorHSplitter->Initialize(PanelAreaRect);
+
+    // 각 뷰포트 클라이언트 생성 및 초기화 (기존 로직 활용, 영역 계산 수정)
     FRect TopLeftViewportRect, TopRightViewportRect, BottomLeftViewportRect, BottomRightViewportRect;
     CalculateViewportRects(ViewportAreaRect, TopLeftViewportRect, TopRightViewportRect, BottomLeftViewportRect, BottomRightViewportRect);
 
@@ -69,11 +73,6 @@ void SLevelEditor::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
 
     ActiveViewportClient = ViewportClients[0];
 
-    FRect PanelAreaRect = MainVSplitter->SideRB->GetRect();
-    EditorHSplitter = new SSplitterH();
-    EditorHSplitter->Initialize(PanelAreaRect);
-
-    // @todo Load 이후 Resize 호출을 통해 갱신 안해주어도 되는지 체크 (현재는 무조건 resize가 호출되는 상황이기에 문제 없이 넘어가고는 있음)
     LoadConfig();
 
     FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();

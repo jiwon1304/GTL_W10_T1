@@ -139,8 +139,8 @@ void SSplitterV::UpdateChildRects()
     if (SideLT)
     {
         SideLT->Initialize(FRect(
-            0.0f,
-            0.0f,
+            std::trunc(Rect.TopLeftX),
+            std::trunc(Rect.TopLeftY),
             static_cast<float>(SplitterCenterX - SplitterHalfThickness),
             std::trunc(Rect.Height)
         ));
@@ -150,8 +150,8 @@ void SSplitterV::UpdateChildRects()
         const float Offset = static_cast<float>(SplitterCenterX + SplitterHalfThickness);
         
         SideRB->Initialize(FRect(
-            Offset,
-            0.0f,
+            std::trunc(Rect.TopLeftX) + Offset,
+            std::trunc(Rect.TopLeftY),
             std::trunc(Rect.Width - Offset),
             std::trunc(Rect.Height)
         ));
@@ -220,8 +220,8 @@ void SSplitterH::UpdateChildRects()
     if (SideLT)
     {
         SideLT->Initialize(FRect(
-            0.0f,
-            0.0f,
+            std::trunc(Rect.TopLeftX),
+            std::trunc(Rect.TopLeftY),
             std::trunc(Rect.Width),
             static_cast<float>(SplitterCenterY - SplitterHalfThickness)
         ));
@@ -231,8 +231,8 @@ void SSplitterH::UpdateChildRects()
         const float Offset = static_cast<float>(SplitterCenterY + SplitterHalfThickness);
         
         SideRB->Initialize(FRect(
-            0.0f,
-            Offset,
+            std::trunc(Rect.TopLeftX),
+            std::trunc(Rect.TopLeftY) + Offset,
             std::trunc(Rect.Width),
             std::trunc(Rect.Height - Offset)
         ));

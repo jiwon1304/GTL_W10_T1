@@ -329,6 +329,10 @@ void FEngineLoop::TempRenderDebugImGui()
     ImGui::Text("- MainSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
     Rect = LevelEditor->EditorHSplitter->GetRect();
     ImGui::Text("EditorSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->SideLT->GetRect();
+    ImGui::Text("- EditorSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+    ImGui::Text("- EditorSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
     Rect = LevelEditor->ViewportVSplitter->GetRect();
     ImGui::Text("ViewportVSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
     Rect = LevelEditor->ViewportHSplitter->GetRect();

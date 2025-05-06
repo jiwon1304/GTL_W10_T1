@@ -27,6 +27,8 @@
 #include "Engine/AssetManager.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "Slate/Widgets/Layout/SSplitter.h"
+#include "Components/Material/Material.h"
 #include "Math/JungleMath.h"
 #include "Renderer/ShadowManager.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -45,11 +47,18 @@ void PropertyEditorPanel::Render()
     }
     
     /* Pre Setup */
-    float PanelWidth = (Width) * 0.2f - 6.0f;
-    float PanelHeight = (Height) * 0.65f;
+    // Splitter 기반 영역 계산
+    SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
+    FRect PropertyRect{0,0,0,0};
+    if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideRB)
+    {
+        PropertyRect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+    }
 
-    float PanelPosX = (Width) * 0.8f + 5.0f;
-    float PanelPosY = (Height) * 0.3f + 15.0f;
+    float PanelPosX = PropertyRect.TopLeftX;
+    float PanelPosY = PropertyRect.TopLeftY;
+    float PanelWidth = PropertyRect.Width;
+    float PanelHeight = PropertyRect.Height;
 
     ImVec2 MinSize(140, 370);
     ImVec2 MaxSize(FLT_MAX, 900);
