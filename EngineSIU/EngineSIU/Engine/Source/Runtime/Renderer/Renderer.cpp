@@ -46,74 +46,51 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
 
     ShaderManager = new FDXDShaderManager(Graphics->Device);
     ShadowManager = new FShadowManager();
-    ShadowRenderPass = new FShadowRenderPass();
+    ShadowRenderPass = AddRenderPass<FShadowRenderPass>();
 
     CreateConstantBuffers();
     CreateCommonShader();
     
-    StaticMeshRenderPass = new FStaticMeshRenderPass();
-    WorldBillboardRenderPass = new FWorldBillboardRenderPass();
-    EditorBillboardRenderPass = new FEditorBillboardRenderPass();
-    GizmoRenderPass = new FGizmoRenderPass();
-    UpdateLightBufferPass = new FUpdateLightBufferPass();
-    LineRenderPass = new FLineRenderPass();
-    FogRenderPass = new FFogRenderPass();
-    CameraEffectRenderPass = new FCameraEffectRenderPass();
-    EditorRenderPass = new FEditorRenderPass();
+    StaticMeshRenderPass = AddRenderPass<FStaticMeshRenderPass>();
+    WorldBillboardRenderPass = AddRenderPass<FWorldBillboardRenderPass>();
+    EditorBillboardRenderPass = AddRenderPass<FEditorBillboardRenderPass>();
+    GizmoRenderPass = AddRenderPass<FGizmoRenderPass>();
+    UpdateLightBufferPass = AddRenderPass<FUpdateLightBufferPass>();
+    LineRenderPass = AddRenderPass<FLineRenderPass>();
+    FogRenderPass = AddRenderPass<FFogRenderPass>();
+    CameraEffectRenderPass = AddRenderPass<FCameraEffectRenderPass>();
+    EditorRenderPass = AddRenderPass<FEditorRenderPass>();
     
-    DepthPrePass = new FDepthPrePass();
-    TileLightCullingPass = new FTileLightCullingPass();
-    LightHeatMapRenderPass = new FLightHeatMapRenderPass();
+    DepthPrePass = AddRenderPass<FDepthPrePass>();
+    TileLightCullingPass = AddRenderPass<FTileLightCullingPass>();
+    LightHeatMapRenderPass = AddRenderPass<FLightHeatMapRenderPass>();
     
-    CompositingPass = new FCompositingPass();
-    PostProcessCompositingPass = new FPostProcessCompositingPass();
-    SlateRenderPass = new FSlateRenderPass();
+    CompositingPass = AddRenderPass<FCompositingPass>();
+    PostProcessCompositingPass = AddRenderPass<FPostProcessCompositingPass>();
+    SlateRenderPass = AddRenderPass<FSlateRenderPass>();
 
     if (false == ShadowManager->Initialize(Graphics, BufferManager))
     {
         static_assert(true, "ShadowManager Initialize Failed");
     }
-    ShadowRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    ShadowRenderPass->InitializeShadowManager(ShadowManager);
-    
-    StaticMeshRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    StaticMeshRenderPass->InitializeShadowManager(ShadowManager);
-    WorldBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    EditorBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    GizmoRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    UpdateLightBufferPass->Initialize(BufferManager, Graphics, ShaderManager);
-    LineRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    FogRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    CameraEffectRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    EditorRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
-    
-    DepthPrePass->Initialize(BufferManager, Graphics, ShaderManager);
-    TileLightCullingPass->Initialize(BufferManager, Graphics, ShaderManager);
-    LightHeatMapRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
 
-    CompositingPass->Initialize(BufferManager, Graphics, ShaderManager);
-    PostProcessCompositingPass->Initialize(BufferManager, Graphics, ShaderManager);
-    
-    SlateRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
+    for (IRenderPass* RenderPass : RenderPasses)
+    {
+        RenderPass->Initialize(BufferManager, Graphics, ShaderManager);
+    }
+    ShadowRenderPass->InitializeShadowManager(ShadowManager);
+    StaticMeshRenderPass->InitializeShadowManager(ShadowManager);
 }
 
 void FRenderer::Release()
 {
     delete ShaderManager;
     delete ShadowManager;
-    delete ShadowRenderPass;
 
-    delete StaticMeshRenderPass;
-    delete WorldBillboardRenderPass;
-    delete EditorBillboardRenderPass;
-    delete GizmoRenderPass;
-    delete UpdateLightBufferPass;
-    delete LineRenderPass;
-    delete FogRenderPass;
-    delete CameraEffectRenderPass;
-    delete CompositingPass;
-    delete PostProcessCompositingPass;
-    delete SlateRenderPass;
+    for (const IRenderPass* RenderPass : RenderPasses)
+    {
+        delete RenderPass;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -228,30 +205,18 @@ void FRenderer::PrepareRender(FViewportResource* ViewportResource) const
 
 void FRenderer::PrepareRenderPass() const
 {
-    StaticMeshRenderPass->PrepareRenderArr();
-    ShadowRenderPass->PrepareRenderArr();
-    GizmoRenderPass->PrepareRenderArr();
-    WorldBillboardRenderPass->PrepareRenderArr();
-    EditorBillboardRenderPass->PrepareRenderArr();
-    UpdateLightBufferPass->PrepareRenderArr();
-    FogRenderPass->PrepareRenderArr();
-    EditorRenderPass->PrepareRenderArr();
-    TileLightCullingPass->PrepareRenderArr();
-    DepthPrePass->PrepareRenderArr();
+    for (IRenderPass* RenderPass : RenderPasses)
+    {
+        RenderPass->PrepareRenderArr();
+    }
 }
 
 void FRenderer::ClearRenderArr() const
 {
-    StaticMeshRenderPass->ClearRenderArr();
-    ShadowRenderPass->ClearRenderArr();
-    WorldBillboardRenderPass->ClearRenderArr();
-    EditorBillboardRenderPass->ClearRenderArr();
-    GizmoRenderPass->ClearRenderArr();
-    UpdateLightBufferPass->ClearRenderArr();
-    FogRenderPass->ClearRenderArr();
-    EditorRenderPass->ClearRenderArr();
-    DepthPrePass->ClearRenderArr();
-    TileLightCullingPass->ClearRenderArr();
+    for (IRenderPass* RenderPass : RenderPasses)
+    {
+        RenderPass->ClearRenderArr();
+    }
 }
 
 void FRenderer::UpdateCommonBuffer(const std::shared_ptr<FEditorViewportClient>& Viewport) const
