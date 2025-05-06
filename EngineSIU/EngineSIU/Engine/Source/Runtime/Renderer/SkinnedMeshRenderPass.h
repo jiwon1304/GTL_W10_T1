@@ -1,7 +1,10 @@
 ﻿#pragma once
+#include "EngineBaseTypes.h"
 #include "IRenderPass.h"
 #include "Container/Array.h"
+#include "Math/Matrix.h"
 
+class USkeletalMesh;
 class USkinnedMeshComponent;
 
 
@@ -25,10 +28,24 @@ public:
     virtual void ClearRenderArr() override;
     // ~IRenderPass
 
+    void CreateShader() const;
+    void PrepareRenderState(const std::shared_ptr<FEditorViewportClient>& Viewport) const;
+    void ChangeViewMode(EViewModeIndex ViewMode) const;
+    void UpdateLitUnlitConstant(bool bIsLit) const;
+    void RenderAllSkinnedMeshes();
+    void UpdateObjectConstant(
+        const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected, bool bCPUSkinning
+    ) const;
+    void UpdateBoneMatrices(const TArray<FMatrix>& BoneMatrices) const;
+    void UpdateVertexBuffer(const USkeletalMesh& MeshData, const TArray<FMatrix>& BoneMatrices) const;
+
 protected:
     TArray<USkinnedMeshComponent*> SkinnedMeshComponents;
 
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
     FDXDShaderManager* ShaderManager;
+
+private:
+    bool bIsCPUSkinning = true;
 };
