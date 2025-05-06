@@ -77,13 +77,14 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& O
     UStaticMeshTest* NewStaticMesh = FObjectFactory::ConstructObject<UStaticMeshTest>(&AssetManager);
     if (ImportFromFileInternal(InFilePath, NewStaticMesh, nullptr))
     {
-        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
+        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.generic_wstring().c_str());
         Info.AssetName = FName(FilePath.filename().wstring());
         Info.AssetType = EAssetType::StaticMesh;
         Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
         FEngineLoop::ResourceManager.AddAssignStaticMeshMap(FName(FilePath.generic_wstring()), NewStaticMesh);
+        NewStaticMesh->AssetName = Info.AssetName;
         OutStaticMesh = NewStaticMesh;
         return true;
     }
@@ -99,13 +100,14 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
     USkeletalMesh* NewSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(&AssetManager);
     if (ImportFromFileInternal(InFilePath, nullptr, NewSkeletalMesh))
     {
-        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.filename().c_str());
+        FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(FilePath.generic_wstring().c_str());
         Info.AssetName = FName(FilePath.filename().wstring());
         Info.AssetType = EAssetType::SkeletalMesh;
         Info.PackagePath = FName(FilePath.parent_path().generic_wstring());
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
         FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(FilePath.generic_wstring()), NewSkeletalMesh);
+        NewSkeletalMesh->AssetName = Info.AssetName;
         OutSkeletalMesh = NewSkeletalMesh;
         return true;
     }
@@ -230,8 +232,6 @@ void FFbxImporter::ProcessMeshNode(const FbxNode* InNode, FbxMesh* InMesh, UStat
 
 void FFbxImporter::ProcessStaticMesh(const FbxNode* InNode, FbxMesh* InMesh, UStaticMeshTest* OutMesh)
 {
-	OutMesh->AssetName = InNode->GetName();
-
 	TArray<int32> VertexControlPointIndices; // 임시 데이터
 	ExtractGeometryData<FVertex>(InMesh, OutMesh->Vertices, OutMesh->Indices, VertexControlPointIndices);
 
@@ -247,8 +247,6 @@ void FFbxImporter::ProcessStaticMesh(const FbxNode* InNode, FbxMesh* InMesh, USt
 
 void FFbxImporter::ProcessSkeletalMesh(const FbxNode* InNode, FbxMesh* InMesh, USkeletalMesh* OutMesh)
 {
-	OutMesh->AssetName = InNode->GetName();
-
 	TArray<int32> VertexControlPointIndices; // 각 최종 Vertex가 어떤 Control Point Index에서 왔는지 추적
 	ExtractGeometryData<FSkinnedVertex>(InMesh, OutMesh->Vertices, OutMesh->Indices, VertexControlPointIndices);
 
