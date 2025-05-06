@@ -957,7 +957,7 @@ void PropertyEditorPanel::RenderForSkinnedMeshComponent(USkinnedMeshComponent* S
         FString PreviewName = FString("None");
         if (USkeletalMesh* SkeletalMesh = SkinnedMeshComponent->GetSkeletalMesh())
         {
-            PreviewName = SkeletalMesh->AssetName.ToString();
+            PreviewName = SkeletalMesh->Info.AssetName.ToString();
         }
         
         if (ImGui::BeginCombo("##SkeletalMesh", GetData(PreviewName), ImGuiComboFlags_None))

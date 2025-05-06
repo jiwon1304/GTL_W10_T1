@@ -69,7 +69,7 @@ USkeletalMesh* FSerializeMeshAsset::LoadSkeletalMeshFromBinary(const FString& Fi
     Info.Size = static_cast<uint32>(std::filesystem::file_size(Path));
 
     FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(Path.generic_wstring()), NewSkeletalMesh);
-    NewSkeletalMesh->AssetName = Info.AssetName;
+    NewSkeletalMesh->Info = Info;
     return NewSkeletalMesh;
 }
 
@@ -128,8 +128,7 @@ FArchive& FSerializeMeshAsset::SerializeVersion(FArchive& Ar)
 
 FArchive& FSerializeMeshAsset::SerializeMeshAssetBase(FArchive& Ar, UMeshAsset* Mesh)
 {
-    return Ar << Mesh->AssetName
-              << Mesh->Materials;
+    return Ar << Mesh->Materials;
 }
 
 FArchive& FSerializeMeshAsset::SerializeMeshAsset(FArchive& Ar, UStaticMeshTest* StaticMesh)

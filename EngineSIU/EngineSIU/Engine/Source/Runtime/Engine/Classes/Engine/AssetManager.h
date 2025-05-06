@@ -18,6 +18,15 @@ struct FAssetInfo
     uint32 Size;          // Asset의 크기 (바이트 단위)
 
     FString GetFullPath() const { return PackagePath.ToString() / AssetName.ToString(); }
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FAssetInfo& Data)
+    {
+        return Ar << Data.AssetName
+                  << Data.PackagePath
+                  << *reinterpret_cast<uint8*>(&Data.AssetType)
+                  << Data.Size;
+    }
 };
 
 struct FAssetRegistry

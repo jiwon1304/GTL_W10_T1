@@ -84,7 +84,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& O
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
         FEngineLoop::ResourceManager.AddAssignStaticMeshMap(FName(FilePath.generic_wstring()), NewStaticMesh);
-        NewStaticMesh->AssetName = Info.AssetName;
+        NewStaticMesh->Info = Info;
         OutStaticMesh = NewStaticMesh;
         return true;
     }
@@ -107,7 +107,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
         Info.Size = static_cast<uint32>(std::filesystem::file_size(FilePath));
 
         FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(FilePath.generic_wstring()), NewSkeletalMesh);
-        NewSkeletalMesh->AssetName = Info.AssetName;
+        NewSkeletalMesh->Info = Info;
         OutSkeletalMesh = NewSkeletalMesh;
         return true;
     }
