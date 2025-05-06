@@ -139,7 +139,6 @@ void PropertyEditorPanel::Render()
 
     if (USkeletalMeshComponent* SkeletalMeshComponent = GetTargetComponent<USkeletalMeshComponent>(SelectedActor, SelectedComponent))
     {
-        RenderForSkinnedMeshComponent(SkeletalMeshComponent);
     }
 
     if (UHeightFogComponent* FogComponent = GetTargetComponent<UHeightFogComponent>(SelectedActor, SelectedComponent))
