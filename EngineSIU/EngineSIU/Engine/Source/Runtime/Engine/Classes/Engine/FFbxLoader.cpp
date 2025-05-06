@@ -303,7 +303,7 @@ void FFbxLoader::LoadFBXMesh(
                                 : tangentElement->GetIndexArray().GetAt(polygonIndex * 3 + vertexIndex);
                 tangent = tangentElement->GetDirectArray().GetAt(tangentIdx);
             }
-            FVector convertTangent(tangent[0], tangent[1], tangent[2]);
+            FVector convertTangent = FVector(tangent[0], tangent[1], tangent[2]);
             v.tangent = convertTangent;
 
             // UV
@@ -386,7 +386,37 @@ void FFbxLoader::LoadFBXMesh(
         meshData.subsetIndex.Add(fbxObject->materialSubsets.Num());
         fbxObject->materialSubsets.Add(subset);
     }
-    
+
+    // tangent 없을 경우 처리.
+    if (tangentElement == nullptr)
+    {
+        for (int i = 0; i + 2 < meshData.indices.Num(); i += 3)
+        {
+            uint32 i0 = meshData.indices[i];
+            uint32 i1 = meshData.indices[i + 1];
+            uint32 i2 = meshData.indices[i + 2];
+
+            FFbxVertex& v0 = meshData.vertices[i0];
+            FFbxVertex& v1 = meshData.vertices[i1];
+            FFbxVertex& v2 = meshData.vertices[i2];
+            
+            FVector dp1 = v1.position - v0.position;
+            FVector dp2 = v2.position - v0.position;
+            FVector2D duv1 = v1.uv - v0.uv;
+            FVector2D duv2 = v2.uv - v0.uv;
+
+            float r = 1.0f / (duv1.X * duv2.Y - duv1.Y * duv2.X);
+            FVector tangent = (dp1 * duv2.Y - dp2 * duv1.Y) * r;
+
+            v0.tangent += tangent;
+            v1.tangent += tangent;
+            v2.tangent += tangent;
+        }
+        for (int i = 0; i < meshData.vertices.Num(); ++i)
+            meshData.vertices[i].tangent = meshData.vertices[i].tangent * 1 / meshData.vertices[i].tangent.xyz().Length();
+    }
+
+    // AABB 설정.
     fbxObject->AABBmin = AABBmin;
     fbxObject->AABBmax = AABBmax;
 
