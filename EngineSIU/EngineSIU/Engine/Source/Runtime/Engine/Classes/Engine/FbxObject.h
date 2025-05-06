@@ -29,6 +29,7 @@ struct FFbxMeshData
 {
     TArray<FFbxVertex> vertices;
     TArray<uint32> indices;
+    TArray<uint32> subsetIndex;
     FString name;
 };
 

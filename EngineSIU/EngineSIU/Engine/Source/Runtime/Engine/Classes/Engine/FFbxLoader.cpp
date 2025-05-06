@@ -111,17 +111,17 @@ FSkinnedMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
         LoadSkinWeights(node, boneNameToIndex, weightMap);
     }
 
-    // parse meshes
+    // parse meshes & material
     for (auto& node: meshes)
     {
         LoadFBXMesh(result, node, boneNameToIndex, weightMap);
-    }
-
-    // parse materials
-    for (auto& node: meshes)
-    {
         LoadFBXMaterials(result, node);
     }
+
+    // // parse materials
+    // for (auto& node: meshes)
+    // {
+    // }
     
     return result;
 }
@@ -369,12 +369,13 @@ void FFbxLoader::LoadFBXMesh(
 
     // subset 처리.
     uint32 accumIndex = 0;
+    uint32 materialIndexOffset = fbxObject->material.Num();
     for (auto& [materialIndex, indices]: materialIndexToIndices)
     {
         FMaterialSubset subset;
         subset.IndexStart = static_cast<uint32>(accumIndex);
         subset.IndexCount = static_cast<uint32>(indices.Num());
-        subset.MaterialIndex = materialIndex;
+        subset.MaterialIndex = materialIndexOffset + materialIndex;
         if (materialIndex < node->GetMaterialCount())
         {
             FbxSurfaceMaterial* mat = node->GetMaterial(materialIndex);
@@ -382,6 +383,7 @@ void FFbxLoader::LoadFBXMesh(
                 subset.MaterialName = mat->GetName();
         }
         accumIndex += indices.Num();
+        meshData.subsetIndex.Add(fbxObject->materialSubsets.Num());
         fbxObject->materialSubsets.Add(subset);
     }
     

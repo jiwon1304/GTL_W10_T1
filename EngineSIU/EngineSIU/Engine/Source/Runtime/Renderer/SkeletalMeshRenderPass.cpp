@@ -129,9 +129,10 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         
             // Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
 
-            for (int SubMeshIndex = 0; SubMeshIndex < RenderData->material.Num() && SubMeshIndex < RenderData->materialSubsets.Num(); SubMeshIndex++)
+            for (int i = 0; i < MeshData.subsetIndex.Num(); ++i)
             {
-                uint32 MaterialIndex = RenderData->materialSubsets[SubMeshIndex].MaterialIndex;
+                uint32 SubsetIndex = MeshData.subsetIndex[i];
+                uint32 MaterialIndex = RenderData->materialSubsets[SubsetIndex].MaterialIndex;
             
                 if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
                 {
@@ -142,8 +143,8 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
                     MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
                 }
             
-                uint32 StartIndex = RenderData->materialSubsets[SubMeshIndex].IndexStart;
-                uint32 IndexCount = RenderData->materialSubsets[SubMeshIndex].IndexCount;
+                uint32 StartIndex = RenderData->materialSubsets[SubsetIndex].IndexStart;
+                uint32 IndexCount = RenderData->materialSubsets[SubsetIndex].IndexCount;
                 Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
             }
         }

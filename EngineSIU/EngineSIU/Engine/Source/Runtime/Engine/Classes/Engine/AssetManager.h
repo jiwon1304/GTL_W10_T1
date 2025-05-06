@@ -44,6 +44,7 @@ public:
     void InitAssetManager();
 
     const TMap<FName, FAssetInfo>& GetAssetRegistry();
+    bool AddAsset(std::string filePath);
 
 private:
     void LoadObjFiles();

@@ -39,7 +39,6 @@ protected:
     virtual void Render_Internal(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderAllStaticMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
-    void RenderAllSkinnedMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderPrimitive(FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex) const;
 

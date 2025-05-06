@@ -42,6 +42,36 @@ const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
     return AssetRegistry->PathNameToAssetInfo;
 }
 
+bool UAssetManager::AddAsset(std::string filePath)
+{
+    std::filesystem::path path(filePath);
+    EAssetType assetType;
+    if (path.extension() == ".fbx")
+    {
+        assetType = EAssetType::SkeletalMesh;
+        if (!FFbxLoader::GetFbxObject(filePath))
+            return false;
+    }
+    else if (path.extension() == ".obj")
+    {
+        assetType = EAssetType::StaticMesh;
+        if (!FObjManager::CreateStaticMesh(filePath))
+            return false;
+    } else
+    {
+        return false;
+    }
+    
+    FAssetInfo NewAssetInfo;
+    NewAssetInfo.AssetName = FName(path.filename().string());
+    NewAssetInfo.PackagePath = FName(path.parent_path().string());
+    NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(path));
+    NewAssetInfo.AssetType = assetType;
+    AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
+
+    return true;
+}
+
 void UAssetManager::LoadObjFiles()
 {
     const std::string BasePathName = "Contents/";

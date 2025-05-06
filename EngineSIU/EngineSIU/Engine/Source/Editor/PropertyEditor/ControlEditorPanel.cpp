@@ -210,7 +210,7 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                     const FString FileName = FileNames.Pop();
                     UE_LOG(ELogLevel::Display, TEXT("Import Wavefront File: %s"), *FileName);
 
-                    if (FObjManager::CreateStaticMesh(FileName) == nullptr)
+                    if (UAssetManager::Get().AddAsset(GetData(FileName)) == false)
                     {
                         tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
                     }
@@ -234,8 +234,7 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                     const FString FileName = FileNames.Pop();
                     UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
 
-                    FSkinnedMesh* fbx = FFbxLoader::GetFbxObject(FileName);
-                    if (fbx == nullptr)
+                    if (UAssetManager::Get().AddAsset(GetData(FileName)) == false)
                     {
                         tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
                     }

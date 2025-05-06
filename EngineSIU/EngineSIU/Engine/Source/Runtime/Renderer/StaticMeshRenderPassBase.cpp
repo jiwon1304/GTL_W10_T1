@@ -104,14 +104,6 @@ void FStaticMeshRenderPassBase::RenderAllStaticMeshes(const std::shared_ptr<FEdi
     }
 }
 
-void FStaticMeshRenderPassBase::RenderAllSkinnedMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
-{
-    for (USkinnedMeshComponent* Comp: SkinnedMeshComponents)
-    {
-        
-    }
-}
-
 void FStaticMeshRenderPassBase::RenderPrimitive(FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex) const
 {
     UINT Stride = sizeof(FStaticMeshVertex);
