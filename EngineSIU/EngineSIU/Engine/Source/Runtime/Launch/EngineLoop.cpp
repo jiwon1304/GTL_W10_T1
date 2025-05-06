@@ -511,8 +511,16 @@ void FEngineLoop::Show(const HWND HWnd)
 {
     if (HWnd)
     {
+        ImGuiContext* PreviousContext = ImGui::GetCurrentContext();
+
         ShowWindow(HWnd, SW_SHOWDEFAULT);
         UpdateWindow(HWnd);
+
+        // 기존 ImGuiContext 복원 (다른 컨텍스트에서 호출되어도 문제가 없게끔)
+        if (PreviousContext)
+        {
+            ImGui::SetCurrentContext(PreviousContext);
+        }
     }
 }
 
