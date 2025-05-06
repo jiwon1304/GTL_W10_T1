@@ -58,6 +58,10 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
 
     GraphicDevice.Initialize(MainAppWnd);
+    //if (SkeletalMeshViewerAppWnd)
+    //{
+        GraphicDevice.CreateAdditionalSwapChain(SkeletalMeshViewerAppWnd);
+    //}
     BufferManager->Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext);
     Renderer.Initialize(&GraphicDevice, BufferManager, &GPUTimingManager);
     PrimitiveDrawBatch.Initialize(&GraphicDevice);
@@ -114,7 +118,7 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 
 void FEngineLoop::Render() const
 {
-    GraphicDevice.Prepare();
+    GraphicDevice.Prepare(MainAppWnd);
     
     if (LevelEditor->IsMultiViewport())
     {
@@ -139,7 +143,9 @@ void FEngineLoop::Render() const
         Renderer.RenderViewport(MainAppWnd, LevelEditor->GetActiveViewportClient());
     }
 
-    if (IsWindowVisible(SkeletalMeshViewerAppWnd))
+    GraphicDevice.Prepare(SkeletalMeshViewerAppWnd);
+
+    if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd) && AssetViewer)
     {
         Renderer.Render(AssetViewer->GetActiveViewportClient());
 
@@ -205,24 +211,33 @@ void FEngineLoop::Tick()
         Render();
 
         /* Render UI (ImGui) */
-        MainUIManager->BeginFrame();
+        // 메인 윈도우 ImGui
+        if (MainUIManager && MainUIManager->GetContext() && IsWindowVisible(MainAppWnd))
         {
-            CurrentImGuiContext = ImGui::GetCurrentContext();
-            UnrealEditor->Render();
+            MainUIManager->BeginFrame();
+            {
+                UnrealEditor->Render();
 
-            FConsole::GetInstance().Draw();
-            EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
-            TempRenderDebugImGui();
+                FConsole::GetInstance().Draw();
+                EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
+                TempRenderDebugImGui();
+            }
+            ID3D11RenderTargetView* const* BackBufferRTV = Renderer.Graphics->BackBufferRTVs.Find(MainAppWnd);
+            Renderer.Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
+            MainUIManager->EndFrame();
         }
-        MainUIManager->EndFrame();
 
-        // Sub window rendering
-        SkeletalMeshViewerUIManager->BeginFrame();
+        // 스켈레탈 메쉬 뷰어 ImGui
+        if (SkeletalMeshViewerUIManager && SkeletalMeshViewerUIManager->GetContext() && SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd))
         {
-            CurrentImGuiContext = ImGui::GetCurrentContext();
-            UnrealEditor->RenderSubWindowPanel();
+            SkeletalMeshViewerUIManager->BeginFrame();
+            {
+                UnrealEditor->RenderSubWindowPanel();
+            }
+            ID3D11RenderTargetView* const* BackBufferRTV = Renderer.Graphics->BackBufferRTVs.Find(SkeletalMeshViewerAppWnd);
+            Renderer.Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
+            SkeletalMeshViewerUIManager->EndFrame();
         }
-        SkeletalMeshViewerUIManager->EndFrame();
 
         // Pending 처리된 오브젝트 제거
         GUObjectArray.ProcessPendingDestroyObjects();
@@ -232,7 +247,11 @@ void FEngineLoop::Tick()
             GPUTimingManager.EndFrame();        // End GPU frame timing
         }
 
-        GraphicDevice.SwapBuffer();
+        GraphicDevice.SwapBuffer(MainAppWnd);
+        if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd))
+        {
+            GraphicDevice.SwapBuffer(SkeletalMeshViewerAppWnd);
+        }
 
         do
         {

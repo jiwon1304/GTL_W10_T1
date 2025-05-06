@@ -11,6 +11,7 @@ FSlateRenderPass::FSlateRenderPass()
     : BufferManager(nullptr)
     , Graphics(nullptr)
     , ShaderManager(nullptr)
+    , Sampler(nullptr)
 {
 }
 
@@ -66,7 +67,8 @@ void FSlateRenderPass::Render(HWND hWnd, const std::shared_ptr<FEditorViewportCl
     BufferManager->BindConstantBuffer(TEXT("FSlateTransform"), 11, EShaderStage::Vertex);
 
     // 렌더 타겟을 백버퍼로 지정
-    Graphics->DeviceContext->OMSetRenderTargets(1, &Graphics->BackBufferRTV, nullptr);
+    ID3D11RenderTargetView* const* BackBufferRTV = Graphics->BackBufferRTVs.Find(hWnd);
+    Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
     Graphics->DeviceContext->RSSetViewports(1, &Graphics->Viewport);
 
     // 렌더 준비

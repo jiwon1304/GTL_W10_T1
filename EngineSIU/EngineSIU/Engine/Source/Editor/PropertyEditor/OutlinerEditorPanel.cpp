@@ -15,7 +15,9 @@ void OutlinerEditorPanel::Render()
     SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
     FRect OutlinerRect{0,0,0,0};
     if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideLT)
+    {
         OutlinerRect = LevelEditor->EditorHSplitter->SideLT->GetRect();
+    }
 
     float PanelPosX = OutlinerRect.TopLeftX;
     float PanelPosY = OutlinerRect.TopLeftY;
