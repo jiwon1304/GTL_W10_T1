@@ -23,7 +23,7 @@ void OutlinerEditorPanel::Render()
     float PanelHeight = OutlinerRect.Height;
 
     ImVec2 MinSize(140, 100);
-    ImVec2 MaxSize(FLT_MAX, 500);
+    ImVec2 MaxSize(FLT_MAX, FLT_MAX);
     
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);

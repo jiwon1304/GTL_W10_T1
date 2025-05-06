@@ -145,6 +145,7 @@ void SLevelEditor::SelectViewport(const FVector2D& Point)
         if (ViewportClients[i]->IsSelected(Point))
         {
             SetActiveViewportClient(i);
+            SetFocus(GEngineLoop.MainAppWnd);
             return;
         }
     }
@@ -208,7 +209,9 @@ void SLevelEditor::ResizeViewports()
         {
             if (ActiveViewportClient)
             {
-                const FRect FullRect(0.f, 0.f, ViewportAreaRect.Width, ViewportAreaRect.Height);
+                //const FRect FullRect(0.f, 0.f, ViewportAreaRect.Width, ViewportAreaRect.Height);
+                // 72 = Top padding height, 32 = bottom padding height
+                const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width * 0.8f, ViewportAreaRect.Height - 72.f - 32.f);
                 ActiveViewportClient->GetViewport()->ResizeViewport(FullRect); // 임시: Top=Bottom=Left=Right=전체영역
                 // TODO: FEditorViewportClient::ResizeViewport에서 단일 뷰포트 모드 처리 로직 확인/수정 필요
             }
@@ -237,12 +240,12 @@ void SLevelEditor::LoadConfig()
     int32 WindowHeight = GetValueFromConfig(Config, "WindowHeight", EditorHeight);
     if (WindowWidth > 100 && WindowHeight > 100)
     {
-        MoveWindow(GEngineLoop.AppWnd, WindowX, WindowY, WindowWidth, WindowHeight, true);
+        MoveWindow(GEngineLoop.MainAppWnd, WindowX, WindowY, WindowWidth, WindowHeight, true);
     }
     const bool bIsZoomed = GetValueFromConfig(Config, "Zoomed", false);
     if (bIsZoomed)
     {
-        ShowWindow(GEngineLoop.AppWnd, SW_MAXIMIZE);
+        ShowWindow(GEngineLoop.MainAppWnd, SW_MAXIMIZE);
     }
 
     FEditorViewportClient::Pivot.X = GetValueFromConfig(Config, "OrthoPivotX", 0.0f);
@@ -317,12 +320,12 @@ void SLevelEditor::SaveConfig()
     ActiveViewportClient->SaveConfig(Config);
 
     RECT WndRect = {};
-    GetWindowRect(GEngineLoop.AppWnd, &WndRect);
+    GetWindowRect(GEngineLoop.MainAppWnd, &WndRect);
     Config["WindowX"] = std::to_string(WndRect.left);
     Config["WindowY"] = std::to_string(WndRect.top);
     Config["WindowWidth"] = std::to_string(WndRect.right - WndRect.left);
     Config["WindowHeight"] = std::to_string(WndRect.bottom - WndRect.top);
-    Config["Zoomed"] = std::to_string(IsZoomed(GEngineLoop.AppWnd));
+    Config["Zoomed"] = std::to_string(IsZoomed(GEngineLoop.MainAppWnd));
 
     Config["bMultiView"] = std::to_string(bMultiViewportMode);
     Config["ActiveViewportIndex"] = std::to_string(ActiveViewportClient->ViewportIndex);
@@ -445,7 +448,7 @@ void SLevelEditor::RegisterEditorInputDelegates()
 
             POINT Point;
             GetCursorPos(&Point);
-            ScreenToClient(GEngineLoop.AppWnd, &Point);
+            ScreenToClient(GEngineLoop.MainAppWnd, &Point);
             FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
 
             MainVSplitter->OnPressed({ ClientPos.X, ClientPos.Y });
@@ -522,7 +525,7 @@ void SLevelEditor::RegisterEditorInputDelegates()
                 POINT Point;
 
                 GetCursorPos(&Point);
-                ScreenToClient(GEngineLoop.AppWnd, &Point);
+                ScreenToClient(GEngineLoop.MainAppWnd, &Point);
                 FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
 
                 // 모든 스플리터에 대해 Hover 검사

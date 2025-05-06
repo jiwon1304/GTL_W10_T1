@@ -1,4 +1,4 @@
-﻿#include "SlateRenderPass.h"
+#include "SlateRenderPass.h"
 
 #include "RendererHelpers.h"
 #include "UnrealClient.h"
@@ -35,11 +35,16 @@ void FSlateRenderPass::PrepareRenderArr()
 
 void FSlateRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
+    // Do nothing
+}
+
+void FSlateRenderPass::Render(HWND hWnd, const std::shared_ptr<FEditorViewportClient>& Viewport)
+{
     const FRect Rect = Viewport->GetViewport()->GetRect();
 
     uint32 ClientWidth = 0;
     uint32 ClientHeight = 0;
-    GEngineLoop.GetClientSize(ClientWidth, ClientHeight);
+    GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
 
     const float ClientWidthFloat = static_cast<float>(ClientWidth);
     const float ClientHeightFloat = static_cast<float>(ClientHeight);

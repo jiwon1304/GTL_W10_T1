@@ -21,7 +21,7 @@ FSlateAppMessageHandler::FSlateAppMessageHandler()
         KeyState = false;
     }
 
-    RawInputHandler = std::make_unique<FRawInput>(GEngineLoop.AppWnd, [this](const RAWINPUT& RawInput)
+    RawInputHandler = std::make_unique<FRawInput>(GEngineLoop.MainAppWnd, [this](const RAWINPUT& RawInput)
     {
         HandleRawInput(RawInput);
     });
@@ -541,7 +541,7 @@ void FSlateAppMessageHandler::OnRawMouseInput(const RAWMOUSE& RawMouseInput)
         {
             // 커서가 화면 안에 있는지 검사
             RECT WindowRect;
-            ::GetWindowRect(GEngineLoop.AppWnd, &WindowRect);
+            ::GetWindowRect(GEngineLoop.MainAppWnd, &WindowRect);
     
             POINT Pos;
             ::GetCursorPos(&Pos);

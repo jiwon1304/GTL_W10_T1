@@ -23,7 +23,6 @@ static consteval const char* GetFileName(const char* Path)
 #define FILENAME GetFileName(__FILE__)
 #define UE_LOG(Level, Fmt, ...) FConsole::GetInstance().AddLog(Level, "[%s:%d] " Fmt, FILENAME, __LINE__, __VA_ARGS__)
 
-
 enum class ELogLevel : uint8
 {
     Display,
@@ -71,6 +70,10 @@ public:
     void Render(ID3D11DeviceContext* Context, UINT Width, UINT Height);
     void RegisterStatScope(const FString& DisplayName, const FName& CPUStatName, const FName& GPUStatName);
 
+    void ToggleWindow() { bShowWindow = !bShowWindow; }
+    void ShowWindow() { bShowWindow = true; }
+    void HideWindow() { bShowWindow = false; }
+
 private:
     FGPUTimingManager* GPUTimingManager = nullptr;
     TArray<FProfiledScope> TrackedScopes;
@@ -100,17 +103,7 @@ public:
     void ExecuteCommand(const std::string& Command);
     void OnResize(HWND hWnd);
 
-    virtual void Toggle() override
-    {
-        if (bWasOpen)
-        {
-            bWasOpen = false;
-        }
-        else
-        {
-            bWasOpen = true;
-        }
-    }
+    virtual void Toggle() override { bWasOpen = !bWasOpen; }
 
 public:
     struct LogEntry
