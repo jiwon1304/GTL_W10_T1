@@ -79,6 +79,28 @@ std::shared_ptr<FTexture> FResourceMgr::GetTexture(const FWString& name) const
     return TempValue ? *TempValue : nullptr;
 }
 
+std::shared_ptr<UStaticMeshTest> FResourceMgr::GetStaticMesh(FName InName) const
+{
+    auto* TempValue = StaticMeshMap.Find(InName);
+    return TempValue ? *TempValue : nullptr;
+}
+
+std::shared_ptr<USkeletalMesh> FResourceMgr::GetSkeletalMesh(FName InName) const
+{
+    auto* TempValue = SkeletalMeshMap.Find(InName);
+    return TempValue ? *TempValue : nullptr;
+}
+
+void FResourceMgr::AddStaticMesh(FName InName, const std::shared_ptr<UStaticMeshTest>& InStaticMesh)
+{
+    return StaticMeshMap.Add(InName, InStaticMesh);
+}
+
+void FResourceMgr::AddSkeletalMesh(FName InName, const std::shared_ptr<USkeletalMesh>& InSkeletalMesh)
+{
+    return SkeletalMeshMap.Add(InName, InSkeletalMesh);
+}
+
 HRESULT FResourceMgr::LoadTextureFromFile(ID3D11Device* device, const wchar_t* filename, bool bIsSRGB)
 {
     IWICImagingFactory* wicFactory = nullptr;
