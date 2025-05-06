@@ -43,7 +43,8 @@ public:
     
     void InitAssetManager();
 
-    const TMap<FName, FAssetInfo>& GetAssetRegistry();
+    const TMap<FName, FAssetInfo>& GetAssetRegistry() const;
+    TMap<FName, FAssetInfo>& GetAssetRegistry();
 
 private:
     void LoadObjFiles();
