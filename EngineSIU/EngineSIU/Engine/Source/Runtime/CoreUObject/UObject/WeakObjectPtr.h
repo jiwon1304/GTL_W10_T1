@@ -1,6 +1,4 @@
 ﻿#pragma once
-#include <concepts>
-
 #include "ObjectUtils.h"
 #include "HAL/PlatformType.h"
 
@@ -51,7 +49,8 @@ public:
     {
         if (ObjectPtr)
         {
-            if (::IsValid(ObjectPtr))
+            // ReSharper disable once CppCStyleCast
+            if (::IsValid((UObject*)ObjectPtr))
             {
                 return ObjectPtr;
             }
