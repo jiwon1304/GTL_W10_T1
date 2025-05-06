@@ -8,7 +8,7 @@
 #include "World/World.h"
 #include "Engine/FObjLoader.h"
 #include "Engine/FFbxLoader.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 
 ATransformGizmo::ATransformGizmo()
 {

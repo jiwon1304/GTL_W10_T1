@@ -42,7 +42,7 @@ const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
     return AssetRegistry->PathNameToAssetInfo;
 }
 
-bool UAssetManager::AddAsset(std::string filePath)
+bool UAssetManager::AddAsset(std::wstring filePath) const
 {
     std::filesystem::path path(filePath);
     EAssetType assetType;

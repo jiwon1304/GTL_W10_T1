@@ -19,4 +19,5 @@ public:
     
 protected:
     FSkinnedMesh* SkinnedMesh = nullptr;
+    int SelectedBoneIndex = -1;
 };

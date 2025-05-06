@@ -16,11 +16,10 @@
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
 #include "Editor/PropertyEditor/ShowFlags.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/SkinnedMeshComponent.h"
 
 class UEditorEngine;
 class UStaticMeshComponent;
-class USkeletalMeshComponent;
 #include "UnrealEd/EditorViewportClient.h"
 
 FShadowRenderPass::FShadowRenderPass()
@@ -100,7 +99,7 @@ void FShadowRenderPass::PrepareRenderArr()
             }
         }
     }
-    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
+    for (const auto iter : TObjectRange<USkinnedMeshComponent>())
     {
         if (iter->GetOwner() && !iter->GetOwner()->IsHidden())
         {

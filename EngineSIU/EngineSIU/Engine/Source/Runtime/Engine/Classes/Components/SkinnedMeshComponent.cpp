@@ -1,19 +1,61 @@
 #include "SkinnedMeshComponent.h"
+
+#include "Engine/AssetManager.h"
 #include "Engine/FbxObject.h"
+#include "Engine/FFbxLoader.h"
+#include "Mesh/SkeletalMeshRenderData.h"
+#include "UObject/Casts.h"
 
 UObject* USkinnedMeshComponent::Duplicate(UObject* InOuter)
 {
-    return UMeshComponent::Duplicate(InOuter);
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
+    NewComponent->SkinnedMesh = SkinnedMesh;
+    NewComponent->SelectedBoneIndex = SelectedBoneIndex;
+    return NewComponent;
 }
 
 void USkinnedMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) const
 {
-    UMeshComponent::GetProperties(OutProperties);
+    Super::GetProperties(OutProperties);
+        
+    if (SkinnedMesh != nullptr)
+    {
+        FString PathFString = SkinnedMesh->name;
+        OutProperties.Add(TEXT("SkeletalMeshPath"), PathFString);
+    }
+    else
+    {
+        OutProperties.Add(TEXT("SkeletalMeshPath"), TEXT("None"));
+    }
 }
 
 void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& InProperties)
 {
-    UMeshComponent::SetProperties(InProperties);
+    Super::SetProperties(InProperties);
+
+    const FString* SkeletalMeshPath = InProperties.Find(TEXT("SkeletalMeshPath"));
+    if (SkeletalMeshPath)
+    {
+        if (*SkeletalMeshPath != TEXT("None"))
+        {
+            if (UAssetManager::Get().AddAsset(StringToWString(SkeletalMeshPath->ToAnsiString())))
+            {
+                FSkinnedMesh* MeshToSet = FFbxLoader::GetFbxObject(SkeletalMeshPath->ToAnsiString());
+                SetSkinnedMesh(MeshToSet);
+                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+                SetSkinnedMesh(nullptr);
+            }
+        }
+        else
+        {
+            SetSkinnedMesh(nullptr);
+            UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
+        }
+    }
 }
 
 void USkinnedMeshComponent::SetSkinnedMesh(FSkinnedMesh* InSkinnedMesh)
