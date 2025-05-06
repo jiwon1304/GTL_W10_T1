@@ -56,10 +56,11 @@ USkeletalMesh* FSerializeMeshAsset::LoadSkeletalMeshFromBinary(const FString& Fi
 
     FMemoryReader Reader{LoadData}; // TODO: FFileArchive 만들기
 
+    // TODO: 여러번 불러오면 오브젝트가 중복 생성됨, 나중에 리임포트 기능 만들면 수정 필요
     UAssetManager& AssetManager = UAssetManager::Get();
-    USkeletalMesh* SharedSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(&AssetManager);
+    USkeletalMesh* NewSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(&AssetManager);
     SerializeVersion(Reader);
-    SerializeMeshAsset(Reader, SharedSkeletalMesh);
+    SerializeMeshAsset(Reader, NewSkeletalMesh);
 
     FAssetInfo& Info = AssetManager.GetAssetRegistry().FindOrAdd(Path.filename().c_str());
     Info.AssetName = FName(Path.filename().wstring());
@@ -67,8 +68,8 @@ USkeletalMesh* FSerializeMeshAsset::LoadSkeletalMeshFromBinary(const FString& Fi
     Info.PackagePath = FName(Path.parent_path().generic_wstring());
     Info.Size = static_cast<uint32>(std::filesystem::file_size(Path));
 
-    FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(Info.AssetName, SharedSkeletalMesh);
-    return SharedSkeletalMesh;
+    FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(Info.AssetName, NewSkeletalMesh);
+    return NewSkeletalMesh;
 }
 
 bool FSerializeMeshAsset::SaveStaticMeshToBinary(const FString& FilePath, UStaticMeshTest* StaticMesh)
