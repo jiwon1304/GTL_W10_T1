@@ -10,16 +10,17 @@
 #include "Core/HAL/PlatformType.h"
 
 
-#define PI                   (3.1415926535897932f)
-#define SMALL_NUMBER         (1.e-8f)
-#define KINDA_SMALL_NUMBER   (1.e-4f)
-#define INV_PI				 (0.31830988618f)
-#define HALF_PI				 (1.57079632679f)
-#define TWO_PI				 (6.28318530717f)
-#define PI_SQUARED			 (9.86960440108f)
+#define PI                          (3.1415926535897932f)
+#define SMALL_NUMBER                (1.e-8f)
+#define KINDA_SMALL_NUMBER          (1.e-4f)
+#define INV_PI				        (0.31830988618f)
+#define HALF_PI				        (1.57079632679f)
+#define TWO_PI				        (6.28318530717f)
+#define PI_SQUARED			        (9.86960440108f)
 
-#define PI_DOUBLE            (3.141592653589793238462643383279502884197169399)
-
+#define DOUBLE_PI					(3.141592653589793238462643383279502884197169399)
+#define DOUBLE_SMALL_NUMBER			(1.e-8)
+#define DOUBLE_KINDA_SMALL_NUMBER	(1.e-4)
 
 /**
  * 커스텀 타입에 대해서 Lerp를 사용할 수 있도록 합니다.
@@ -129,6 +130,24 @@ struct FMath
     }
 
     /**
+     * 두 숫자 A와 B가 지정된 허용 오차 범위 내에서 거의 동일한지 확인합니다.
+     *
+     * @param A 첫 번째 부동 소수점 값입니다.
+     * @param B 두 번째 부동 소수점 값입니다.
+     * @param ErrorTolerance (기본값: SMALL_NUMBER) 두 값의 차이가 허용되는 최대 오차입니다.
+     * @return A와 B가 지정된 허용 오차 내에서 거의 동일하면 true를 반환하고, 그렇지 않으면 false를 반환합니다.
+     */
+    [[nodiscard]] static FORCEINLINE bool IsNearlyEqual(float A, float B, float ErrorTolerance = SMALL_NUMBER)
+    {
+        return Abs<float>(A - B) <= ErrorTolerance;
+    }
+
+    [[nodiscard]] static FORCEINLINE bool IsNearlyEqual(double A, double B, double ErrorTolerance = DOUBLE_SMALL_NUMBER)
+    {
+        return Abs<double>(A - B) <= ErrorTolerance;
+    }
+
+    /**
      * 부동소수점 숫자가 거의 0에 가까운지 확인합니다.
      * @param Value 비교할 숫자
      * @param ErrorTolerance 거의 0으로 간주되는 값의 허용 최대 차이
@@ -137,6 +156,11 @@ struct FMath
     [[nodiscard]] static FORCEINLINE bool IsNearlyZero(float Value, float ErrorTolerance = SMALL_NUMBER)
     {
         return Abs<float>(Value) <= ErrorTolerance;
+    }
+
+    [[nodiscard]] static FORCEINLINE bool IsNearlyZero(double Value, double ErrorTolerance = DOUBLE_SMALL_NUMBER)
+    {
+        return Abs<double>(Value) <= ErrorTolerance;
     }
 
     // Begin Interpolations
@@ -441,7 +465,7 @@ struct FMath
 
     [[nodiscard]] static FORCEINLINE constexpr double RadiansToDegrees(double RadVal)
     {
-        return RadVal * (180.0 / PI_DOUBLE);
+        return RadVal * (180.0 / DOUBLE_PI);
     }
 
     template <typename T>
@@ -457,7 +481,7 @@ struct FMath
 
     [[nodiscard]] static FORCEINLINE constexpr double DegreesToRadians(double DegVal)
     {
-        return DegVal * (PI_DOUBLE / 180.0);
+        return DegVal * (DOUBLE_PI / 180.0);
     }
 
     // Returns e^Value
