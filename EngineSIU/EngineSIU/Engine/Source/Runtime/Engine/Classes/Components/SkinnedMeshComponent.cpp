@@ -38,7 +38,7 @@ void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& Properti
 
 TArray<FMatrix> USkinnedMeshComponent::CalculateBoneMatrices() const
 {
-    TArray<FMatrix> OutBoneMatrices;
+    TArray<FMatrix> OutBoneMatrices; // 최종 스키닝 행렬을 담을 배열
 
     if (!SkeletalMesh || SkeletalMesh->SkeletonData.Bones.Num() == 0)
     {
