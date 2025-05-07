@@ -18,6 +18,8 @@ namespace EEngineShowFlags
         SF_Shadow = 1ULL << 7,
         SF_Collision = 1ULL << 8,
         SF_CollisionSelectedOnly = 1ULL << 9,
+        SF_SkeletalMesh = 1ULL << 10,
+        SF_SkeletalBone = 1ULL << 11,
     };
 }
 
@@ -39,7 +41,7 @@ public:
             bWasOpen = false;
         }
     }
-    uint64 CurrentFlags = 63;
+    uint64 CurrentFlags = 1087;
 private:
     bool bWasOpen = true;
     UINT Width;
