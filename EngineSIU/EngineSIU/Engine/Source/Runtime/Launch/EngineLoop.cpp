@@ -67,6 +67,9 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     PrimitiveDrawBatch.Initialize(&GraphicDevice);
     ResourceManager.Initialize(&Renderer, &GraphicDevice);
 
+    GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
+    GEngine->Init();
+
     MainUIManager->Initialize(MainAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
     SkeletalMeshViewerUIManager->Initialize(SkeletalMeshViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
     uint32 ClientWidth = 0;
@@ -102,8 +105,6 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
         EngineProfiler.RegisterStatScope(TEXT("SlatePass"), FName(TEXT("SlatePass_CPU")), FName(TEXT("SlatePass_GPU")));
     }
 
-    GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
-    GEngine->Init();
 
     FSoundManager::GetInstance().Initialize();
     //FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");
