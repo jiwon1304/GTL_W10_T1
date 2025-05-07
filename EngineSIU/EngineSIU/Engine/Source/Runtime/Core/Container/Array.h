@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
+#include <cassert>
 
 #include "ContainerAllocator.h"
 #include "Serialization/Archive.h"
@@ -31,7 +32,8 @@ public:
 
     T& operator[](SizeType Index);
     const T& operator[](SizeType Index) const;
-    void operator+(const TArray& OtherArray);
+    void operator+=(const TArray& OtherArray);
+    TArray operator+(const TArray& OtherArray) const;
 
 public:
     ArrayType& GetContainerPrivate() { return ContainerPrivate; }
@@ -64,11 +66,24 @@ public:
     template <typename... Args>
     SizeType Emplace(Args&&... Item);
 
+    /**
+     * 다른 TArray의 모든 요소를 이 배열의 끝에 추가합니다.
+     * @param Source 다른 TArray 객체
+     */
+    void Append(const TArray& Source);
+
+    /**
+     * 포인터가 가리키는 C-스타일 배열의 요소들을 이 배열의 끝에 추가합니다.
+     * @param Ptr 추가할 요소 배열의 시작 포인터
+     * @param Count 추가할 요소의 개수
+     */
+    void Append(const ElementType* Ptr, SizeType Count);
+
     /** Array가 비어있는지 확인합니다. */
     bool IsEmpty() const;
 
     /** Array를 비웁니다 */
-    void Empty();
+    void Empty(SizeType Slack = 0);
 
     /** Item과 일치하는 모든 요소를 제거합니다. */
     SizeType Remove(const T& Item);
@@ -132,7 +147,7 @@ public:
     SizeType Num() const;
 
     /** Array의 Capacity를 가져옵니다. */
-    SizeType Len() const;
+    SizeType Max() const;
 
     /** Array의 Size를 Number로 설정합니다. */
     void SetNum(SizeType Number);
@@ -140,19 +155,34 @@ public:
     /** Array의 Capacity를 Number로 설정합니다. */
     void Reserve(SizeType Number);
 
-    /** Count만큼 초기화되지 않은 공간을 확장합니다. */
+    /**
+     * Count만큼 초기화되지 않은 공간을 확장합니다.
+     * @warning std::vector의 한계로, 실제로는 AddDefaulted와 동작이 같습니다.
+     */
     SizeType AddUninitialized(SizeType Count);
+
+    /**
+     * 배열 끝에 기본 생성된 요소 1개를 추가합니다.
+     * @return 추가된 요소의 인덱스
+     */
+    SizeType AddDefaulted();
+
+    /**
+     * 배열 끝에 기본 생성된 요소를 Count개 만큼 추가합니다.
+     * @param Count 추가할 요소의 개수
+     * @return 추가된 첫 번째 요소의 인덱스. Count가 0 이하라면 현재 Num()을 반환할 수 있습니다.
+     */
+    SizeType AddDefaulted(SizeType Count);
+
+    /** Array의 capacity를 현재 size에 맞게 축소하여 메모리를 최적화합니다. */
+    void Shrink();
 
     void Sort();
     template <typename Compare>
         requires std::is_invocable_r_v<bool, Compare, const T&, const T&>
     void Sort(const Compare& CompFn);
 
-    bool IsValidIndex(uint32 ElementIndex) const {
-        if (ElementIndex < 0 || ElementIndex >= Len()) return false;
-
-        return true;
-    }
+    bool IsValidIndex(uint32 ElementIndex) const;
 
     ElementType Pop();
 };
@@ -171,9 +201,17 @@ const T& TArray<T, Allocator>::operator[](SizeType Index) const
 }
 
 template <typename T, typename Allocator>
-void TArray<T, Allocator>::operator+(const TArray& OtherArray)
+void TArray<T, Allocator>::operator+=(const TArray& OtherArray)
 {
     ContainerPrivate.insert(end(), OtherArray.begin(), OtherArray.end());
+}
+
+template <typename T, typename Allocator>
+TArray<T, Allocator> TArray<T, Allocator>::operator+(const TArray& OtherArray) const
+{
+    TArray Result(*this);
+    Result += OtherArray;
+    return Result;
 }
 
 template <typename T, typename Allocator>
@@ -257,15 +295,86 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Emplace(Args&&... 
 }
 
 template <typename T, typename Allocator>
+void TArray<T, Allocator>::Append(const TArray& Source)
+{
+    // 추가할 요소가 없으면 바로 반환
+    if (Source.IsEmpty())
+    {
+        return;
+    }
+
+    // 최적화: 필요한 경우 미리 메모리를 할당하여 여러 번의 재할당 방지
+    const SizeType OldSize = Num();
+    const SizeType NumToAdd = Source.Num();
+    const SizeType NewSize = OldSize + NumToAdd;
+    if (Max() < NewSize)
+    {
+        Reserve(NewSize); // 필요한 만큼 (또는 그 이상) 용량 확보
+    }
+
+    // std::vector::insert를 사용하여 Source의 모든 요소를 현재 벡터의 끝(end())에 삽입
+    ContainerPrivate.insert(
+        ContainerPrivate.end(),          // 삽입 위치: 현재 벡터의 끝
+        Source.ContainerPrivate.begin(), // 복사할 시작 이터레이터
+        Source.ContainerPrivate.end()    // 복사할 끝 이터레이터
+    );
+}
+
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Append(const ElementType* Ptr, SizeType Count)
+{
+    // 추가할 요소가 없거나 포인터가 유효하지 않으면 바로 반환
+    if (Count <= 0)
+    {
+        return;
+    }
+    // Count가 0보다 클 때 Ptr이 nullptr이면 문제가 발생하므로 확인 (assert 또는 예외 처리 등)
+    assert(Ptr != nullptr && "TArray::Append trying to append from null pointer with Count > 0");
+    if (Ptr == nullptr) {
+        // 실제 엔진이라면 로그를 남기거나 할 수 있음
+        return;
+    }
+
+
+    // 최적화: 필요한 경우 미리 메모리를 할당
+    const SizeType OldSize = Num();
+    const SizeType NewSize = OldSize + Count;
+    if (Max() < NewSize)
+    {
+        Reserve(NewSize);
+    }
+
+    // std::vector::insert는 포인터를 이터레이터처럼 사용할 수 있음
+    ContainerPrivate.insert(
+        ContainerPrivate.end(), // 삽입 위치: 현재 벡터의 끝
+        Ptr,                  // 복사할 시작 포인터 (이터레이터 역할)
+        Ptr + Count           // 복사할 끝 포인터 (이터레이터 역할)
+    );
+}
+
+template <typename T, typename Allocator>
 bool TArray<T, Allocator>::IsEmpty() const
 {
     return ContainerPrivate.empty();
 }
 
 template <typename T, typename Allocator>
-void TArray<T, Allocator>::Empty()
+void TArray<T, Allocator>::Empty(SizeType Slack)
 {
     ContainerPrivate.clear();
+
+    if (Slack > 0)
+    {
+        // 현재 capacity가 Slack보다 작으면 늘림
+        if (Max() < Slack)
+        {
+            ContainerPrivate.reserve(Slack);
+        }
+    }
+    else // Slack이 0이면 가능하면 메모리 해제 시도
+    {
+        Shrink();
+    }
 }
 
 template <typename T, typename Allocator>
@@ -353,7 +462,7 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Num() const
 }
 
 template <typename T, typename Allocator>
-typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Len() const
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::Max() const
 {
     return ContainerPrivate.capacity();
 }
@@ -379,13 +488,46 @@ typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddUninitialized(S
     }
 
     // 기존 크기 저장
-    SizeType OldSize = ContainerPrivate.size();
+    SizeType StartIndex = ContainerPrivate.size();
 
-    // 메모리를 확장 (초기화하지 않음)
-    ContainerPrivate.resize(OldSize + Count);
+    // 메모리를 확장
+    ContainerPrivate.resize(StartIndex + Count);
 
     // 새 크기를 반환
-    return OldSize;
+    return StartIndex;
+}
+
+template <typename T, typename Allocator>
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddDefaulted()
+{
+    // 새 요소들이 시작될 인덱스 (현재 크기)
+    const SizeType StartIndex = Num();
+    ContainerPrivate.emplace_back();
+    return StartIndex;
+}
+
+template <typename T, typename Allocator>
+typename TArray<T, Allocator>::SizeType TArray<T, Allocator>::AddDefaulted(SizeType Count)
+{
+    if (Count <= 0)
+    {
+        return Num();
+    }
+
+    // 새 요소들이 시작될 인덱스 (현재 크기)
+    const SizeType StartIndex = Num();
+
+    // resize를 사용하여 Count만큼 크기를 늘립니다.
+    ContainerPrivate.resize(StartIndex + Count);
+
+    // 추가된 첫 번째 요소의 인덱스 반환
+    return StartIndex;
+}
+
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Shrink()
+{
+    ContainerPrivate.shrink_to_fit();
 }
 
 template <typename T, typename Allocator>
@@ -400,6 +542,13 @@ template <typename Compare>
 void TArray<T, Allocator>::Sort(const Compare& CompFn)
 {
     std::sort(ContainerPrivate.begin(), ContainerPrivate.end(), CompFn);
+}
+
+template <typename T, typename Allocator>
+bool TArray<T, Allocator>::IsValidIndex(uint32 ElementIndex) const
+{
+    // uint32라서 0미만은 검사 안함
+    return ElementIndex < Num();
 }
 
 template <typename T, typename Allocator>

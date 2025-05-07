@@ -9,6 +9,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "AssetManager.h"
+
 bool FObjLoader::ParseOBJ(const FString& ObjFilePath, FObjInfo& OutObjInfo)
 {
     std::ifstream OBJ(ObjFilePath.ToWideString());
@@ -887,7 +889,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
     return true;
 }
 
-UMaterial* FObjManager::CreateMaterial(FMaterialInfo materialInfo)
+UMaterial* FObjManager::CreateMaterial(const FObjMaterialInfo& materialInfo)
 {
     if (MaterialMap[materialInfo.MaterialName] != nullptr)
         return MaterialMap[materialInfo.MaterialName];
@@ -915,14 +917,15 @@ UStaticMesh* FObjManager::CreateStaticMesh(const FString& filePath)
         return StaticMesh;
     }
 
-    StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>(nullptr); // TODO: 추후 AssetManager를 생성해서 관리.
+    UAssetManager& AssetManager = UAssetManager::Get();
+    StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>(&AssetManager);
     StaticMesh->SetData(StaticMeshRenderData);
 
     StaticMeshMap.Add(StaticMeshRenderData->ObjectName, StaticMesh); // TODO: 장기적으로 보면 파일 이름 대신 경로를 Key로 사용하는게 좋음.
     return StaticMesh;
 }
 
-UStaticMesh* FObjManager::GetStaticMesh(FWString name)
+UStaticMesh* FObjManager::GetStaticMesh(const FWString& name)
 {
     return StaticMeshMap[name];
 }
