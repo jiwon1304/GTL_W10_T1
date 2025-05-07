@@ -396,6 +396,10 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
         {
             LevelEditor->SaveConfig();
         }
+        if (auto AssetViewer = GEngineLoop.GetAssetViewer())
+        {
+            AssetViewer->SaveConfig();
+        }
         /** Todo: 현재 PostQuitMessage의 종료 메시지가 정상적으로 수신되지 않아
          *  `bIsExit`을 강제로 true로 만들어주었습니다. 나중에 수정이 필요합니다.
          */
