@@ -127,6 +127,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, UStaticMeshTest*& O
 
         FEngineLoop::ResourceManager.AddAssignStaticMeshMap(FName(FilePath.generic_wstring()), NewStaticMesh);
         NewStaticMesh->Info = Info;
+        NewStaticMesh->UpdateMaterials();
         OutStaticMesh = NewStaticMesh;
         return true;
     }
@@ -150,6 +151,7 @@ bool FFbxImporter::ImportFromFile(const FString& InFilePath, USkeletalMesh*& Out
 
         FEngineLoop::ResourceManager.AddAssignSkeletalMeshMap(FName(FilePath.generic_wstring()), NewSkeletalMesh);
         NewSkeletalMesh->Info = Info;
+        NewSkeletalMesh->UpdateMaterials();
         OutSkeletalMesh = NewSkeletalMesh;
         return true;
     }
@@ -281,7 +283,7 @@ void FFbxImporter::ProcessStaticMesh(const FbxNode* InNode, FbxMesh* InMesh, USt
 	// if (OutMesh->Vertices.Num() > 65535) { OutMesh->IndexFormat = DXGI_FORMAT_R32_UINT; }
 	// else { OutMesh->IndexFormat = DXGI_FORMAT_R16_UINT; // TArray<uint16> 사용 필요 }
 
-	ExtractMaterialData(InNode, InMesh, OutMesh->Materials, OutMesh->Subsets, OutMesh->Indices);
+	ExtractMaterialData(InNode, InMesh, OutMesh->MaterialInfos, OutMesh->Subsets, OutMesh->Indices);
 
 	// TODO: DX11 버퍼 생성 로직 호출
 	// CreateStaticMeshResources(OutMesh);
@@ -292,7 +294,7 @@ void FFbxImporter::ProcessSkeletalMesh(const FbxNode* InNode, FbxMesh* InMesh, U
 	TArray<int32> VertexControlPointIndices; // 각 최종 Vertex가 어떤 Control Point Index에서 왔는지 추적
 	ExtractGeometryData<FSkinnedVertex>(InMesh, OutMesh->Vertices, OutMesh->Indices, VertexControlPointIndices);
 
-	ExtractMaterialData(InNode, InMesh, OutMesh->Materials, OutMesh->Subsets, OutMesh->Indices);
+	ExtractMaterialData(InNode, InMesh, OutMesh->MaterialInfos, OutMesh->Subsets, OutMesh->Indices);
 
 	ExtractSkeletonData(InMesh, OutMesh->SkeletonData);
 
