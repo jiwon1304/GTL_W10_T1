@@ -352,6 +352,18 @@ void FSkeletalMeshRenderPass::CreateShader()
     {
         return;
     }
+#pragma region UberShader
+    D3D_SHADER_MACRO DefinesGouraud[] =
+    {
+        { GOURAUD, "1" },
+        { nullptr, nullptr }
+    };
+    hr = ShaderManager->AddVertexShaderAndInputLayout(L"GOURAUD_SkeletalMeshVertexShader", L"Shaders/StaticMeshVertexShader.hlsl", "mainVS", FSkeletalVertex::LayoutDesc, ARRAYSIZE(FSkeletalVertex::LayoutDesc), DefinesGouraud);
+    if (FAILED(hr))
+    {
+        return;
+    }
+#pragma endregion UberShader
 }
 
 void FSkeletalMeshRenderPass::UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices)
