@@ -38,7 +38,10 @@ void FSkeletalMeshRenderPass::PrepareRenderArr()
 {
     for (const auto& Component : TObjectRange<USkeletalMeshComponent>())
     {
-        SkeletalMeshComponents.Add(Component);
+        if (Component->GetOwner() && !Component->GetOwner()->IsHidden() && Component->GetWorld() == GEngine->ActiveWorld)
+        {
+            SkeletalMeshComponents.Add(Component);
+        }
     }
 }
 

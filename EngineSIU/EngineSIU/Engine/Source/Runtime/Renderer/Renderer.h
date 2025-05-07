@@ -60,6 +60,7 @@ public:
     // 렌더 패스 관련 함수
     //==========================================================================
     void Render(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    void RenderMinimal(const std::shared_ptr<FEditorViewportClient>& Viewport);
     void RenderViewport(HWND hWnd, const std::shared_ptr<FEditorViewportClient>& Viewport) const; // TODO: 추후 RenderSlate로 변경해야함
 
 protected:

@@ -333,35 +333,11 @@ void FFbxLoader::LoadFbxSkeleton(
         joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
     }
 
-    // Transform 정보도 저장 (Lcl만 사용)
-    auto t = node->LclTranslation.Get();
-    joint.position = FVector(t[0], t[1], t[2]);
-
-    auto r = node->LclRotation.Get();
-    joint.rotation = FRotator(
-        static_cast<float>(FMath::RadiansToDegrees(r[0])),
-        static_cast<float>(FMath::RadiansToDegrees(r[1])),
-        static_cast<float>(FMath::RadiansToDegrees(r[2]))
-    );
-
-    auto s = node->LclScaling.Get();
-    joint.scale = FVector(s[0], s[1], s[2]);
-
-
-    // TEST
-    FMatrix Mat = FMatrix::CreateScaleMatrix(joint.scale.X, joint.scale.Y, joint.scale.Z)
-        * FMatrix::CreateRotationMatrix(joint.rotation.Roll, joint.rotation.Pitch, joint.rotation.Yaw)
-        * FMatrix::CreateTranslationMatrix(joint.position);
-
-    auto Mat2 = node->EvaluateLocalTransform();
-
-    t = Mat2.GetT();
-    r = Mat2.GetR();
-    s = Mat2.GetS();
-
+    FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
+    FMatrix Mat;
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j)
-            Mat.M[i][j] = static_cast<float>(Mat2[i][j]);
+            Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
     FTransform Transform;
     Transform.SetFromMatrix(Mat);

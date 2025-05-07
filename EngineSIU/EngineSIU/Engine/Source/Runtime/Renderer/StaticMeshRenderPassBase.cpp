@@ -42,14 +42,14 @@ void FStaticMeshRenderPassBase::PrepareRenderArr()
         }
         StaticMeshComponents.Add(iter);
     }
-    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
-    {
-        if (iter->GetWorld() != GEngine->ActiveWorld)
-        {
-            continue;
-        }
-        SkinnedMeshComponents.Add(iter);
-    }
+    //for (const auto iter : TObjectRange<USkeletalMeshComponent>())
+    //{
+    //    if (iter->GetWorld() != GEngine->ActiveWorld)
+    //    {
+    //        continue;
+    //    }
+    //    SkinnedMeshComponents.Add(iter);
+    //}
 }
 
 void FStaticMeshRenderPassBase::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)

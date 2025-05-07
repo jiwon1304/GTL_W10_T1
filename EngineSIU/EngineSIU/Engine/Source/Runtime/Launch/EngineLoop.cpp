@@ -145,9 +145,20 @@ void FEngineLoop::Render() const
 
     if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd) && AssetViewer)
     {
-        Renderer.Render(AssetViewer->GetActiveViewportClient());
+        // ActiveWorld를 변경하여 FRenderer::Render()에서 EditorPreviewWorld를 접근하도록 함
+        UWorld* CurrentWorld = GEngine->ActiveWorld;
+        if (UEditorEngine* E = Cast<UEditorEngine>(GEngine))
+        {
+            UWorld* EditorWorld = E->EditorPreviewWorld;
+            if (EditorWorld)
+            {
+                GEngine->ActiveWorld = EditorWorld;
+                Renderer.Render(AssetViewer->GetActiveViewportClient());
+            }
+            Renderer.RenderViewport(SkeletalMeshViewerAppWnd, AssetViewer->GetActiveViewportClient());
+        }
 
-        Renderer.RenderViewport(SkeletalMeshViewerAppWnd, AssetViewer->GetActiveViewportClient());
+        GEngine->ActiveWorld = CurrentWorld;
     }
 }
 

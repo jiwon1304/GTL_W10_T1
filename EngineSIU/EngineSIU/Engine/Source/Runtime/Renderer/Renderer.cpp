@@ -323,7 +323,6 @@ void FRenderer::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     EndRender();
 }
 
-
 void FRenderer::EndRender()
 {
     ClearRenderArr();
