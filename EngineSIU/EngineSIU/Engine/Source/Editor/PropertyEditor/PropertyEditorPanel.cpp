@@ -480,34 +480,67 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
     if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
         ImGui::Text("Bone");
-        ImGui::SameLine();
 
         const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
-        FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
-        
-        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        std::function<void(int)> CreateNode = [&CreateNode, &SkeletalMeshComponent, &boneIndexToName](int InParentIndex)
         {
-            for (const auto& [index, boneName] : boneIndexToName)
-            {
-                if (ImGui::Selectable(GetData(boneName), false))
-                {
-                    FString MeshName = boneName;
-                    SkeletalMeshComponent->SelectedBoneIndex = index;
-                }
-            }
-            ImGui::EndCombo();
-        }
+            TArray<int> childrenIndices = SkeletalMeshComponent->GetChildrenOfBone(InParentIndex);
 
+            ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None;
+            if (childrenIndices.Num() == 0)
+                Flags |= ImGuiTreeNodeFlags_Leaf;
+            if (SkeletalMeshComponent->SelectedBoneIndex == InParentIndex)
+                Flags |= ImGuiTreeNodeFlags_Selected;
+
+            ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+            bool NodeOpen = ImGui::TreeNodeEx(GetData(boneIndexToName[InParentIndex]), Flags);
+            
+            if (ImGui::IsItemClicked())
+                SkeletalMeshComponent->SelectedBoneIndex = InParentIndex;
+            if (NodeOpen)
+            {
+                for (int childIndex : childrenIndices)
+                {
+                    CreateNode(childIndex);
+                }
+                ImGui::TreePop();
+            }
+        };
+
+        TArray<int> rootIndices = SkeletalMeshComponent->GetChildrenOfBone(-1);
+        for (int rootIndex : rootIndices)
+        {
+            CreateNode(rootIndex);
+        }
+        
         if (SkeletalMeshComponent->SelectedBoneIndex > -1)
         {
-
-            FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation, 0, 85);
+            ImGui::Text("Bone Pose");
+            ImGui::SameLine();
+            if (ImGui::Button("Reset Pose"))
+            {
+                SkeletalMeshComponent->ResetPose();
+            }
+            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Rotation, 0, 85);
+            FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Scale3D, 0, 85);
+            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
+            
+            ImGui::Text("Reference Pose");
+            FReferenceSkeleton skeleton;
+            SkeletalMeshComponent->GetSkeletalMesh()->GetRefSkeleton(skeleton);
+            FTransform refTransform = skeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("refLocation", refTransform.Translation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale3D, 0, 85);
         }
         //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
 

@@ -21,7 +21,7 @@ float FEditorViewportClient::OrthoSize = 10.0f;
 FEditorViewportClient::FEditorViewportClient()
     : Viewport(nullptr)
     , ViewportType(LVT_Perspective)
-    , ShowFlag(63)
+    , ShowFlag(1087)
     , ViewMode(EViewModeIndex::VMI_Lit_BlinnPhong)
     , bRightMouseDown(false)
 {
@@ -672,7 +672,7 @@ void FEditorViewportClient::LoadConfig(const TMap<FString, FString>& Config)
     PerspectiveCamera.ViewRotation.X = GetValueFromConfig(Config, "PerspectiveCameraRotX" + ViewportNum, 0.0f);
     PerspectiveCamera.ViewRotation.Y = GetValueFromConfig(Config, "PerspectiveCameraRotY" + ViewportNum, 0.0f);
     PerspectiveCamera.ViewRotation.Z = GetValueFromConfig(Config, "PerspectiveCameraRotZ" + ViewportNum, 0.0f);
-    ShowFlag = GetValueFromConfig(Config, "ShowFlag" + ViewportNum, 63.0f);
+    ShowFlag = GetValueFromConfig(Config, "ShowFlag" + ViewportNum, 1087.f);
     ViewMode = static_cast<EViewModeIndex>(GetValueFromConfig(Config, "ViewMode" + ViewportNum, 3));    // 0은 고로 쉐이더로 불안정한 경우가 많음.
     ViewportType = static_cast<ELevelViewportType>(GetValueFromConfig(Config, "ViewportType" + ViewportNum, 3));
 }

@@ -466,7 +466,10 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
     RenderPointlightInstanced();
     RenderSpotlightInstanced();
     RenderArrows();
-    RenderSkinnedMeshs();
+    if (Viewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_SkeletalBone))
+    {
+        RenderSkinnedMeshs();
+    }
 
     //ID3D11DepthStencilState* DepthStateEnable = Graphics->DepthStencilStateTestWriteEnable;
     //Graphics->DeviceContext->OMSetDepthStencilState(DepthStateEnable, 0);

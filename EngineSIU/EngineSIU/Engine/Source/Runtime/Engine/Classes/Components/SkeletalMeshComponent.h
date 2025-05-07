@@ -1,5 +1,6 @@
 #pragma once
 #include "MeshComponent.h"
+#include "Engine/Asset/SkeletalMeshAsset.h"
 
 class USkeletalMesh;
 
@@ -17,12 +18,13 @@ public:
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
     void GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const;
     void GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const;
+    TArray<int> GetChildrenOfBone(int InParentIndex) const;
     const TMap<int, FString> GetBoneIndexToName();
+    void ResetPose();
     
     int SelectedBoneIndex = -1;
-    //FVector SelectedLocation;
-    //FRotator SelectedRotation;
-    //FVector SelectedScale = FVector::OneVector;
+    TArray<FTransform> overrideSkinningTransform;
+    
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
 };

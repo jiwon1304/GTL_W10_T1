@@ -11,6 +11,7 @@ UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
     ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
     NewComponent->SkeletalMesh = SkeletalMesh;
     NewComponent->SelectedBoneIndex = SelectedBoneIndex;
+    NewComponent->ResetPose();
     return NewComponent;
 }
 
@@ -61,28 +62,36 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {
     SkeletalMesh = InSkeletalMesh;
+    SelectedBoneIndex = -1;
+    ResetPose();
 }
 void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const
 {
+    if (!SkeletalMesh)
+    {
+        OutMatrices.Add(FMatrix::Identity);
+        return;
+    }
+    
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
-    if (!SkeletalMesh || RefSkeleton.RawNameToIndexMap.Num() == 0)
+    if (overrideSkinningTransform.Num() == 0)
     {
         OutMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const TArray<FTransform>& RefBonePose = RefSkeleton.RawRefBonePose;
-    OutMatrices.SetNum(RefSkeleton.RawRefBonePose.Num());
+    const TArray<FTransform>& BonePose = overrideSkinningTransform;
+    OutMatrices.SetNum(overrideSkinningTransform.Num());
     TArray<FMatrix> CurrentPoseMatrices; // joint -> model space
-    CurrentPoseMatrices.SetNum(RefSkeleton.RawRefBonePose.Num());
+    CurrentPoseMatrices.SetNum(overrideSkinningTransform.Num());
 
     TArray<FMatrix> InverseBindPose;
     SkeletalMesh->GetInverseBindPoseMatrices(InverseBindPose);
 
-    for (int JointIndex = 0; JointIndex < RefSkeleton.RawRefBonePose.Num(); ++JointIndex)
+    for (int JointIndex = 0; JointIndex < overrideSkinningTransform.Num(); ++JointIndex)
     {
-        const FTransform& RefPose = RefBonePose[JointIndex];
+        const FTransform& RefPose = BonePose[JointIndex];
         FMatrix BoneToModel = FMatrix::Identity;
         FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale3D.X, RefPose.Scale3D.Y, RefPose.Scale3D.Z) *
             RefPose.Rotation.ToMatrix() *
@@ -109,15 +118,21 @@ void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) c
 
 void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const
 {
+    if (!SkeletalMesh)
+    {
+        OutMatrices.Add(FMatrix::Identity);
+        return;
+    }
+    
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
-    if (!SkeletalMesh || RefSkeleton.RawNameToIndexMap.Num() == 0)
+    if (overrideSkinningTransform.Num() == 0)
     {
         OutMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const TArray<FTransform>& RefBonePose = RefSkeleton.RawRefBonePose;
+    const TArray<FTransform>& BonePose = overrideSkinningTransform;
     OutMatrices.SetNum(RefSkeleton.RawRefBonePose.Num());
 
     TArray<FMatrix> InverseBindPose;
@@ -125,7 +140,7 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
 
     for (int JointIndex = 0; JointIndex < RefSkeleton.RawRefBonePose.Num(); ++JointIndex)
     {
-        const FTransform& RefPose = RefBonePose[JointIndex];
+        const FTransform& RefPose = BonePose[JointIndex];
         FMatrix BoneToModel = FMatrix::Identity;
         FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale3D.X, RefPose.Scale3D.Y, RefPose.Scale3D.Z) *
             RefPose.Rotation.ToMatrix() *
@@ -186,20 +201,56 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
     //}
 }
 
+TArray<int> USkeletalMeshComponent::GetChildrenOfBone(int InParentIndex) const
+{
+    if (SkeletalMesh == nullptr)
+        return TArray<int>();
+    FReferenceSkeleton refBones;
+    SkeletalMesh->GetRefSkeleton(refBones);
+    TArray<FMeshBoneInfo>& rawRefBones = refBones.RawRefBoneInfo;
+    // TODO: FMeshBoneInfo에 children Index 저장해서 접근하기.
+    TArray<int> result;
+    for (int i = std::max(InParentIndex, 0); i < rawRefBones.Num(); ++i)
+    {
+        if (rawRefBones[i].ParentIndex == InParentIndex)
+            result.Add(i);
+    }
+    return result;
+}
+
 const TMap<int, FString> USkeletalMeshComponent::GetBoneIndexToName()
 {
     TMap<int, FString> BoneIndexToName;
     BoneIndexToName.Add(-1, "None");
+    if (!SkeletalMesh)
+        return BoneIndexToName;
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
-    if (!SkeletalMesh || RefSkeleton.RawNameToIndexMap.Num() == 0)
-    {
+    if (RefSkeleton.RawNameToIndexMap.Num() == 0)
         return BoneIndexToName;
-    }
     
     for (int i = 0 ; i < RefSkeleton.RawNameToIndexMap.Num(); ++i)
     {
         BoneIndexToName.Add(i, RefSkeleton.RawRefBoneInfo[i].Name);
     }
     return BoneIndexToName;
+}
+
+void USkeletalMeshComponent::ResetPose()
+{
+    overrideSkinningTransform.Empty();
+    
+    FReferenceSkeleton RefSkeleton;
+    if (!SkeletalMesh)
+        return;
+    SkeletalMesh->GetRefSkeleton(RefSkeleton);
+    if (RefSkeleton.RawNameToIndexMap.Num() == 0)
+        return;
+    const TArray<FTransform>& RefBonePose = RefSkeleton.RawRefBonePose;
+    
+    overrideSkinningTransform.SetNum(RefBonePose.Num());
+    for (int i = 0; i < RefBonePose.Num(); ++i)
+    {
+        overrideSkinningTransform[i] = RefBonePose[i];
+    }
 }
