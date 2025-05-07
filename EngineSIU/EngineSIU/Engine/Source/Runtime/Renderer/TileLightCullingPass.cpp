@@ -39,12 +39,13 @@ void FTileLightCullingPass::Initialize(FDXDBufferManager* InBufferManager, FGrap
     Graphics = InGraphics;
     ShaderManager = InShaderManage;
 
-    ResizeTiles(Graphics->ScreenWidth, Graphics->ScreenHeight); // 시작은 전체 크기
-    // 한 타일이 가질 수 있는 조명 ID 목록을 비트마스크로 표현한 총 슬롯 수
-
     CreateShader();
+
+    // 초기화는 메인 윈도우 크기에 맞춤
+    ResizeTiles(*Graphics->ScreenWidths.Find(GEngineLoop.MainAppWnd), *Graphics->ScreenHeights.Find(GEngineLoop.MainAppWnd));
+
     CreateViews();
-    CreateBuffers(Graphics->ScreenWidth, Graphics->ScreenHeight); // 시작은 전체 크기
+    CreateBuffers(*Graphics->ScreenWidths.Find(GEngineLoop.MainAppWnd), *Graphics->ScreenHeights.Find(GEngineLoop.MainAppWnd));
 }
 
 void FTileLightCullingPass::PrepareRenderArr()
