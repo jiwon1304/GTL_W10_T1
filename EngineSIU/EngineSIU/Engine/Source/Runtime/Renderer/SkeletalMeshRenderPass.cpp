@@ -412,6 +412,8 @@ void FSkeletalMeshRenderPass::GetSkinnedVertices(USkeletalMesh* SkeletalMesh, ui
         SkinnedVertex.Position = SkinnedPosition.Pos();
         SkinnedVertex.Normal = SkinnedNormal.Pos();
         SkinnedVertex.Tangent = SkinnedTangent.Pos();
+        SkinnedVertex.Color = Vertex.Color;
+        SkinnedVertex.UV = Vertex.UV;
     }
 }
 
