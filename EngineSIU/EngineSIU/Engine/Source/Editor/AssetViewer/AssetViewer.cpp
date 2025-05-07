@@ -33,7 +33,7 @@ void SAssetViewer::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
 
     FRect CenterAndRightAreaRect = PrimaryVSplitter->SideRB->GetRect();
     CenterAndRightVSplitter = new SSplitterV();
-    CenterAndRightVSplitter->SplitRatio = 0.75f;
+    CenterAndRightVSplitter->SplitRatio = 0.8f;
     CenterAndRightVSplitter->Initialize(CenterAndRightAreaRect);
 
     FRect RightSidebarAreaRect = CenterAndRightVSplitter->SideRB->GetRect();
@@ -49,10 +49,6 @@ void SAssetViewer::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
         EViewScreenLocation Location = EViewScreenLocation::EVL_MAX;
         FRect Rect = CenterAndRightVSplitter->SideLT->GetRect();
         ActiveViewportClient->Initialize(Location, Rect);
-        // For now, we assume basic setup is done in constructor or will be handled by SetRect/ResizeViewport.
-        // If your FEditorViewportClient requires a UWorld or other specific setup:
-        // UWorld* PreviewWorld = GEngine->GetEditorWorldContext().World(); // Or a dedicated preview world
-        // ActiveViewportClient->SetPreviewWorld(PreviewWorld);
     }
 
     LoadConfig();
@@ -94,8 +90,6 @@ void SAssetViewer::Tick(float DeltaTime)
 {
     if (ActiveViewportClient && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
     {
-        FRect ViewportRect = CenterAndRightVSplitter->SideLT->GetRect();
-        ActiveViewportClient->GetViewport()->ResizeViewport(ViewportRect);
         ActiveViewportClient->Tick(DeltaTime);
     }
 }
@@ -113,14 +107,12 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
     // Primary 스플리터 부터 리사이즈 전파
     if (PrimaryVSplitter)
     {
-        //PrimaryVSplitter->SetRect(FRect(0, 0, static_cast<float>(InEditorWidth), static_cast<float>(InEditorHeight)));
         PrimaryVSplitter->OnResize(InEditorWidth, InEditorHeight);
 
         FRect CenterAndRightAreaRect = PrimaryVSplitter->SideRB->GetRect();
         if (CenterAndRightVSplitter)
         {
             CenterAndRightVSplitter->SetRect(CenterAndRightAreaRect);
-            CenterAndRightVSplitter->OnResize(static_cast<uint32>(CenterAndRightAreaRect.Width), static_cast<uint32>(CenterAndRightAreaRect.Height));
 
             FRect RightSidebarAreaRect = CenterAndRightVSplitter->SideRB->GetRect();
             if (RightSidebarHSplitter)
@@ -136,12 +128,12 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
 
 void SAssetViewer::ResizeViewport()
 {
-    if (PrimaryVSplitter)
+    if (CenterAndRightVSplitter)
     {
         FRect ViewportAreaRect = CenterAndRightVSplitter->SideLT->GetRect();
-        if (ActiveViewportClient && ActiveViewportClient->GetViewport() && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
+        if (ActiveViewportClient && ActiveViewportClient->GetViewport())
         {
-            const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
+            const FRect FullRect(ViewportAreaRect.TopLeftX, ViewportAreaRect.TopLeftY + 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
             ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
         }
     }
@@ -416,10 +408,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
             if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton)
               && InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
             {
-                if (ActiveViewportClient)
-                {
-                    ActiveViewportClient->MouseMove(InMouseEvent);
-                }
+                ActiveViewportClient->MouseMove(InMouseEvent);
             }
             // @todo Gizmo 조작
         }

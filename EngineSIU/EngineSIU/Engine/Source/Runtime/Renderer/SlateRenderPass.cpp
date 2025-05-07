@@ -69,7 +69,7 @@ void FSlateRenderPass::Render(HWND hWnd, const std::shared_ptr<FEditorViewportCl
     // 렌더 타겟을 백버퍼로 지정
     ID3D11RenderTargetView* const* BackBufferRTV = Graphics->BackBufferRTVs.Find(hWnd);
     Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
-    Graphics->DeviceContext->RSSetViewports(1, &Graphics->Viewport);
+    Graphics->DeviceContext->RSSetViewports(1, Graphics->Viewports.Find(hWnd));
 
     // 렌더 준비
     FViewportResource* ViewportResource = Viewport->GetViewportResource();
