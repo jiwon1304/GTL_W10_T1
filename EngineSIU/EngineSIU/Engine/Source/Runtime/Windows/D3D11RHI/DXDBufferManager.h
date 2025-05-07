@@ -38,9 +38,11 @@ public:
     template<typename T>
     HRESULT CreateVertexBuffer(const FWString& KeyName, const TArray<T>& vertices, FVertexInfo& OutVertexInfo, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
     template<typename T>
+    HRESULT CreateVertexBuffer(const FString& KeyName, const TArray<T>& vertices, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
+    template<typename T>
     HRESULT CreateVertexBuffer(const FWString& KeyName, const TArray<T>& vertices, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
     template<typename T>
-    HRESULT CreateVertexBuffer(const FString& KeyName, const TArray<T>& vertices, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
+    HRESULT CreateVertexBuffer(const FString& KeyName, const void* Vertices, uint32 ByteWidth, uint32 Stride, uint32 Offset = 0, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
 
     template<typename T>
     HRESULT CreateIndexBuffer(const FString& KeyName, const TArray<T>& indices, FIndexInfo& OutIndexInfo, D3D11_USAGE Usage = D3D11_USAGE_DEFAULT, UINT CpuAccessFlags = 0);
@@ -283,6 +285,39 @@ inline HRESULT FDXDBufferManager::CreateVertexBuffer(const FWString& KeyName, co
     FVertexInfo _temp;
     return CreateVertexBufferInternal(KeyName, vertices, _temp, Usage, CpuAccessFlags);
 }
+
+template<typename T>
+inline HRESULT FDXDBufferManager::CreateVertexBuffer(const FString& KeyName, const void* Vertices, uint32 ByteWidth, uint32 Stride, uint32 Offset, D3D11_USAGE Usage, UINT CpuAccessFlags)
+{
+    if (!KeyName.IsEmpty() && VertexBufferPool.Contains(KeyName))
+    {
+        return S_OK;
+    }
+    uint32_t Stride = sizeof(T);
+    D3D11_BUFFER_DESC bufferDesc = {};
+    bufferDesc.Usage = Usage;
+    bufferDesc.ByteWidth = ByteWidth;
+    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = CpuAccessFlags;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = Vertices;
+
+    ID3D11Buffer* NewBuffer = nullptr;
+    HRESULT hr = DXDevice->CreateBuffer(&bufferDesc, &initData, &NewBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    FVertexInfo VertexInfo;
+    VertexInfo.NumVertices = static_cast<uint32>(ByteWidth / Stride);
+    VertexInfo.VertexBuffer = NewBuffer;
+    VertexInfo.Stride = Stride;
+    VertexInfo.Offset = Offset;
+    VertexBufferPool.Add(KeyName, VertexInfo);
+
+    return S_OK;
+}
+
 
 template<typename T>
 inline HRESULT FDXDBufferManager::CreateVertexBuffer(const FString& KeyName, const TArray<T>& vertices, D3D11_USAGE Usage, UINT CpuAccessFlags)

@@ -6,6 +6,7 @@
 #include "Container/Set.h"
 #include "Define.h"
 #include "Components/Light/PointLightComponent.h"
+#include "Components/Mesh/SkeletalMesh.h"
 #include "Engine/FbxObject.h"
 
 class USkeletalMeshComponent;
@@ -41,6 +42,7 @@ private:
     void CreateShader();
 
     void UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices);
+    void GetSkinnedVertices(USkeletalMesh* SkeletalMesh, uint32 Section, const TArray<FMatrix>& BoneMatrices, TArray<FSkeletalVertex>& OutVertices) const;
 
     bool bIsCPUSkinning = true;
 protected:

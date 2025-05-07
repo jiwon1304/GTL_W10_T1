@@ -1,7 +1,7 @@
 #pragma once
 #include "MeshComponent.h"
 
-struct FSkeletalMesh;
+class USkeletalMesh;
 
 class USkeletalMeshComponent: public UMeshComponent
 {
@@ -13,8 +13,8 @@ public:
     virtual void GetProperties(TMap<FString, FString>& OutProperties) const override;
     virtual void SetProperties(const TMap<FString, FString>& InProperties) override;
 
-    FSkeletalMesh* GetSkinnedMesh() const { return SkeletalMesh; }
-    void SetSkinnedMesh(FSkeletalMesh* InSkinnedMesh);
+    USkeletalMesh* GetSkeletalMesh() const { return SkeletalMesh; }
+    void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
     void GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const;
     void GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const;
     const TMap<int, FString>& GetBoneIndexToName();
@@ -24,6 +24,5 @@ public:
     FRotator SelectedRotation;
     FVector SelectedScale = FVector::OneVector;
 protected:
-    FSkeletalMesh* SkeletalMesh = nullptr;
-    TMap<int, FString> BoneIndexToName;
+    USkeletalMesh* SkeletalMesh = nullptr;
 };

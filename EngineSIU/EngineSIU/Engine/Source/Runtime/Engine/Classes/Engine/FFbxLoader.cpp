@@ -1,10 +1,12 @@
 #include "FFbxLoader.h"
 
 #include <sstream>
-
 #include "FbxObject.h"
 #include "UObject/ObjectFactory.h"
 #include "Components/Material/Material.h"
+#include "Engine/Asset/SkeletalMeshAsset.h"
+#include "Components/Mesh/SkeletalMesh.h"
+#include "Container/StringConv.h"
 
 struct BoneWeights
 {
@@ -12,7 +14,7 @@ struct BoneWeights
     float weight;
 };
 
-FSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
+FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     if (fbxMap.Contains(FBXFilePath))
         return fbxMap[FBXFilePath];
@@ -62,23 +64,95 @@ FSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     FbxGeometryConverter converter(GetFbxManager());
     converter.Triangulate(scene, true);
 
-    FSkeletalMesh* result = LoadFBXObject(scene);
+    FFbxSkeletalMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
     fbxMap[FBXFilePath] = result;
     return result;
 }
 
-FSkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
+USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
+{
+    // 미리 저장해놓은게 있으면 반환
+    if (SkeletalMeshMap.Contains(filename))
+        return SkeletalMeshMap[filename];
+    
+    // 없으면 파싱
+    FFbxSkeletalMesh* fbxObject = GetFbxObjectInternal(filename);
+    if (!fbxObject) // 파싱 실패
+        return nullptr;
+
+
+    // SkeletalMesh로 변환
+    USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
+
+    FSkeletalMeshRenderData renderData;
+    renderData.ObjectName = StringToWString(*fbxObject->name);
+    renderData.RenderSections.SetNum(fbxObject->mesh.Num());
+    renderData.MaterialSubsets.SetNum(fbxObject->materialSubsets.Num());
+
+    for (int i = 0; i < fbxObject->mesh.Num(); ++i)
+    {
+        // TArray로 직접 접근해도 돼나?
+        // 두 구조체의 메모리 레이아웃이 같아야함.
+        renderData.RenderSections[i].Vertices.SetNum(fbxObject->mesh[i].vertices.Num());
+        memcpy(
+            renderData.RenderSections[i].Vertices.GetData(),
+            fbxObject->mesh[i].vertices.GetData(),
+            sizeof(FFbxVertex) * fbxObject->mesh[i].vertices.Num()
+        );
+
+        renderData.RenderSections[i].Indices = fbxObject->mesh[i].indices;
+        renderData.RenderSections[i].SubsetIndex = fbxObject->mesh[i].subsetIndex;
+        renderData.RenderSections[i].Name = fbxObject->mesh[i].name;
+    }
+    for (int i = 0; i < fbxObject->materialSubsets.Num(); ++i)
+    {
+        renderData.MaterialSubsets[i] = fbxObject->materialSubsets[i];
+    }
+    RenderDatas.Add(renderData);
+
+    FReferenceSkeleton refSkeleton;
+    refSkeleton.RawRefBoneInfo.SetNum(fbxObject->skeleton.joints.Num());
+    refSkeleton.RawRefBonePose.SetNum(fbxObject->skeleton.joints.Num());
+    //refSkeleton.RawNameToIndexMap.Reserve(fbxObject->skeleton.joints.Num());
+    for (int i = 0; i < fbxObject->skeleton.joints.Num(); ++i)
+    {
+        refSkeleton.RawRefBoneInfo[i].Name = fbxObject->skeleton.joints[i].name;
+        refSkeleton.RawRefBoneInfo[i].ParentIndex = fbxObject->skeleton.joints[i].parentIndex;
+        refSkeleton.RawRefBonePose[i].Translation = fbxObject->skeleton.joints[i].position;
+        refSkeleton.RawRefBonePose[i].Rotation = fbxObject->skeleton.joints[i].rotation;
+        refSkeleton.RawRefBonePose[i].Scale3D = fbxObject->skeleton.joints[i].scale;
+        refSkeleton.RawNameToIndexMap.Add(fbxObject->skeleton.joints[i].name, i);
+    }
+
+    TArray<UMaterial*> Materials = fbxObject->material;
+
+    // 추가된 요소의 포인터 얻기
+    FSkeletalMeshRenderData* pRenderData = &RenderDatas[RenderDatas.Num()-1];
+
+    TArray<FMatrix> InverseBindPoseMatrices;
+    InverseBindPoseMatrices.SetNum(fbxObject->skeleton.joints.Num());
+    for (int i = 0; i < fbxObject->skeleton.joints.Num(); ++i)
+    {
+        InverseBindPoseMatrices[i] = fbxObject->skeleton.joints[i].inverseBindPose;
+    }
+    newSkeletalMesh->SetData(pRenderData, refSkeleton, InverseBindPoseMatrices, Materials);
+    newSkeletalMesh->bCPUSkinned = true;
+    SkeletalMeshMap.Add(filename, newSkeletalMesh);
+    return newSkeletalMesh;
+}
+
+FFbxSkeletalMesh* FFbxLoader::GetFbxObjectInternal(const FString& filename)
 {
     if (!fbxMap.Contains(filename))
         ParseFBX(filename);
     return fbxMap[filename];
 }
 
-FSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
+FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
 {
-    FSkeletalMesh* result = new FSkeletalMesh();
+    FFbxSkeletalMesh* result = new FFbxSkeletalMesh();
 
     TArray<TMap<int, TArray<BoneWeights>>> weightMaps;
     // TMap<int, TArray<BoneWeights>> weightMap;
@@ -180,7 +254,7 @@ FbxCluster* FFbxLoader::FindClusterForBone(FbxNode* boneNode)
 }
 
 void FFbxLoader::LoadFbxSkeleton(
-    FSkeletalMesh* fbxObject,
+    FFbxSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     int parentIndex = -1
@@ -203,13 +277,15 @@ void FFbxLoader::LoadFbxSkeleton(
     joint.name = node->GetName();
     joint.parentIndex = parentIndex;
 
-    // 👉 바인드 포즈 행렬 계산을 위해 클러스터를 찾음
+    // https://blog.naver.com/jidon333/220264383892
+    // Mesh -> Deformer -> Cluster -> Link == "joint"
+    // bone은 joint사이의 공간을 말하는거지만, 사실상 joint와 동일한 의미로 사용되고 있음.
     FbxCluster* cluster = FindClusterForBone(node);
     if (cluster)
     {
         FbxAMatrix LinkMatrix, Matrix;
         cluster->GetTransformLinkMatrix(LinkMatrix);  // !!! 실제 joint Matrix : joint->model space 변환 행렬
-        cluster->GetTransformMatrix(Matrix);      // Fbx 모델의 전역 오프셋: 모든 joint가 같은 값을 가짐
+        cluster->GetTransformMatrix(Matrix);      // Fbx 모델의 전역 오프셋 : 모든 joint가 같은 값을 가짐
         FbxAMatrix InverseMatrix = LinkMatrix.Inverse() * Matrix;
 
         FbxAMatrix bindLocal = node->EvaluateLocalTransform();
@@ -226,7 +302,7 @@ void FFbxLoader::LoadFbxSkeleton(
     }
     else
     {
-        // ⚠ 클러스터가 없는 경우에는 fallback으로 EvaluateLocalTransform 사용
+        // 클러스터가 없는 경우에는 fallback으로 EvaluateLocalTransform 사용 (확인안됨)
         FbxAMatrix m = node->EvaluateLocalTransform();
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
@@ -240,10 +316,10 @@ void FFbxLoader::LoadFbxSkeleton(
     joint.position = FVector(t[0], t[1], t[2]);
 
     auto r = node->LclRotation.Get();
-    joint.rotation = FQuat::CreateRotation(
-        FMath::RadiansToDegrees(r[0]),
-        FMath::RadiansToDegrees(r[1]),
-        FMath::RadiansToDegrees(r[2])
+    joint.rotation = FRotator(
+        static_cast<float>(FMath::RadiansToDegrees(r[0])),
+        static_cast<float>(FMath::RadiansToDegrees(r[1])),
+        static_cast<float>(FMath::RadiansToDegrees(r[2]))
     );
 
     auto s = node->LclScaling.Get();
@@ -299,7 +375,7 @@ void FFbxLoader::LoadSkinWeights(
 }
 
 void FFbxLoader::LoadFBXMesh(
-    FSkeletalMesh* fbxObject,
+    FFbxSkeletalMesh* fbxObject,
     FbxNode* node,
     TMap<FString, int>& boneNameToIndex,
     TMap<int, TArray<BoneWeights>>& boneWeight
@@ -504,7 +580,7 @@ void FFbxLoader::LoadFBXMesh(
 }
 
 void FFbxLoader::LoadFBXMaterials(
-    FSkeletalMesh* fbxObject,
+    FFbxSkeletalMesh* fbxObject,
     FbxNode* node
 )
 {

@@ -28,6 +28,8 @@
 #include "Engine/AssetManager.h"
 #include "Engine/FbxObject.h"
 #include "Engine/FFbxLoader.h"
+#include "Engine/Asset/SkeletalMeshAsset.h"
+#include "Components/Mesh/SkeletalMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Math/JungleMath.h"
@@ -416,24 +418,24 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
         ImGui::SameLine();
 
         FString PreviewName = FString("None");
-        if (FSkeletalMesh* skinnedMesh = SkeletalComp->GetSkinnedMesh())
+        if (USkeletalMesh* SkeletalMesh = SkeletalComp->GetSkeletalMesh())
         {
-            PreviewName = skinnedMesh->name;
+            PreviewName = SkeletalMesh->GetOjbectName();
         }
         
         const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
 
-        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        if (ImGui::BeginCombo("##SkeletalMesh", GetData(PreviewName), ImGuiComboFlags_None))
         {
             for (const auto& Asset : Assets)
             {
                 if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
                 {
                     FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                    FSkeletalMesh* SkinnedMesh = FFbxLoader::GetFbxObject(MeshName);
-                    if (SkinnedMesh)
+                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetFbxObject(MeshName.ToWideString());
+                    if (SkeletalMesh)
                     {
-                        SkeletalComp->SetSkinnedMesh(SkinnedMesh);
+                        SkeletalComp->SetSkeletalMesh(SkeletalMesh);
                     }
                 }
             }
@@ -447,40 +449,40 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
 
 void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent)
 {
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-    if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
-    {
-        ImGui::Text("Bone");
-        ImGui::SameLine();
+    //ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    //if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    //{
+    //    ImGui::Text("Bone");
+    //    ImGui::SameLine();
 
-        const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
-        FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
-        
-        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
-        {
-            for (const auto& [index, boneName] : boneIndexToName)
-            {
-                if (ImGui::Selectable(GetData(boneName), false))
-                {
-                    FString MeshName = boneName;
-                    SkeletalMeshComponent->SelectedBoneIndex = index;
-                }
-            }
-            ImGui::EndCombo();
-        }
+    //    const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
+    //    FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
+    //    
+    //    if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+    //    {
+    //        for (const auto& [index, boneName] : boneIndexToName)
+    //        {
+    //            if (ImGui::Selectable(GetData(boneName), false))
+    //            {
+    //                FString MeshName = boneName;
+    //                SkeletalMeshComponent->SelectedBoneIndex = index;
+    //            }
+    //        }
+    //        ImGui::EndCombo();
+    //    }
 
-        FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->SelectedLocation, 0, 85);
-        ImGui::Spacing();
+    //    FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->SelectedLocation, 0, 85);
+    //    ImGui::Spacing();
 
-        FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->SelectedRotation, 0, 85);
-        ImGui::Spacing();
+    //    FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->SelectedRotation, 0, 85);
+    //    ImGui::Spacing();
 
-        FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->SelectedScale, 0, 85);
-        ImGui::Spacing();
+    //    FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->SelectedScale, 0, 85);
+    //    ImGui::Spacing();
 
-        ImGui::TreePop();
-    }
-    ImGui::PopStyleColor(); 
+    //    ImGui::TreePop();
+    //}
+    //ImGui::PopStyleColor(); 
 }
 
 void PropertyEditorPanel::RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const

@@ -5,21 +5,23 @@
 #include "Container/Array.h"
 #include "Container/Map.h"
 #include "Container/String.h"
+#include "Asset/SkeletalMeshAsset.h"
 
-struct FSkeletalMesh;
+struct FFbxSkeletalMesh;
 struct BoneWeights;
+class USkeletalMesh;
 
 struct FFbxLoader
 {
-    static FSkeletalMesh* GetFbxObject(const FString& filename);
-
+    static USkeletalMesh* GetFbxObject(const FString& filename);
 private:
+    static FFbxSkeletalMesh* GetFbxObjectInternal(const FString& filename);
     static FbxManager* GetFbxManager();
     static FbxIOSettings* GetFbxIOSettings();
     static FbxCluster* FindClusterForBone(FbxNode* boneNode);
-    static FSkeletalMesh* LoadFBXObject(FbxScene* InFbxInfo);
+    static FFbxSkeletalMesh* LoadFBXObject(FbxScene* InFbxInfo);
     static void LoadFbxSkeleton(
-        FSkeletalMesh* fbxObject,
+        FFbxSkeletalMesh* fbxObject,
         FbxNode* node,
         TMap<FString, int>& boneNameToIndex,
         int parentIndex
@@ -30,32 +32,19 @@ private:
         TMap<int, TArray<BoneWeights>>& OutBoneWeights
     );
     static void LoadFBXMesh(
-        FSkeletalMesh* fbxObject,
+        FFbxSkeletalMesh* fbxObject,
         FbxNode* node,
         TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& boneWeight
     );
     static void LoadFBXMaterials(
-        FSkeletalMesh* fbxObject,
+        FFbxSkeletalMesh* fbxObject,
         FbxNode* node
     );
     static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
     static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
-    inline static TMap<FString, FSkeletalMesh*> fbxMap;
-    static FSkeletalMesh* ParseFBX(const FString& FBXFilePath);
-
-    inline static FMatrix ConvertMatrix(const FbxAMatrix& Mat)
-    {
-        FMatrix Result;
-
-        for (int i = 0; i < 4; ++i)
-        {
-            for (int j = 0; j < 4; ++j)
-            {
-                Result.M[i][j] = Mat[i][j];
-            }
-        }
-
-        return Result;
-    }
+    inline static TMap<FString, FFbxSkeletalMesh*> fbxMap;
+    inline static TMap<FString, USkeletalMesh*> SkeletalMeshMap;
+    inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
+    static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
 };

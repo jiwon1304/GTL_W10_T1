@@ -20,6 +20,7 @@
 #include "Engine/Classes/Components/SphereComponent.h"
 #include "Engine/Classes/Components/CapsuleComponent.h"
 #include "Engine/Classes/Components/SkeletalMeshComponent.h"
+#include "Engine/Classes/Components/Mesh/SkeletalMesh.h"
 #include "Runtime/Engine/World/World.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UObject/UObjectIterator.h"
@@ -944,12 +945,14 @@ void FEditorRenderPass::RenderSkinnedMeshs()
         TArray<FConstantBufferDebugPyramid> PyramidsPerComp;
         TArray<FConstantBufferDebugSphere> SpheresPerComp;
 
-        PyramidsPerComp.SetNum(Comp->GetSkinnedMesh()->skeleton.joints.Num());
-        SpheresPerComp.SetNum(Comp->GetSkinnedMesh()->skeleton.joints.Num());
-
-        if (Comp->GetSkinnedMesh() == nullptr)
-            return;
-        FSkeletalMesh* SkeletalMesh = Comp->GetSkinnedMesh();
+        if (Comp->GetSkeletalMesh() == nullptr)
+        {
+            continue;
+        }
+        FReferenceSkeleton Skeleton;
+        Comp->GetSkeletalMesh()->GetRefSkeleton(Skeleton);
+        PyramidsPerComp.SetNum(Skeleton.RawRefBonePose.Num());
+        SpheresPerComp.SetNum(Skeleton.RawRefBonePose.Num());
         
         TArray<FMatrix> CurrentPoseMatrices;
         Comp->GetCurrentPoseMatrices(CurrentPoseMatrices);
@@ -962,12 +965,12 @@ void FEditorRenderPass::RenderSkinnedMeshs()
         PyramidBuffer.Color = FLinearColor::Red;
         PyramidBuffer.BaseSize = 1;
 
-        for (int i = 0; i < SkeletalMesh->skeleton.joints.Num(); ++i)
+        for (int i = 0; i < Skeleton.RawRefBoneInfo.Num(); ++i)
         {
             SphereBuffer.Position = CurrentPoseMatrices[i].GetTranslationVector();
             SpheresPerComp.Add(SphereBuffer);
 
-            int ParentIndex = SkeletalMesh->skeleton.joints[i].parentIndex;
+            int ParentIndex = Skeleton.RawRefBoneInfo[i].ParentIndex;
             if (ParentIndex >= 0) // If the joint has a parent
             {
                 PyramidBuffer.Position = CurrentPoseMatrices[ParentIndex].GetTranslationVector();
