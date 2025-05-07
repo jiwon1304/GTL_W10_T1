@@ -177,7 +177,6 @@ FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
     FFbxSkeletalMesh* result = new FFbxSkeletalMesh();
 
     TArray<TMap<int, TArray<BoneWeights>>> weightMaps;
-    // TMap<int, TArray<BoneWeights>> weightMap;
     TMap<FString, int> boneNameToIndex;
 
     TArray<FbxNode*> skeletons;
@@ -299,10 +298,18 @@ void FFbxLoader::LoadFbxSkeleton(
     joint.name = node->GetName();
     joint.parentIndex = parentIndex;
 
+    FbxCluster* cluster = FindClusterForBone(node);
+    FbxPose* pose = nullptr;
+    for (int i = 0; i < node->GetScene()->GetPoseCount(); ++i)
+    {
+        pose = node->GetScene()->GetPose(i);
+        if (pose->IsBindPose())
+            break;
+    }
+    
     // https://blog.naver.com/jidon333/220264383892
     // Mesh -> Deformer -> Cluster -> Link == "joint"
     // bone은 joint사이의 공간을 말하는거지만, 사실상 joint와 동일한 의미로 사용되고 있음.
-    FbxCluster* cluster = FindClusterForBone(node);
     if (cluster)
     {
         FbxAMatrix LinkMatrix, Matrix;
@@ -322,15 +329,37 @@ void FFbxLoader::LoadFbxSkeleton(
             for (int j = 0; j < 4; ++j)
                 joint.inverseBindPose.M[i][j] = static_cast<float>(InverseMatrix[i][j]);
     }
+    // FbxPose를 통해 구하는 방법?
+    else if (pose)
+    {
+        int index = pose->Find(node);
+        if (index >= 0)
+        {
+            FbxMatrix bindLocal = pose->GetMatrix(index);
+            FbxMatrix inverseBindLocal = bindLocal.Inverse();
+            
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < 4; ++j)
+                    joint.localBindPose.M[i][j] = static_cast<float>(bindLocal[i][j]);
+
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < 4; ++j)
+                    joint.inverseBindPose.M[i][j] = static_cast<float>(inverseBindLocal[i][j]);
+        }
+    }
     else
     {
         // 클러스터가 없는 경우에는 fallback으로 EvaluateLocalTransform 사용 (확인안됨)
-        FbxAMatrix m = node->EvaluateLocalTransform();
+        FbxAMatrix localMatrix = node->EvaluateLocalTransform();
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
-                joint.localBindPose.M[i][j] = static_cast<float>(m[i][j]);
+                joint.localBindPose.M[i][j] = static_cast<float>(localMatrix[i][j]);
 
-        joint.inverseBindPose = FMatrix::Inverse(joint.localBindPose);
+        FbxAMatrix globalMatrix = node->EvaluateGlobalTransform();
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                joint.inverseBindPose.M[i][j] = static_cast<float>(globalMatrix[i][j]);
+        joint.inverseBindPose = FMatrix::Inverse(joint.inverseBindPose);
     }
 
     // Transform 정보도 저장 (Lcl만 사용)
