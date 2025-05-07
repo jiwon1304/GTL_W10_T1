@@ -186,7 +186,7 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
     //}
 }
 
-const TMap<int, FString>& USkeletalMeshComponent::GetBoneIndexToName()
+const TMap<int, FString> USkeletalMeshComponent::GetBoneIndexToName()
 {
     TMap<int, FString> BoneIndexToName;
     BoneIndexToName.Add(-1, "None");

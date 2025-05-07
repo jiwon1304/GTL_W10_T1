@@ -22,6 +22,26 @@ struct FTransform
     FRotator Rotation;
     FVector Scale3D;
     FTransform() : Translation(FVector::ZeroVector), Rotation(FRotator::ZeroRotator), Scale3D(FVector::OneVector) {}
+
+    void SetFromMatrix(const FMatrix& InMatrix)
+    {
+        // Extract translation
+        Translation = InMatrix.GetTranslationVector();
+
+        // Extract rotation and scale from the matrix
+        FMatrix RotationMatrix = InMatrix;
+        Scale3D = RotationMatrix.ExtractScaling(SMALL_NUMBER);
+
+        // If there is negative scaling, handle it
+        if (InMatrix.Determinant() < 0.0f)
+        {
+            // Reflect matrix to ensure proper handedness
+            Scale3D *= -1.0f;
+            RotationMatrix.SetAxis(0, -RotationMatrix.GetScaledAxis(0));
+        }
+
+        Rotation = RotationMatrix.Rotator();
+    }
 };
 
 // inverse bind pose는 USkeletalMesh에 존재.

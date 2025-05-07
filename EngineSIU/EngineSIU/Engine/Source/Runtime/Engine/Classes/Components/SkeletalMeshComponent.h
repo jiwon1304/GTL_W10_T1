@@ -17,12 +17,12 @@ public:
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
     void GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const;
     void GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const;
-    const TMap<int, FString>& GetBoneIndexToName();
+    const TMap<int, FString> GetBoneIndexToName();
     
     int SelectedBoneIndex = -1;
-    FVector SelectedLocation;
-    FRotator SelectedRotation;
-    FVector SelectedScale = FVector::OneVector;
+    //FVector SelectedLocation;
+    //FRotator SelectedRotation;
+    //FVector SelectedScale = FVector::OneVector;
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
 };

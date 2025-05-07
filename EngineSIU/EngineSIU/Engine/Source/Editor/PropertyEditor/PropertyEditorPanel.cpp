@@ -449,40 +449,46 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
 
 void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent)
 {
-    //ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-    //if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
-    //{
-    //    ImGui::Text("Bone");
-    //    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+        ImGui::Text("Bone");
+        ImGui::SameLine();
 
-    //    const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
-    //    FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
-    //    
-    //    if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
-    //    {
-    //        for (const auto& [index, boneName] : boneIndexToName)
-    //        {
-    //            if (ImGui::Selectable(GetData(boneName), false))
-    //            {
-    //                FString MeshName = boneName;
-    //                SkeletalMeshComponent->SelectedBoneIndex = index;
-    //            }
-    //        }
-    //        ImGui::EndCombo();
-    //    }
+        const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
+        FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
+        
+        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        {
+            for (const auto& [index, boneName] : boneIndexToName)
+            {
+                if (ImGui::Selectable(GetData(boneName), false))
+                {
+                    FString MeshName = boneName;
+                    SkeletalMeshComponent->SelectedBoneIndex = index;
+                }
+            }
+            ImGui::EndCombo();
+        }
 
-    //    FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->SelectedLocation, 0, 85);
-    //    ImGui::Spacing();
+        if (SkeletalMeshComponent->SelectedBoneIndex > -1)
+        {
 
-    //    FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->SelectedRotation, 0, 85);
-    //    ImGui::Spacing();
+            FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation, 0, 85);
+            ImGui::Spacing();
 
-    //    FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->SelectedScale, 0, 85);
-    //    ImGui::Spacing();
+            FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Rotation, 0, 85);
+            ImGui::Spacing();
 
-    //    ImGui::TreePop();
-    //}
-    //ImGui::PopStyleColor(); 
+            FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Scale3D, 0, 85);
+        }
+        //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
+
+        ImGui::Spacing();
+
+        ImGui::TreePop();
+    }
+    ImGui::PopStyleColor(); 
 }
 
 void PropertyEditorPanel::RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const

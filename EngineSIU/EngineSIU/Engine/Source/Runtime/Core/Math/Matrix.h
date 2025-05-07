@@ -59,6 +59,16 @@ public:
     void RemoveScaling(float Tolerance = SMALL_NUMBER);
 
     bool Equals(const FMatrix& Other, float Tolerance = KINDA_SMALL_NUMBER) const;
+
+    FVector ExtractScaling(float Tolerance = SMALL_NUMBER);
+
+    float Determinant() const;
+
+    void SetAxis(int32 AxisIndex, const FVector& Axis);
+
+    FVector GetScaledAxis(int32 InAxis) const;
+
+    FRotator Rotator() const;
 };
 
 inline FArchive& operator<<(FArchive& Ar, FMatrix& M)

@@ -355,6 +355,20 @@ void FFbxLoader::LoadFbxSkeleton(
 
     auto Mat2 = node->EvaluateLocalTransform();
 
+    t = Mat2.GetT();
+    r = Mat2.GetR();
+    s = Mat2.GetS();
+
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            Mat.M[i][j] = static_cast<float>(Mat2[i][j]);
+    
+    FTransform Transform;
+    Transform.SetFromMatrix(Mat);
+
+    joint.position = Transform.Translation;
+    joint.rotation = Transform.Rotation;
+    joint.scale = Transform.Scale3D;
 
     int thisIndex = fbxObject->skeleton.joints.Num();
     fbxObject->skeleton.joints.Add(joint);
