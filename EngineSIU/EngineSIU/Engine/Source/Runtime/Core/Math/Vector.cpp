@@ -1,4 +1,6 @@
 ﻿#include "Vector.h"
+
+#include "Vector4.h"
 #include "Misc/Parse.h"
 
 const FVector2D FVector2D::ZeroVector = FVector2D(0, 0);
@@ -32,6 +34,13 @@ bool FVector2D::InitFromString(const FString& InSourceString)
     const bool bSuccessful = FParse::Value(*InSourceString, TEXT("X=") , X) && FParse::Value(*InSourceString, TEXT("Y="), Y) ;
 
     return bSuccessful;
+}
+
+FVector::FVector(const FVector4& InVector4)
+    : X(InVector4.X)
+    , Y(InVector4.Y)
+    , Z(InVector4.Z)
+{
 }
 
 

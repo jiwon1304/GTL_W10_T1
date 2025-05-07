@@ -103,6 +103,7 @@ public:
     FVector(float X, float Y, float Z) : X(X), Y(Y), Z(Z) {}
     explicit FVector(float Scalar) : X(Scalar), Y(Scalar), Z(Scalar) {}
 
+    FVector(const FVector4& InVector4);
     explicit FVector(const FRotator& InRotator);
 
     // Vector(0, 0, 0)
