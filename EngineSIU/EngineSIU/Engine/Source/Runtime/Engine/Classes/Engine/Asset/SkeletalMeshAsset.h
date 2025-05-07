@@ -28,6 +28,14 @@ struct FReferenceSkeleton
     // joint pose 저장용도. Index는 RawRefBoneInfo를 따라갑니다.
     TArray<FTransform> RawRefBonePose;
     TMap<FString, int32> RawNameToIndexMap;
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& Data)
+    {
+        return Ar << Data.RawRefBoneInfo
+                  << Data.RawRefBonePose
+                  << Data.RawNameToIndexMap;
+    }
 };  
 
 // !!! FFbxVertex랑 메모리 레이아웃이 같아야합니다.
@@ -53,7 +61,30 @@ struct FSkeletalVertex
         {"BONE_INDICES", 1, DXGI_FORMAT_R32G32B32A32_SINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"BONE_WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"BONE_WEIGHTS", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    }; 
+    };
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FSkeletalVertex& Data)
+    {
+        Ar << Data.Position
+           << Data.Color
+           << Data.Normal
+           << Data.Tangent
+           << Data.UV
+           << Data.MaterialIndex;
+
+        for (int& Idx : Data.BoneIndices)
+        {
+            Ar << Idx;
+        }
+
+        for (float& Weight : Data.BoneWeights)
+        {
+            Ar << Weight;
+        }
+
+        return Ar;
+    }
 };
 
 struct FSkelMeshRenderSection
@@ -64,6 +95,16 @@ struct FSkelMeshRenderSection
     //TArray<uint8> BoneIndices;
     //TArray<float> BoneWeights;
     FString Name;
+
+    friend FArchive& operator<<(FArchive& Ar, FSkelMeshRenderSection& Data)
+    {
+        return Ar << Data.Vertices
+                  << Data.Indices
+                  << Data.SubsetIndex
+                  // << Data.BoneIndices
+                  // << Data.BoneWeights
+                  << Data.Name;
+    }
 };
 
 // 수정되지 않는 데이터입니다.
@@ -85,4 +126,12 @@ struct FSkeletalMeshRenderData
 
     TArray<FSkelMeshRenderSection> RenderSections;
     TArray<FMaterialSubset> MaterialSubsets;
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshRenderData& Data)
+    {
+        return Ar << Data.ObjectName
+                  << Data.RenderSections
+                  << Data.MaterialSubsets;
+    }
 };

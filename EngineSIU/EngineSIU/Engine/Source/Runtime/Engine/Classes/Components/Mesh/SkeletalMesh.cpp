@@ -7,7 +7,7 @@ UObject* USkeletalMesh::Duplicate(UObject* InOuter)
     return nullptr;
 }
 
-uint32 USkeletalMesh::GetMaterialIndex(FString MaterialSlotName) const
+uint32 USkeletalMesh::GetMaterialIndex(const FString& MaterialSlotName) const
 {
     for (uint32 materialIndex = 0; materialIndex < Materials.Num(); materialIndex++) {
         if (Materials[materialIndex]->GetMaterialInfo().MaterialName == MaterialSlotName)
@@ -30,10 +30,10 @@ FString USkeletalMesh::GetOjbectName() const
     return RenderData.ObjectName;
 }
 
-void USkeletalMesh::SetData(FSkeletalMeshRenderData InRenderData,
-    FReferenceSkeleton InRefSkeleton, 
-    TArray<FMatrix> InInverseBindPoseMatrices, 
-    TArray<UMaterial*> InMaterials)
+void USkeletalMesh::SetData(const FSkeletalMeshRenderData& InRenderData,
+    const FReferenceSkeleton& InRefSkeleton,
+    const TArray<FMatrix>& InInverseBindPoseMatrices,
+    const TArray<UMaterial*>& InMaterials)
 {
     RenderData = InRenderData;
     RefSkeleton = InRefSkeleton;
@@ -45,4 +45,16 @@ void USkeletalMesh::SetData(FSkeletalMeshRenderData InRenderData,
     //    NewSection.Vertices = Section.Vertices;
     //    DuplicatedVertices.Add(NewSection);
     //}
+}
+
+void USkeletalMesh::SerializeMesh(FArchive& Ar)
+{
+    Ar << RenderData
+       << RefSkeleton
+       << InverseBindPoseMatrices;
+
+    for (UMaterial* Material : Materials)
+    {
+        Ar << Material->GetMaterialInfo();
+    }
 }

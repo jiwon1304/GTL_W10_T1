@@ -29,6 +29,15 @@ struct FMaterialSubset
     uint32 IndexCount; // Index Count
     uint32 MaterialIndex; // Material Index
     FString MaterialName; // Material Name
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FMaterialSubset& Data)
+    {
+        return Ar << Data.IndexStart
+                  << Data.IndexCount
+                  << Data.MaterialIndex
+                  << Data.MaterialName;
+    }
 };
 
 struct FStaticMaterial
@@ -171,6 +180,28 @@ struct FTextureInfo
     FString TextureName;
     FWString TexturePath;
     bool bIsSRGB;
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FTextureInfo& Data)
+    {
+        FString Path;
+
+        if (Ar.IsSaving())
+        {
+            Path = Data.TexturePath;
+        }
+
+        Ar << Data.TextureName
+           << Path
+           << Data.bIsSRGB;
+
+        if (Ar.IsLoading())
+        {
+            Data.TexturePath = Path.ToWideString();
+        }
+
+        return Ar;
+    }
 };
 
 struct FMaterialInfo
@@ -201,6 +232,29 @@ struct FMaterialInfo
 
     /* Texture */
     TArray<FTextureInfo> TextureInfos;                     // Texture Information
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FMaterialInfo& Data)
+    {
+        return Ar << Data.MaterialName
+                  << Data.TextureFlag
+                  << Data.bTransparent
+                  << Data.DiffuseColor
+                  << Data.SpecularColor
+                  << Data.AmbientColor
+                  << Data.EmissiveColor
+                  << Data.SpecularExponent
+                  << Data.IOR
+                  << Data.Transparency
+                  << Data.BumpMultiplier
+                  << Data.IlluminanceModel
+                  << Data.Metallic
+                  << Data.Roughness
+                  << Data.AmbientOcclusion
+                  << Data.ClearCoat
+                  << Data.Sheen
+                  << Data.TextureInfos;
+    }
 };
 
 struct FVertexTexture
