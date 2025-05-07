@@ -58,10 +58,7 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
 
     GraphicDevice.Initialize(MainAppWnd);
-    //if (SkeletalMeshViewerAppWnd)
-    //{
-        GraphicDevice.CreateAdditionalSwapChain(SkeletalMeshViewerAppWnd);
-    //}
+    GraphicDevice.CreateAdditionalSwapChain(SkeletalMeshViewerAppWnd);
     BufferManager->Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext);
     Renderer.Initialize(&GraphicDevice, BufferManager, &GPUTimingManager);
     PrimitiveDrawBatch.Initialize(&GraphicDevice);
@@ -220,6 +217,7 @@ void FEngineLoop::Tick()
                 FConsole::GetInstance().Draw();
                 EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
                 TempRenderDebugImGui();
+                TempRenderDebugSubImGui();
             }
             ID3D11RenderTargetView* const* BackBufferRTV = Renderer.Graphics->BackBufferRTVs.Find(MainAppWnd);
             Renderer.Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
@@ -463,6 +461,28 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         // Do Nothing (ShowWindow로 관리하므로 직접 처리할 필요 없음. DESTROY가 호출될 때에는 Exit에서 일괄처리함)
         break;
     case WM_SIZE:
+        if (wParam != SIZE_MINIMIZED)
+        {
+            // 클라이언트 영역 크기 가져오기
+            uint32 ClientWidth = 0;
+            uint32 ClientHeight = 0;
+            GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
+            
+            // AssetViewer 리사이즈
+            if (auto AssetViewer = GEngineLoop.GetAssetViewer())
+            {
+                AssetViewer->ResizeEditor(ClientWidth, ClientHeight);
+                if (AssetViewer->GetActiveViewportClient())
+                {
+                    // 필요하다면 TileLightCullingPass 버퍼도 리사이즈
+                    FEngineLoop::Renderer.TileLightCullingPass->ResizeViewBuffers(
+                        static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Width),
+                        static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Height)
+                    );
+                }
+            }
+        }
+        // UI 업데이트는 기존대로 호출
         GEngineLoop.UpdateSubWindowUI();
         break;
     case WM_CLOSE:
@@ -514,7 +534,8 @@ void FEngineLoop::UpdateSubWindowUI()
     {
         GEngineLoop.GetUnrealEditor()->OnResize(SkeletalMeshViewerAppWnd, true);
     }
-    //ViewportTypePanel::GetInstance().OnResize(SkeletalMeshViewerAppWnd);
+    
+    ViewportTypePanel::GetInstance().OnResize(SkeletalMeshViewerAppWnd);
 }
 
 void FEngineLoop::ToggleWindow(const HWND hWnd)
@@ -617,6 +638,61 @@ void FEngineLoop::TempRenderDebugImGui()
     ImGui::Text("IsEditorHovered: %s", bIsEditorHovered ? "true" : "false");
     ImGui::Text("IsViewportVHovered: %s", bIsViewportVHovered ? "true" : "false");
     ImGui::Text("IsViewportHHovered: %s", bIsViewportHHovered ? "true" : "false");
+
+    ImGui::End();
+}
+
+void FEngineLoop::TempRenderDebugSubImGui()
+{
+    // ImGui 디버그 정보 표시
+    ImGui::Begin("Splitter Debug Sub Info");
+
+    // 마우스 커서 위치 가져오기
+    POINT MousePos;
+    GetCursorPos(&MousePos);
+    ImGui::Text("Mouse Position: (%.1ld, %.1ld)", MousePos.x, MousePos.y);
+
+    ScreenToClient(GEngineLoop.SkeletalMeshViewerAppWnd, &MousePos);
+    FVector2D ClientPos = FVector2D{ static_cast<float>(MousePos.x), static_cast<float>(MousePos.y) };
+    ImGui::Text("Client Position: (%.1f, %.1f)", ClientPos.X, ClientPos.Y);
+
+    FRect Rect = AssetViewer->GetActiveViewportClient()->GetViewport()->GetRect();
+
+    // 현재 Splitter의 Rect 정보 표시
+    ImGui::Text("Selected Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Splitters");
+    Rect = AssetViewer->PrimaryVSplitter->GetRect();
+    ImGui::Text("PrimaryVSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->PrimaryVSplitter->SideLT->GetRect();
+    ImGui::Text("- PrimaryVSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->PrimaryVSplitter->SideRB->GetRect();
+    ImGui::Text("- PrimaryVSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->CenterAndRightVSplitter->GetRect();
+    ImGui::Text("CenterAndRightVSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->CenterAndRightVSplitter->SideLT->GetRect();
+    ImGui::Text("- CenterAndRightVSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->CenterAndRightVSplitter->SideRB->GetRect();
+    ImGui::Text("- CenterAndRightVSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = AssetViewer->RightSidebarHSplitter->GetRect();
+    ImGui::Text("RightSidebarHSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Viewport");
+    auto ViewportClient = AssetViewer->GetActiveViewportClient();
+    auto Viewport = ViewportClient->GetViewport();
+    ImGui::Text("Viewport Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Viewport->GetRect().TopLeftX, Viewport->GetRect().TopLeftY, Viewport->GetRect().TopLeftX + Viewport->GetRect().Width, Viewport->GetRect().TopLeftY + Viewport->GetRect().Height);
+    // IsSplitterHovered 상태 표시
+    // IsSplitterHovered 함수는 const가 아니므로 const_cast 사용 또는 함수를 const로 변경 필요.
+    // 여기서는 const_cast를 사용합니다.
+    // FPoint 생성자에 float 대신 int32를 사용하도록 수정
+    bool bIsPrimaryHovered = AssetViewer->PrimaryVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsCentralRightHovered = AssetViewer->CenterAndRightVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsRIghtSidebarHovered = AssetViewer->RightSidebarHSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+
+    ImGui::SeparatorText("Hovered");
+    ImGui::Text("IsPrimaryHovered: %s", bIsPrimaryHovered ? "true" : "false");
+    ImGui::Text("IsCentralRightHovered: %s", bIsCentralRightHovered ? "true" : "false");
+    ImGui::Text("IsRightSidebarHovered: %s", bIsRIghtSidebarHovered ? "true" : "false");
 
     ImGui::End();
 }
