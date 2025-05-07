@@ -11,6 +11,7 @@ UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
     ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
     NewComponent->SkeletalMesh = SkeletalMesh;
     NewComponent->SelectedBoneIndex = SelectedBoneIndex;
+    NewComponent->ResetPose();
     return NewComponent;
 }
 
@@ -61,6 +62,7 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
 {
     SkeletalMesh = InSkeletalMesh;
+    SelectedBoneIndex = -1;
     ResetPose();
 }
 void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const
