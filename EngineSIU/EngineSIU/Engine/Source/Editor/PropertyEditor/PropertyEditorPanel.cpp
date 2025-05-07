@@ -1227,6 +1227,6 @@ void PropertyEditorPanel::OnResize(HWND hWnd)
 {
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
-    Width = ClientRect.right - ClientRect.left;
-    Height = ClientRect.bottom - ClientRect.top;
+    Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);
+    Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }

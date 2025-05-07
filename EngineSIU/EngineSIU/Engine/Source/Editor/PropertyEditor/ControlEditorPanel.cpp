@@ -660,8 +660,8 @@ void ControlEditorPanel::OnResize(const HWND hWnd)
 {
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
-    Width = static_cast<float>(ClientRect.right) - static_cast<float>(ClientRect.left);
-    Height = static_cast<float>(ClientRect.bottom) - static_cast<float>(ClientRect.top);
+    Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);
+    Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }
 
 void ControlEditorPanel::CreateLightSpawnButton(const ImVec2 InButtonSize, ImFont* IconFont)
