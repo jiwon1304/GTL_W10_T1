@@ -27,7 +27,7 @@ void SkeletalTreePanel::Render()
     float PanelWidth = SkeletalTreeRect.Width;
     float PanelHeight = SkeletalTreeRect.Height;
 
-    ImVec2 MinSize(140, 370);
+    ImVec2 MinSize(50, 50);
     ImVec2 MaxSize(FLT_MAX, FLT_MAX);
 
     /* Min, Max Size */
