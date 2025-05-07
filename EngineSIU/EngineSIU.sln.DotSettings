@@ -1,10 +1,37 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Description/@EntryValue">Struct에 FArchive용 operator&lt;&lt;를 생성합니다</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Field/=CLASS/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Field/=CLASS/Expression/@EntryValue">typeName()</s:String>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Field/=CLASS/InitialRange/@EntryValue">-1</s:Int64>
+	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Field/=CLASS/Order/@EntryValue">0</s:Int64>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Field/=MEMBERS/@KeyIndexDefined">False</s:Boolean>
+	
+	
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/IsBlessed/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Scope/=2BA3EB57D316654FB23BF757F7C2AC89/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Scope/=2BA3EB57D316654FB23BF757F7C2AC89/Type/@EntryValue">InCppClass</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Scope/=F6696F8185506F41B9C4252540BE9C18/@KeyIndexDefined">False</s:Boolean>
+	
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Shortcut/@EntryValue">SerializeStruct</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=392D26C40764894D925179C0CF3F09FA/Text/@EntryValue">public:
+    friend FArchive&amp; operator&lt;&lt;(FArchive&amp; Ar, $CLASS$&amp; Data)
+    {
+        $END$
+    }</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=B8C148A7BD3562488391CEC28E4784D1/Applicability/=Live/@EntryIndexedValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/@KeyIndexDefined">True</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Applicability/=Surround/@EntryIndexedValue">False</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Description/@EntryValue">Component Duplicate Template</s:String>
 	
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/IsBlessed/@EntryValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Reformat/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Scope/=4B847A5ED8F7574F925C66209222DF71/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Scope/=4B847A5ED8F7574F925C66209222DF71/Type/@EntryValue">AtLineStart</s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Shortcut/@EntryValue">Dup</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Text/@EntryValue">if (ThisClass* NewObject = Cast&lt;ThisClass&gt;(Super::Duplicate(InOuter)))
