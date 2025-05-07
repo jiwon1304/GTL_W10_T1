@@ -107,28 +107,9 @@ FRotator FRotator::FromQuaternion(const FQuat& InQuat) const
     return FRotator(InQuat);
 }
 
-FQuat FRotator::ToQuaternion() const
+FQuat FRotator::Quaternion() const
 {
-    float DegToRad = PI / 180.0f;
-    float Div = DegToRad / 2.0f;
-    float SP, SY, SR;
-    float CP, CY, CR;
-
-    const float PitchNoWinding = FMath::Fmod(Pitch, 360.0f);
-    const float YawNoWinding = FMath::Fmod(Yaw, 360.0f);
-    const float RollNoWinding = FMath::Fmod(Roll, 360.0f);
-
-    FMath::SinCos(&SP, &CP, PitchNoWinding * Div);
-    FMath::SinCos(&SY, &CY, YawNoWinding * Div);
-    FMath::SinCos(&SR, &CR, RollNoWinding * Div);
-    
-    FQuat RotationQuat;
-    RotationQuat.X = CR * SP * SY - SR * CP * CY;
-    RotationQuat.Y = -CR * SP * CY - SR * CP * SY;
-    RotationQuat.Z = CR * CP * SY - SR * SP * CY;
-    RotationQuat.W = CR * CP * CY + SR * SP * SY;
-
-    return RotationQuat;
+    return FQuat(*this);
 }
 
 FVector FRotator::ToVector() const
@@ -151,7 +132,7 @@ FVector FRotator::ToVector() const
 
 FVector FRotator::RotateVector(const FVector& Vec) const
 {
-    return ToQuaternion().RotateVector(Vec);
+    return Quaternion().RotateVector(Vec);
 }
 
 FMatrix FRotator::ToMatrix() const
