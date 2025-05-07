@@ -384,13 +384,18 @@ void FEngineLoop::SubWindowInit(HINSTANCE hInstance)
 
 LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
 {
-    if  (GEngineLoop.MainUIManager)
+    // 이전 ImGui 컨텍스트 저장
+    ImGuiContext* PreviousContext = ImGui::GetCurrentContext();
+    
+    if (GEngineLoop.MainUIManager)
     {
-        // 항상 메인 윈도우 컨텍스트로 설정하고 이벤트 처리
+        // 메인 윈도우 컨텍스트로 임시 설정하고 이벤트 처리
         ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
         GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
         if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
         {
+            // 이전 컨텍스트 복원 후 반환
+            ImGui::SetCurrentContext(PreviousContext);
             return true;
         }
     }
@@ -455,29 +460,40 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
                 }
             }
         }
-        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        // 활성화 상태일 때 컨텍스트 설정하되 이전 컨텍스트 저장 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
         else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
         {
-            ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
-            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+            // MainAppWnd가 활성화될 때 ImGui 컨텍스트를 현재 윈도우용으로 유지
+            // 단, 이전 컨텍스트를 변경하지 않도록 GEngineLoop.CurrentImGuiContext만 업데이트
+            GEngineLoop.CurrentImGuiContext = GEngineLoop.MainUIManager->GetContext();
         }
         break;
     default:
         GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
     }
 
-    return DefWindowProc(hWnd, Msg, wParam, lParam);
+    LRESULT Result = DefWindowProc(hWnd, Msg, wParam, lParam);
+    
+    // 이전 컨텍스트로 복원
+    ImGui::SetCurrentContext(PreviousContext);
+    
+    return Result;
 }
 
 LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
 {
+    // 이전 ImGui 컨텍스트 저장
+    ImGuiContext* PreviousContext = ImGui::GetCurrentContext();
+    
     if (GEngineLoop.SkeletalMeshViewerUIManager)
     {
-        // 항상 서브 윈도우 컨텍스트로 설정하고 이벤트 처리
+        // 서브 윈도우 컨텍스트로 임시 설정하고 이벤트 처리
         ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
         GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
         if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
         {
+            // 이벤트 처리 후 이전 컨텍스트 복원
+            ImGui::SetCurrentContext(PreviousContext);
             return true;
         }
     }
@@ -514,6 +530,7 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         break;
     case WM_CLOSE:
         ShowWindow(hWnd, SW_HIDE);
+        ImGui::SetCurrentContext(PreviousContext); // 컨텍스트 복원 후 반환
         return 0;
     case WM_ACTIVATE:
         if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.SkeletalMeshViewerUIManager)
@@ -529,20 +546,26 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
                 GEngineLoop.GetAssetViewer()->GetActiveViewportClient()->ResetKeyState();
             }
         }
-        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        // 활성화 상태일 때만 컨텍스트 업데이트 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
         else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
         {
-            ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
-            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+            // SubAppWnd가 활성화될 때 ImGui 컨텍스트를 현재 윈도우용으로 유지
+            // 단, 이전 컨텍스트를 변경하지 않도록 GEngineLoop.CurrentImGuiContext만 업데이트
+            GEngineLoop.CurrentImGuiContext = GEngineLoop.SkeletalMeshViewerUIManager->GetContext();
         }
         break;
     default:
-        // @todo MessageHandler 수정
+        // MessageHandler 처리
         GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
         break;
     }
 
-    return DefWindowProc(hWnd, Msg, wParam, lParam);
+    LRESULT Result = DefWindowProc(hWnd, Msg, wParam, lParam);
+    
+    // 이전 컨텍스트로 복원
+    ImGui::SetCurrentContext(PreviousContext);
+    
+    return Result;
 }
 
 void FEngineLoop::UpdateUI()

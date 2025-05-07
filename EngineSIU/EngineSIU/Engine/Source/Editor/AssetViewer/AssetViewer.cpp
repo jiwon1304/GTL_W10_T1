@@ -149,8 +149,9 @@ void SAssetViewer::SelectViewport(const FVector2D& Point)
             // 뷰포트 선택 시 키 상태 초기화
             ActiveViewportClient->ResetKeyState();
             
-            // 뷰포트에 포커스 설정
-            SetFocus(GEngineLoop.SkeletalMeshViewerAppWnd);
+            // 포커스 설정 부분 제거
+            // SetFocus 호출은 제거하고, 사용자의 마우스 클릭에 의한 
+            // 자연스러운 윈도우 시스템의 포커스 처리에 맡김
         }
     }
 }
