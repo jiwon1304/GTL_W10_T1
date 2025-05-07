@@ -88,11 +88,11 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     uint32 ClientWidth = 0;
     uint32 ClientHeight = 0;
     GetClientSize(ClientWidth, ClientHeight);
-    LevelEditor->Initialize(ClientWidth, ClientHeight);
 
     GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
     GEngine->Init();
 
+    LevelEditor->Initialize(ClientWidth, ClientHeight);
 
     FSoundManager::GetInstance().Initialize();
     FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");

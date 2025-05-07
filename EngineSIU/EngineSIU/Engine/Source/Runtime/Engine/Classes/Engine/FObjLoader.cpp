@@ -889,7 +889,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
     return true;
 }
 
-UMaterial* FObjManager::CreateMaterial(const FObjMaterialInfo& materialInfo)
+UMaterial* FObjManager::CreateMaterial(const FMaterialInfo& materialInfo)
 {
     if (MaterialMap[materialInfo.MaterialName] != nullptr)
         return MaterialMap[materialInfo.MaterialName];

@@ -18,7 +18,7 @@ class UWorld;
 class UMaterial;
 class FEditorViewportClient;
 
-class FSkeletalMeshRenderPass : public IRenderPass
+class FSkeletalMeshRenderPass : public virtual IRenderPass
 {
 public:
     FSkeletalMeshRenderPass();
