@@ -242,36 +242,51 @@ void FSkinnedMeshRenderPass::UpdateVertexBuffer(const USkeletalMesh& MeshData, c
     TArray<FSkinnedVertex> NewVertices;
     NewVertices.Reserve(MeshData.Vertices.Num());
 
-    static auto PerspectiveDivide = [](const FVector4& InVector) -> FVector
-    {
-        if (InVector.W != 0.0f)
-        {
-            return FVector{InVector.X / InVector.W, InVector.Y / InVector.W, InVector.Z / InVector.W};
-        }
-        return FVector{InVector.X, InVector.Y, InVector.Z};
-    };
-
     for (const FSkinnedVertex& Vertex : MeshData.Vertices)
     {
-        FVector4 SkinnedPosition(0, 0, 0, 0);
-        FVector4 SkinnedNormal(0, 0, 0, 0);
-        FVector4 SkinnedTangent(0, 0, 0, 0);
+        FVector FinalSkinnedPosition = FVector::ZeroVector;
+        FVector FinalSkinnedNormal = FVector::ZeroVector;
+        FVector FinalSkinnedTangentDir = FVector::ZeroVector; // XYZ 부분만
 
         for (int Idx = 0; Idx < 4; ++Idx)
         {
-            if (Vertex.BoneWeights[Idx] > 0.0f)
+            if (Vertex.BoneWeights[Idx] > KINDA_SMALL_NUMBER)
             {
                 const FMatrix& BoneMatrix = BoneMatrices[Vertex.BoneIndices[Idx]];
+                const float Weight = Vertex.BoneWeights[Idx];
 
-                SkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Vertex.BoneWeights[Idx];
-                SkinnedNormal += BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0)) * Vertex.BoneWeights[Idx];
-                SkinnedTangent += BoneMatrix.TransformFVector4(Vertex.Tangent) * Vertex.BoneWeights[Idx];
+                // 위치 스키닝
+                FinalSkinnedPosition += BoneMatrix.TransformPosition(Vertex.Position) * Weight;
+
+                // 노멀 스키닝 (BoneMatrix의 3x3 부분 또는 전용 NormalTransform 함수 사용)
+                // FVector TransformedNormal = BoneMatrix.TransformNormal(Vertex.Normal); // 이런 함수가 있다면 사용
+                FVector TransformedNormal = BoneMatrix.TransformFVector4(FVector4(Vertex.Normal, 0.0f)); // 방향벡터로 변환
+                FinalSkinnedNormal += TransformedNormal * Weight;
+
+                // 탄젠트 XYZ 스키닝
+                FVector TransformedTangentDir = BoneMatrix.TransformFVector4(FVector4(Vertex.Tangent.X, Vertex.Tangent.Y, Vertex.Tangent.Z, 0.0f));
+                FinalSkinnedTangentDir += TransformedTangentDir * Weight;
             }
         }
-        FSkinnedVertex NewVertex = Vertex;
-        NewVertex.Position = PerspectiveDivide(SkinnedPosition);
-        NewVertex.Normal = PerspectiveDivide(SkinnedNormal);
-        NewVertex.Tangent = PerspectiveDivide(SkinnedTangent);
+
+        FSkinnedVertex NewVertex = Vertex; // UV, Color 등 복사
+        NewVertex.Position = FinalSkinnedPosition;
+
+        if (!FinalSkinnedNormal.IsNearlyZero()) // 0벡터가 되는 경우 방지
+        {
+            FinalSkinnedNormal.Normalize();
+        }
+        NewVertex.Normal = FinalSkinnedNormal;
+
+        // NewVertex.Tangent.W는 원본 Vertex.Tangent.W 유지 (이미 복사됨)
+        if (!FinalSkinnedTangentDir.IsNearlyZero())
+        {
+            FinalSkinnedTangentDir.Normalize();
+        }
+        NewVertex.Tangent.X = FinalSkinnedTangentDir.X;
+        NewVertex.Tangent.Y = FinalSkinnedTangentDir.Y;
+        NewVertex.Tangent.Z = FinalSkinnedTangentDir.Z;
+        // 필요시 Normal과 Tangent 직교화 (Gram-Schmidt)
 
         NewVertices.Add(NewVertex);
     }
