@@ -242,26 +242,46 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
                     if (FFbxImporter::GetInstance().ImportFromFile(FileName, SkeletalMesh))
                     {
                         UE_LOG(ELogLevel::Display, TEXT("FBX Import Success"));
-                        // std::filesystem::path TempPath = FileName.ToWideString();
-                        // TempPath.replace_extension(L".bin");
+                        std::filesystem::path TempPath = FileName.ToWideString();
+                        TempPath.replace_extension(L".bin");
 
-                        // if (FSerializeMeshAsset::SaveSkeletalMeshToBinary(TempPath.generic_wstring(), SkeletalMesh))
-                        // {
-                        //     UE_LOG(ELogLevel::Display, "Binary Saved Success");
-                        //     // if (FSerializeMeshAsset::LoadSkeletalMeshFromBinary())
-                        // }
-                        // if (USkeletalMesh* Mesh = FSerializeMeshAsset::LoadSkeletalMeshFromBinary(TempPath.generic_wstring()))
-                        // {
-                        //     assert(Mesh->Vertices.Num() == SkeletalMesh->Vertices.Num());
-                        //     for (int32 Idx = 0; Idx < Mesh->Vertices.Num(); ++Idx)
-                        //     {
-                        //         assert(Mesh->Vertices[Idx].Position == SkeletalMesh->Vertices[Idx].Position);
-                        //     }
-                        // }
+                        if (FSerializeMeshAsset::SaveSkeletalMeshToBinary(TempPath.generic_wstring(), SkeletalMesh))
+                        {
+                            UE_LOG(ELogLevel::Display, "Binary Saved Success");
+                        }
                     }
                     else
                     {
                         UE_LOG(ELogLevel::Error, TEXT("FBX Import Failed"));
+                    }
+                }
+            }
+
+            if (ImGui::MenuItem("FBX Binary (.bin)"))
+            {
+                TArray<FString> FileNames;
+                if (FDesktopPlatformWindows::OpenFileDialog(
+                    "Open FBX Binary File",
+                    "",
+                    {{
+                        .FilterPattern = "*.bin",
+                        .Description = "FBX Binary(.bin) file"
+                    }},
+                    EFileDialogFlag::None,
+                    FileNames
+                ))
+                {
+                    const FString FileName = FileNames.Pop();
+                    UE_LOG(ELogLevel::Display, TEXT("Import FBX Binary File: %s"), FileName.ToAnsiString().c_str());
+
+                    if (FSerializeMeshAsset::LoadSkeletalMeshFromBinary(FileName))
+                    {
+                        UE_LOG(ELogLevel::Display, TEXT("FBX Binary Import Success"));
+
+                    }
+                    else
+                    {
+                        UE_LOG(ELogLevel::Error, TEXT("FBX Binary Import Failed"));
                     }
                 }
             }
