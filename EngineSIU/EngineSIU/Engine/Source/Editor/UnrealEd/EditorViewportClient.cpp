@@ -23,6 +23,7 @@ FEditorViewportClient::FEditorViewportClient()
     , ViewportType(LVT_Perspective)
     , ShowFlag(63)
     , ViewMode(EViewModeIndex::VMI_Lit_BlinnPhong)
+    , bRightMouseDown(false)
 {
 }
 
@@ -69,44 +70,48 @@ void FEditorViewportClient::Release() const
 
 void FEditorViewportClient::UpdateEditorCameraMovement(const float DeltaTime)
 {
-    if (PressedKeys.Contains(EKeys::A))
+    // 키 상태에 따라 카메라 이동을 처리
+    // 이제 bRightMouseDown이 true인 경우에만 카메라 이동 처리
+    if (bRightMouseDown)
     {
-        CameraMoveRight(-100.f * DeltaTime);
-    }
+        if (PressedKeys.Contains(EKeys::A))
+        {
+            CameraMoveRight(-100.f * DeltaTime);
+        }
 
-    if (PressedKeys.Contains(EKeys::D))
-    {
-        CameraMoveRight(100.f * DeltaTime);
-    }
+        if (PressedKeys.Contains(EKeys::D))
+        {
+            CameraMoveRight(100.f * DeltaTime);
+        }
 
-    if (PressedKeys.Contains(EKeys::W))
-    {
-        CameraMoveForward(100.f * DeltaTime);
-    }
+        if (PressedKeys.Contains(EKeys::W))
+        {
+            CameraMoveForward(100.f * DeltaTime);
+        }
 
-    if (PressedKeys.Contains(EKeys::S))
-    {
-        CameraMoveForward(-100.f * DeltaTime);
-    }
+        if (PressedKeys.Contains(EKeys::S))
+        {
+            CameraMoveForward(-100.f * DeltaTime);
+        }
 
-    if (PressedKeys.Contains(EKeys::E))
-    {
-        CameraMoveUp(100.f * DeltaTime);
-    }
+        if (PressedKeys.Contains(EKeys::E))
+        {
+            CameraMoveUp(100.f * DeltaTime);
+        }
 
-    if (PressedKeys.Contains(EKeys::Q))
-    {
-        CameraMoveUp(-100.f * DeltaTime);
+        if (PressedKeys.Contains(EKeys::Q))
+        {
+            CameraMoveUp(-100.f * DeltaTime);
+        }
     }
 }
 
 void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
 {
-    // TODO: 나중에 InKeyEvent.GetKey();로 가져오는걸로 수정하기
-
-    // 마우스 우클릭이 되었을때만 실행되는 함수
-    if (GetKeyState(VK_RBUTTON) & 0x8000)
+    // 키 이벤트 처리 - GetKeyState API 대신 bRightMouseDown 멤버 변수 사용
+    if (bRightMouseDown)
     {
+        // 마우스 우클릭 상태에서만 카메라 이동키 처리
         switch (InKeyEvent.GetCharacter())
         {
         case 'A':
@@ -187,32 +192,40 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
     }
     else
     {
+        // 마우스 우클릭 상태가 아닌 경우 - 변환 모드 설정
         AEditorPlayer* EdPlayer = CastChecked<UEditorEngine>(GEngine)->GetEditorPlayer();
         switch (InKeyEvent.GetCharacter())
         {
         case 'W':
         {
-            EdPlayer->SetMode(CM_TRANSLATION);
+            if (InKeyEvent.GetInputEvent() == IE_Pressed)
+            {
+                EdPlayer->SetMode(CM_TRANSLATION);
+            }
             break;
         }
         case 'E':
         {
-            EdPlayer->SetMode(CM_ROTATION);
+            if (InKeyEvent.GetInputEvent() == IE_Pressed)
+            {
+                EdPlayer->SetMode(CM_ROTATION);
+            }
             break;
         }
         case 'R':
         {
-            EdPlayer->SetMode(CM_SCALE);
+            if (InKeyEvent.GetInputEvent() == IE_Pressed)
+            {
+                EdPlayer->SetMode(CM_SCALE);
+            }
             break;
         }
         default:
             break;
         }
-        PressedKeys.Empty();
     }
 
-
-    // 일반적인 단일 키 이벤트
+    // 항상 처리해야 할 단일 키 이벤트 (M 키 포함)
     if (InKeyEvent.GetInputEvent() == IE_Pressed)
     {
         switch (InKeyEvent.GetCharacter())
@@ -232,6 +245,7 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
         }
         case 'M':
         {
+            // M 키 처리를 직접 수행 - ImGui에 영향받지 않도록
             FEngineLoop::GraphicDevice.Resize(GEngineLoop.MainAppWnd);
             SLevelEditor* LevelEd = GEngineLoop.GetLevelEditor();
             LevelEd->SetEnableMultiViewport(!LevelEd->IsMultiViewport());
@@ -241,7 +255,7 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
             break;
         }
 
-        // Virtual Key
+        // Virtual Key 처리
         UEditorEngine* EdEngine = CastChecked<UEditorEngine>(GEngine);
         switch (InKeyEvent.GetKeyCode())
         {
@@ -297,16 +311,20 @@ void FEditorViewportClient::MouseMove(const FPointerEvent& InMouseEvent)
 {
     const auto& [DeltaX, DeltaY] = InMouseEvent.GetCursorDelta();
 
-    // Yaw(좌우 회전) 및 Pitch(상하 회전) 값 변경
-    if (IsPerspective())
+    // 마우스 우클릭 상태에서만 카메라 회전 처리
+    if (bRightMouseDown)
     {
-        CameraRotateYaw(DeltaX * 0.1f);  // X 이동에 따라 좌우 회전
-        CameraRotatePitch(DeltaY * 0.1f);  // Y 이동에 따라 상하 회전
-    }
-    else
-    {
-        PivotMoveRight(DeltaX);
-        PivotMoveUp(DeltaY);
+        // Yaw(좌우 회전) 및 Pitch(상하 회전) 값 변경
+        if (IsPerspective())
+        {
+            CameraRotateYaw(DeltaX * 0.1f);  // X 이동에 따라 좌우 회전
+            CameraRotatePitch(DeltaY * 0.1f);  // Y 이동에 따라 상하 회전
+        }
+        else
+        {
+            PivotMoveRight(DeltaX);
+            PivotMoveUp(DeltaY);
+        }
     }
 }
 
@@ -382,7 +400,6 @@ void FEditorViewportClient::GetViewInfo(FMinimalViewInfo& OutViewInfo) const
         OutViewInfo = FMinimalViewInfo();
     }
 }
-
 
 D3D11_VIEWPORT& FEditorViewportClient::GetD3DViewport() const
 {

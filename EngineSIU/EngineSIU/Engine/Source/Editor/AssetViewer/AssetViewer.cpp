@@ -6,6 +6,7 @@
 #include "Widgets/SWindow.h" // Assuming SlateCore module
 #include "Widgets/Layout/SSplitter.h"
 #include "UnrealEd/EditorViewportClient.h"
+#include "SlateCore/Input/Events.h"
 
 extern FEngineLoop GEngineLoop;
 
@@ -131,6 +132,10 @@ void SAssetViewer::SelectViewport(const FVector2D& Point)
     {
         if (ActiveViewportClient->IsSelected(Point))
         {
+            // 뷰포트 선택 시 키 상태 초기화
+            ActiveViewportClient->ResetKeyState();
+            
+            // 뷰포트에 포커스 설정
             SetFocus(GEngineLoop.SkeletalMeshViewerAppWnd);
         }
     }
@@ -138,9 +143,180 @@ void SAssetViewer::SelectViewport(const FVector2D& Point)
 
 void SAssetViewer::RegisterViewerInputDelegates()
 {
-    //FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
+    FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
 
+    // 기존 델리게이트 제거
+    for (const FDelegateHandle& Handle : InputDelegatesHandles)
+    {
+        Handler->OnKeyCharDelegate.Remove(Handle);
+        Handler->OnKeyDownDelegate.Remove(Handle);
+        Handler->OnKeyUpDelegate.Remove(Handle);
+        Handler->OnMouseDownDelegate.Remove(Handle);
+        Handler->OnMouseUpDelegate.Remove(Handle);
+        Handler->OnMouseDoubleClickDelegate.Remove(Handle);
+        Handler->OnMouseWheelDelegate.Remove(Handle);
+        Handler->OnMouseMoveDelegate.Remove(Handle);
+        Handler->OnRawMouseInputDelegate.Remove(Handle);
+        Handler->OnRawKeyboardInputDelegate.Remove(Handle);
+    }
+    
+    InputDelegatesHandles.Empty();
 
+    // 키보드 입력 델리게이트 등록 (ImGui 필터링 추가)
+    InputDelegatesHandles.Add(Handler->OnKeyDownDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            return;
+        }
+        if (ActiveViewportClient)
+        {
+            ActiveViewportClient->InputKey(InKeyEvent);
+        }
+    }));
+    
+    InputDelegatesHandles.Add(Handler->OnKeyUpDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            return;
+        }
+        if (ActiveViewportClient)
+        {
+            ActiveViewportClient->InputKey(InKeyEvent);
+        }
+    }));
+    
+    // 마우스 우클릭 델리게이트
+    InputDelegatesHandles.Add(Handler->OnMouseDownDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        if (ImGui::GetIO().WantCaptureMouse)
+        {
+            return;
+        }
+
+        switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
+        {
+        case EKeys::RightMouseButton:
+            {
+                if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
+                {
+                    // 마우스 커서 숨김
+                    ShowCursor(FALSE);
+                    MousePinPosition = InMouseEvent.GetScreenSpacePosition();
+                }
+                break;
+            }
+        default:
+            break;
+        }
+        
+        POINT Point;
+        GetCursorPos(&Point);
+        ScreenToClient(hWnd, &Point);
+        const FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+        
+        SelectViewport(ClientPos);
+    }));
+    
+    InputDelegatesHandles.Add(Handler->OnMouseUpDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
+        {
+        case EKeys::RightMouseButton:
+            {
+                // 마우스 커서 표시
+                ShowCursor(TRUE);
+                // 마우스 위치 복원
+                SetCursorPos(
+                    static_cast<int>(MousePinPosition.X),
+                    static_cast<int>(MousePinPosition.Y)
+                );
+                break;
+            }
+        default:
+            break;
+        }
+    }));
+
+    // 마우스 이동 델리게이트
+    InputDelegatesHandles.Add(Handler->OnRawMouseInputDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        // Mouse Move 이벤트 일때만 실행
+        if (InMouseEvent.GetInputEvent() == IE_Axis
+         && InMouseEvent.GetEffectingButton() == EKeys::Invalid)
+        {
+            // 에디터 카메라 이동 로직
+            if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton)
+              && InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
+            {
+                if (ActiveViewportClient)
+                {
+                    ActiveViewportClient->MouseMove(InMouseEvent);
+                }
+            }
+        }
+    }));
+    
+    // 마우스 휠 델리게이트
+    InputDelegatesHandles.Add(Handler->OnMouseWheelDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        if (ImGui::GetIO().WantCaptureMouse)
+        {
+            return;
+        }
+
+        if (ActiveViewportClient)
+        {
+            // 뷰포트에서 앞뒤 방향으로 화면 이동
+            if (ActiveViewportClient->IsPerspective())
+            {
+                if (!InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
+                {
+                    const FVector CameraLoc = ActiveViewportClient->PerspectiveCamera.GetLocation();
+                    const FVector CameraForward = ActiveViewportClient->PerspectiveCamera.GetForwardVector();
+                    ActiveViewportClient->PerspectiveCamera.SetLocation(
+                        CameraLoc + CameraForward * InMouseEvent.GetWheelDelta() * 50.0f
+                    );
+                }
+            }
+            else
+            {
+                // 정적 메소드 호출
+                FEditorViewportClient::SetOthoSize(-InMouseEvent.GetWheelDelta());
+            }
+        }
+    }));
 }
 
 void SAssetViewer::LoadConfig()

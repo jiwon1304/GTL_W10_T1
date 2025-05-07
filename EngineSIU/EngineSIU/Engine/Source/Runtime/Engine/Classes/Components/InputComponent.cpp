@@ -31,12 +31,12 @@ void UInputComponent::BindInputDelegate()
 {
     FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
 
-    BindKeyDownDelegateHandles.Add(Handler->OnKeyDownDelegate.AddLambda([this](const FKeyEvent& InKeyEvent)
+    BindKeyDownDelegateHandles.Add(Handler->OnKeyDownDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
     {
         InputKey(InKeyEvent);
     }));
 
-    BindKeyUpDelegateHandles.Add(Handler->OnKeyUpDelegate.AddLambda([this](const FKeyEvent& InKeyEvent)
+    BindKeyUpDelegateHandles.Add(Handler->OnKeyUpDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
     {
         InputKey(InKeyEvent);
     }));

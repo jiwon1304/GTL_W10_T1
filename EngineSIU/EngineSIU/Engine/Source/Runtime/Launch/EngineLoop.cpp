@@ -415,8 +415,24 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
             break;
         }
         
+        // 윈도우가 비활성화될 때 키 상태 초기화
+        if (wParam == WA_INACTIVE)
+        {
+            if (GEngineLoop.GetLevelEditor())
+            {
+                auto* LevelEditor = GEngineLoop.GetLevelEditor();
+                for (int i = 0; i < 4; ++i)  // ViewportClients는 고정 크기 4개의 배열
+                {
+                    auto ViewportClient = LevelEditor->GetViewports()[i];
+                    if (ViewportClient)
+                    {
+                        ViewportClient->ResetKeyState();
+                    }
+                }
+            }
+        }
         // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
-        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
         {
             ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
             GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
@@ -459,8 +475,16 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
             break;
         }
         
+        // 윈도우가 비활성화될 때 키 상태 초기화
+        if (wParam == WA_INACTIVE)
+        {
+            if (GEngineLoop.GetAssetViewer() && GEngineLoop.GetAssetViewer()->GetActiveViewportClient())
+            {
+                GEngineLoop.GetAssetViewer()->GetActiveViewportClient()->ResetKeyState();
+            }
+        }
         // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
-        if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
         {
             ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
             GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();

@@ -212,6 +212,13 @@ public:
     float GetCameraSpeedScalar() const { return CameraSpeed; }
     void SetCameraSpeed(float InValue);
 
+    void ResetKeyState() { PressedKeys.Empty(); }
+    bool IsKeyPressed(EKeys::Type Key) const { return PressedKeys.Contains(Key); }
+    
+    // 마우스 우클릭 상태 제어 메소드
+    void SetRightMouseDown(bool bDown) { bRightMouseDown = bDown; }
+    bool IsRightMouseDown() const { return bRightMouseDown; }
+
 private:
     template <typename T>
     T GetValueFromConfig(const TMap<FString, FString>& config, const FString& key, T defaultValue)
