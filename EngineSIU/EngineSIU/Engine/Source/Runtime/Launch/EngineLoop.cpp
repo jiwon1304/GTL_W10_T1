@@ -154,6 +154,10 @@ void FEngineLoop::Render() const
             {
                 GEngine->ActiveWorld = EditorWorld;
                 Renderer.Render(AssetViewer->GetActiveViewportClient());
+                auto Viewport = AssetViewer->GetActiveViewportClient();
+                auto Location = Viewport->GetCameraLocation();
+
+                UE_LOG(ELogLevel::Display, TEXT("%f %f %f"), Location.X, Location.Y, Location.Z);
             }
             Renderer.RenderViewport(SkeletalMeshViewerAppWnd, AssetViewer->GetActiveViewportClient());
         }
@@ -212,6 +216,7 @@ void FEngineLoop::Tick()
         const float DeltaTime = static_cast<float>(ElapsedTime / 1000.f);
         GEngine->Tick(DeltaTime);
         LevelEditor->Tick(DeltaTime);
+        AssetViewer->Tick(DeltaTime);
         // @todo SkeletalMeshViewer->Tick(DeltaTime);
 
         /* Render Viewports */

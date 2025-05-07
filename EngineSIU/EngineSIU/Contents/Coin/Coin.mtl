@@ -1,0 +1,18 @@
+# Blender 4.3.2 MTL File: 'None'
+# www.blender.org
+
+newmtl M_Coin_01
+Ks 0.500000 0.500000 0.500000
+Ni 1.500000
+d 1.000000
+illum 2
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd M_Coin_01_baseColor.jpeg
+map_Pm M_Coin_01_metallic.png
+map_Pr M_Coin_01_roughness.png
+map_Ke M_Coin_01_emissive.jpeg
+map_Bump -bm 1.000000 M_Coin_01_normal.png

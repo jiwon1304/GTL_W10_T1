@@ -41,6 +41,8 @@ void UEditorEngine::Init()
         AssetManager->InitAssetManager();
     }
     LoadLevel("Saved/AutoSaves.scene");
+
+    StartPreviewWorld(nullptr);
 }
 
 void UEditorEngine::Release()
@@ -196,10 +198,14 @@ void UEditorEngine::StartPreviewWorld(UMeshComponent* TargetMesh)
 
     EditorPreviewWorldContext.SetCurrentWorld(EditorPreviewWorld);
 
+    EditorPreviewWorld->SpawnActor<ACube>()->SetActorLocation(FVector(0, 0, 0));
+
+    EditorPreviewWorld->SpawnActor<ADirectionalLight>();
+
+    // 임시로 ActiveWorld 변경
     UWorld* CurrentWorld = ActiveWorld;
     
-
-    // BindEssentialObjects()는 ActiveWorld기준임.
+    // BindEssentialObjects()는 ActiveWorld기준임.  
     ActiveWorld = EditorPreviewWorld;
     BindEssentialObjects();
 
