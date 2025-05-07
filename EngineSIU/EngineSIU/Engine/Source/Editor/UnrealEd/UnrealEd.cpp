@@ -1,20 +1,27 @@
-﻿#include "UnrealEd.h"
+#include "UnrealEd.h"
 #include "EditorPanel.h"
 
 #include "PropertyEditor/ControlEditorPanel.h"
 #include "PropertyEditor/OutlinerEditorPanel.h"
 #include "PropertyEditor/PropertyEditorPanel.h"
+#include "PropertyEditor/SubEditor/SkeletalTreePanel.h"
 
 void UnrealEd::Initialize()
 {
     auto ControlPanel = std::make_shared<ControlEditorPanel>();
-    Panels["ControlPanel"] = ControlPanel;
-    
+    AddEditorPanel("ControlPanel", ControlPanel);
+
     auto OutlinerPanel = std::make_shared<OutlinerEditorPanel>();
-    Panels["OutlinerPanel"] = OutlinerPanel;
-    
+    AddEditorPanel("OutlinerPanel", OutlinerPanel);
+
     auto PropertyPanel = std::make_shared<PropertyEditorPanel>();
-    Panels["PropertyPanel"] = PropertyPanel;
+    AddEditorPanel("PropertyPanel", PropertyPanel);
+
+    auto SubWIndowPropertyPanel = std::make_shared<PropertyEditorPanel>();
+    AddEditorPanel("PropertyPanel", SubWIndowPropertyPanel, true);
+
+    auto SubWindowSkeletalTreePanel = std::make_shared<SkeletalTreePanel>();
+    AddEditorPanel("SubWindowSkeletalTreePanel", SubWindowSkeletalTreePanel, true);
 }
 
 void UnrealEd::Render() const
@@ -25,20 +32,38 @@ void UnrealEd::Render() const
     }
 }
 
-void UnrealEd::AddEditorPanel(const FString& PanelId, const std::shared_ptr<UEditorPanel>& EditorPanel)
+void UnrealEd::RenderSubWindowPanel() const
 {
-    Panels[PanelId] = EditorPanel;
+    for (const auto& Panel : SubPanels)
+    {
+        Panel.Value->Render();
+    }
 }
 
-void UnrealEd::OnResize(HWND hWnd) const
+void UnrealEd::AddEditorPanel(const FString& PanelId, const std::shared_ptr<UEditorPanel>& EditorPanel, bool bSubWindow)
 {
-    for (auto& Panel : Panels)
+    (bSubWindow ? SubPanels : Panels)[PanelId] = EditorPanel;
+}
+
+void UnrealEd::OnResize(HWND hWnd, bool bSubWindow) const
+{
+    auto& targetPanels = bSubWindow ? SubPanels : Panels;
+
+    for (auto& PanelPair : targetPanels)
     {
-        Panel.Value->OnResize(hWnd);
+        if (PanelPair.Value)
+        {
+            PanelPair.Value->OnResize(hWnd);
+        }
     }
 }
 
 std::shared_ptr<UEditorPanel> UnrealEd::GetEditorPanel(const FString& PanelId)
 {
     return Panels[PanelId];
+}
+
+std::shared_ptr<UEditorPanel> UnrealEd::GetSubEditorPanel(const FString& PanelId)
+{
+    return SubPanels[PanelId];
 }

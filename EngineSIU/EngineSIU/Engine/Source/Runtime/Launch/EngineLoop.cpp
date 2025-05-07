@@ -5,16 +5,13 @@
 #include "D3D11RHI/GraphicDevice.h"
 #include "Engine/EditorEngine.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "AssetViewer/AssetViewer.h"
 #include "PropertyEditor/ViewportTypePanel.h"
 #include "Slate/Widgets/Layout/SSplitter.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/UnrealEd.h"
 #include "World/World.h"
-
-#include "Engine/EditorEngine.h"
-#include "Renderer/DepthPrePass.h"
 #include "Renderer/TileLightCullingPass.h"
-
 #include "SoundManager.h"
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -27,11 +24,15 @@ uint32 FEngineLoop::TotalAllocationBytes = 0;
 uint32 FEngineLoop::TotalAllocationCount = 0;
 
 FEngineLoop::FEngineLoop()
-    : AppWnd(nullptr)
-    , UIMgr(nullptr)
+    : MainAppWnd(nullptr)
+    , SkeletalMeshViewerAppWnd(nullptr)
+    , MainUIManager(nullptr)
+    , SkeletalMeshViewerUIManager(nullptr)
     , LevelEditor(nullptr)
+    , AssetViewer(nullptr)
     , UnrealEditor(nullptr)
     , BufferManager(nullptr)
+    , CurrentImGuiContext(nullptr)
 {
 }
 
@@ -44,61 +45,73 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 {
     FPlatformTime::InitTiming();
 
-    /* must be initialized before window. */
     WindowInit(hInstance);
+    SubWindowInit(hInstance);
 
-    UnrealEditor = new UnrealEd();
     BufferManager = new FDXDBufferManager();
-    UIMgr = new UImGuiManager;
-    AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
+    MainUIManager = new UImGuiManager;
+    SkeletalMeshViewerUIManager = new UImGuiManager;
     LevelEditor = new SLevelEditor();
+    AssetViewer = new SAssetViewer();
+    UnrealEditor = new UnrealEd();
 
-    UnrealEditor->Initialize();
-    GraphicDevice.Initialize(AppWnd);
+    AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
 
-    if (!GPUTimingManager.Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext))
-    {
-        UE_LOG(ELogLevel::Error, TEXT("Failed to initialize GPU Timing Manager!"));
-    }
-    EngineProfiler.SetGPUTimingManager(&GPUTimingManager);
-
-    // @todo Table에 Tree 구조로 넣을 수 있도록 수정
-    EngineProfiler.RegisterStatScope(TEXT("Renderer_Render"), FName(TEXT("Renderer_Render_CPU")), FName(TEXT("Renderer_Render_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- DepthPrePass"), FName(TEXT("DepthPrePass_CPU")), FName(TEXT("DepthPrePass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- TileLightCulling"), FName(TEXT("TileLightCulling_CPU")), FName(TEXT("TileLightCulling_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- ShadowPass"), FName(TEXT("ShadowPass_CPU")), FName(TEXT("ShadowPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- StaticMeshPass"), FName(TEXT("StaticMeshPass_CPU")), FName(TEXT("StaticMeshPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- WorldBillboardPass"), FName(TEXT("WorldBillboardPass_CPU")), FName(TEXT("WorldBillboardPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- UpdateLightBufferPass"), FName(TEXT("UpdateLightBufferPass_CPU")), FName(TEXT("UpdateLightBufferPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- FogPass"), FName(TEXT("FogPass_CPU")), FName(TEXT("FogPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- PostProcessCompositing"), FName(TEXT("PostProcessCompositing_CPU")), FName(TEXT("PostProcessCompositing_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- EditorBillboardPass"), FName(TEXT("EditorBillboardPass_CPU")), FName(TEXT("EditorBillboardPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- EditorRenderPass"), FName(TEXT("EditorRenderPass_CPU")), FName(TEXT("EditorRenderPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- LinePass"), FName(TEXT("LinePass_CPU")), FName(TEXT("LinePass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- GizmoPass"), FName(TEXT("GizmoPass_CPU")), FName(TEXT("GizmoPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("|- CompositingPass"), FName(TEXT("CompositingPass_CPU")), FName(TEXT("CompositingPass_GPU")));
-    EngineProfiler.RegisterStatScope(TEXT("SlatePass"), FName(TEXT("SlatePass_CPU")), FName(TEXT("SlatePass_GPU")));
-
+    GraphicDevice.Initialize(MainAppWnd);
+    //if (SkeletalMeshViewerAppWnd)
+    //{
+        GraphicDevice.CreateAdditionalSwapChain(SkeletalMeshViewerAppWnd);
+    //}
     BufferManager->Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext);
     Renderer.Initialize(&GraphicDevice, BufferManager, &GPUTimingManager);
     PrimitiveDrawBatch.Initialize(&GraphicDevice);
-    UIMgr->Initialize(AppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
     ResourceManager.Initialize(&Renderer, &GraphicDevice);
-    
-    uint32 ClientWidth = 0;
-    uint32 ClientHeight = 0;
-    GetClientSize(ClientWidth, ClientHeight);
 
     GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
     GEngine->Init();
 
+    MainUIManager->Initialize(MainAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
+    SkeletalMeshViewerUIManager->Initialize(SkeletalMeshViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
+    uint32 ClientWidth = 0;
+    uint32 ClientHeight = 0;
+    GetClientSize(MainAppWnd, ClientWidth, ClientHeight);
     LevelEditor->Initialize(ClientWidth, ClientHeight);
+    GetClientSize(SkeletalMeshViewerAppWnd, ClientWidth, ClientHeight);
+    AssetViewer->Initialize(ClientWidth, ClientHeight);
+    UnrealEditor->Initialize();
+    
+    {
+        if (!GPUTimingManager.Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext))
+        {
+            UE_LOG(ELogLevel::Error, TEXT("Failed to initialize GPU Timing Manager!"));
+        }
+        EngineProfiler.SetGPUTimingManager(&GPUTimingManager);
+
+        // @todo Table에 Tree 구조로 넣을 수 있도록 수정
+        EngineProfiler.RegisterStatScope(TEXT("Renderer_Render"), FName(TEXT("Renderer_Render_CPU")), FName(TEXT("Renderer_Render_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- DepthPrePass"), FName(TEXT("DepthPrePass_CPU")), FName(TEXT("DepthPrePass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- TileLightCulling"), FName(TEXT("TileLightCulling_CPU")), FName(TEXT("TileLightCulling_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- ShadowPass"), FName(TEXT("ShadowPass_CPU")), FName(TEXT("ShadowPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- StaticMeshPass"), FName(TEXT("StaticMeshPass_CPU")), FName(TEXT("StaticMeshPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- WorldBillboardPass"), FName(TEXT("WorldBillboardPass_CPU")), FName(TEXT("WorldBillboardPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- UpdateLightBufferPass"), FName(TEXT("UpdateLightBufferPass_CPU")), FName(TEXT("UpdateLightBufferPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- FogPass"), FName(TEXT("FogPass_CPU")), FName(TEXT("FogPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- PostProcessCompositing"), FName(TEXT("PostProcessCompositing_CPU")), FName(TEXT("PostProcessCompositing_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- EditorBillboardPass"), FName(TEXT("EditorBillboardPass_CPU")), FName(TEXT("EditorBillboardPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- EditorRenderPass"), FName(TEXT("EditorRenderPass_CPU")), FName(TEXT("EditorRenderPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- LinePass"), FName(TEXT("LinePass_CPU")), FName(TEXT("LinePass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- GizmoPass"), FName(TEXT("GizmoPass_CPU")), FName(TEXT("GizmoPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("|- CompositingPass"), FName(TEXT("CompositingPass_CPU")), FName(TEXT("CompositingPass_GPU")));
+        EngineProfiler.RegisterStatScope(TEXT("SlatePass"), FName(TEXT("SlatePass_CPU")), FName(TEXT("SlatePass_GPU")));
+    }
+
 
     FSoundManager::GetInstance().Initialize();
-    FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");
-    FSoundManager::GetInstance().LoadSound("sizzle", "Contents/Sounds/sizzle.mp3");
+    //FSoundManager::GetInstance().LoadSound("fishdream", "Contents/Sounds/fishdream.mp3");
+    //FSoundManager::GetInstance().LoadSound("sizzle", "Contents/Sounds/sizzle.mp3");
     //FSoundManager::GetInstance().PlaySound("fishdream");
 
+    // @todo 필요한 로직인지 확인
     UpdateUI();
 
     return 0;
@@ -106,7 +119,7 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 
 void FEngineLoop::Render() const
 {
-    GraphicDevice.Prepare();
+    GraphicDevice.Prepare(MainAppWnd);
     
     if (LevelEditor->IsMultiViewport())
     {
@@ -120,7 +133,7 @@ void FEngineLoop::Render() const
         for (int i = 0; i < 4; ++i)
         {
             LevelEditor->SetActiveViewportClient(i);
-            Renderer.RenderViewport(LevelEditor->GetActiveViewportClient());
+            Renderer.RenderViewport(MainAppWnd, LevelEditor->GetActiveViewportClient());
         }
         GetLevelEditor()->SetActiveViewportClient(ActiveViewportCache);
     }
@@ -128,9 +141,32 @@ void FEngineLoop::Render() const
     {
         Renderer.Render(LevelEditor->GetActiveViewportClient());
         
-        Renderer.RenderViewport(LevelEditor->GetActiveViewportClient());
+        Renderer.RenderViewport(MainAppWnd, LevelEditor->GetActiveViewportClient());
     }
-    
+
+    GraphicDevice.Prepare(SkeletalMeshViewerAppWnd);
+
+    if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd) && AssetViewer)
+    {
+        Renderer.Render(AssetViewer->GetActiveViewportClient());
+
+        Renderer.RenderViewport(SkeletalMeshViewerAppWnd, AssetViewer->GetActiveViewportClient());
+    }
+}
+
+void FEngineLoop::WndMessageProc(HWND hWnd)
+{
+    MSG Msg;
+    while (PeekMessage(&Msg, hWnd, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&Msg); // 키보드 입력 메시지를 문자메시지로 변경
+        DispatchMessage(&Msg);  // 메시지를 WndProc에 전달
+        if (Msg.message == WM_QUIT)
+        {
+            bIsExit = true;
+            break;
+        }
+    }
 }
 
 void FEngineLoop::Tick()
@@ -145,39 +181,62 @@ void FEngineLoop::Tick()
 
     while (bIsExit == false)
     {
+        QueryPerformanceCounter(&StartTime);
+
         FProfilerStatsManager::BeginFrame();    // Clear previous frame stats
         if (GPUTimingManager.IsInitialized())
         {
             GPUTimingManager.BeginFrame();      // Start GPU frame timing
         }
 
-        QueryPerformanceCounter(&StartTime);
-
-        MSG Msg;
-        while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
+        /* Window Message Loop */
+        WndMessageProc(MainAppWnd);
+        if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd) && !bIsExit)
         {
-            TranslateMessage(&Msg); // 키보드 입력 메시지를 문자메시지로 변경
-            DispatchMessage(&Msg);  // 메시지를 WndProc에 전달
-
-            if (Msg.message == WM_QUIT)
-            {
-                bIsExit = true;
-                break;
-            }
+            WndMessageProc(SkeletalMeshViewerAppWnd);
+        }
+        if (bIsExit)
+        {
+            break;
         }
 
+        /* Tick Game Logic */
         const float DeltaTime = static_cast<float>(ElapsedTime / 1000.f);
-
         GEngine->Tick(DeltaTime);
         LevelEditor->Tick(DeltaTime);
+        // @todo SkeletalMeshViewer->Tick(DeltaTime);
+
+        /* Render Viewports */
         Render();
-        UIMgr->BeginFrame();
-        UnrealEditor->Render();
 
-        FConsole::GetInstance().Draw();
-        EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
+        /* Render UI (ImGui) */
+        // 메인 윈도우 ImGui
+        if (MainUIManager && MainUIManager->GetContext() && IsWindowVisible(MainAppWnd))
+        {
+            MainUIManager->BeginFrame();
+            {
+                UnrealEditor->Render();
 
-        UIMgr->EndFrame();
+                FConsole::GetInstance().Draw();
+                EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
+                TempRenderDebugImGui();
+            }
+            ID3D11RenderTargetView* const* BackBufferRTV = Renderer.Graphics->BackBufferRTVs.Find(MainAppWnd);
+            Renderer.Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
+            MainUIManager->EndFrame();
+        }
+
+        // 스켈레탈 메쉬 뷰어 ImGui
+        if (SkeletalMeshViewerUIManager && SkeletalMeshViewerUIManager->GetContext() && SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd))
+        {
+            SkeletalMeshViewerUIManager->BeginFrame();
+            {
+                UnrealEditor->RenderSubWindowPanel();
+            }
+            ID3D11RenderTargetView* const* BackBufferRTV = Renderer.Graphics->BackBufferRTVs.Find(SkeletalMeshViewerAppWnd);
+            Renderer.Graphics->DeviceContext->OMSetRenderTargets(1, BackBufferRTV, nullptr);
+            SkeletalMeshViewerUIManager->EndFrame();
+        }
 
         // Pending 처리된 오브젝트 제거
         GUObjectArray.ProcessPendingDestroyObjects();
@@ -187,7 +246,12 @@ void FEngineLoop::Tick()
             GPUTimingManager.EndFrame();        // End GPU frame timing
         }
 
-        GraphicDevice.SwapBuffer();
+        GraphicDevice.SwapBuffer(MainAppWnd);
+        if (SkeletalMeshViewerAppWnd && IsWindowVisible(SkeletalMeshViewerAppWnd))
+        {
+            GraphicDevice.SwapBuffer(SkeletalMeshViewerAppWnd);
+        }
+
         do
         {
             Sleep(0);
@@ -197,10 +261,10 @@ void FEngineLoop::Tick()
     }
 }
 
-void FEngineLoop::GetClientSize(uint32& OutWidth, uint32& OutHeight) const
+void FEngineLoop::GetClientSize(const HWND hWnd, uint32& OutWidth, uint32& OutHeight) const
 {
     RECT ClientRect = {};
-    GetClientRect(AppWnd, &ClientRect);
+    GetClientRect(hWnd, &ClientRect);
             
     OutWidth = ClientRect.right - ClientRect.left;
     OutHeight = ClientRect.bottom - ClientRect.top;
@@ -208,18 +272,44 @@ void FEngineLoop::GetClientSize(uint32& OutWidth, uint32& OutHeight) const
 
 void FEngineLoop::Exit()
 {
-    LevelEditor->Release();
-    UIMgr->Shutdown();
+    if (SkeletalMeshViewerAppWnd && IsWindow(SkeletalMeshViewerAppWnd))
+    {
+        DestroyWindow(SkeletalMeshViewerAppWnd);
+        SkeletalMeshViewerAppWnd = nullptr;
+    }
+    if (SkeletalMeshViewerUIManager)
+    {
+        SkeletalMeshViewerUIManager->Shutdown();
+        delete SkeletalMeshViewerUIManager;
+        SkeletalMeshViewerUIManager = nullptr;
+    }
+
+    if (LevelEditor)
+    {
+        LevelEditor->Release();
+        delete LevelEditor;
+        LevelEditor = nullptr;
+    }
+
+    if (MainAppWnd && IsWindow(MainAppWnd))
+    {
+        DestroyWindow(MainAppWnd);
+        MainAppWnd = nullptr;
+    }
+    if (MainUIManager)
+    {
+        MainUIManager->Shutdown();
+        delete MainUIManager;
+        MainUIManager = nullptr;
+    }
+
     ResourceManager.Release(&Renderer);
     Renderer.Release();
     GraphicDevice.Release();
-    
     GEngine->Release();
 
     delete UnrealEditor;
     delete BufferManager;
-    delete UIMgr;
-    delete LevelEditor;
 }
 
 void FEngineLoop::WindowInit(HINSTANCE hInstance)
@@ -236,18 +326,52 @@ void FEngineLoop::WindowInit(HINSTANCE hInstance)
 
     RegisterClassW(&wc);
 
-    AppWnd = CreateWindowExW(
+    MainAppWnd = CreateWindowExW(
         0, WindowClass, Title, WS_POPUP | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1400, 1000,
         nullptr, nullptr, hInstance, nullptr
     );
 }
 
+void FEngineLoop::SubWindowInit(HINSTANCE hInstance)
+{
+    WCHAR WindowClass[] = L"JungleSubWindowClass";
+    WCHAR Title[] = L"SkeletalMesh Viewer";
+
+    WNDCLASSW wc{};
+    wc.lpfnWndProc = SubAppWndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = WindowClass;
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+
+    RegisterClassW(&wc);
+
+    // WS_VISIBLE 제거, 숨김 초기 상태
+    SkeletalMeshViewerAppWnd = CreateWindowExW(
+        0, WindowClass, Title, WS_POPUP | WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        MainAppWnd, nullptr, hInstance, nullptr
+    );
+
+    // @note 생성 확인용
+    if (SkeletalMeshViewerAppWnd)
+    {
+        ShowWindow(SkeletalMeshViewerAppWnd, SW_SHOW);
+        UpdateWindow(SkeletalMeshViewerAppWnd);
+    }
+}
+
 LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+    if  (GEngineLoop.MainUIManager)
     {
-        return true;
+        // 항상 메인 윈도우 컨텍스트로 설정하고 이벤트 처리
+        ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
+        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+        {
+            return true;
+        }
     }
 
     switch (Msg)
@@ -258,6 +382,10 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
         {
             LevelEditor->SaveConfig();
         }
+        /** Todo: 현재 PostQuitMessage의 종료 메시지가 정상적으로 수신되지 않아
+         *  `bIsExit`을 강제로 true로 만들어주었습니다. 나중에 수정이 필요합니다.
+         */
+        GEngineLoop.bIsExit = true;
         break;
     case WM_SIZE:
         if (wParam != SIZE_MINIMIZED)
@@ -269,31 +397,226 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
                 
                 uint32 ClientWidth = 0;
                 uint32 ClientHeight = 0;
-                GEngineLoop.GetClientSize(ClientWidth, ClientHeight);
+                GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
             
                 LevelEditor->ResizeEditor(ClientWidth, ClientHeight);
                 FEngineLoop::Renderer.TileLightCullingPass->ResizeViewBuffers(
-                  static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Width),
+                    static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Width),
                     static_cast<uint32>(LevelEditor->GetActiveViewportClient()->GetD3DViewport().Height)
                 );
             }
         }
         GEngineLoop.UpdateUI();
         break;
+    case WM_ACTIVATE:
+        if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.MainUIManager)
+        {
+            break;
+        }
+        
+        // 윈도우가 비활성화될 때 키 상태 초기화
+        if (wParam == WA_INACTIVE)
+        {
+            if (GEngineLoop.GetLevelEditor())
+            {
+                auto* LevelEditor = GEngineLoop.GetLevelEditor();
+                for (int i = 0; i < 4; ++i)  // ViewportClients는 고정 크기 4개의 배열
+                {
+                    auto ViewportClient = LevelEditor->GetViewports()[i];
+                    if (ViewportClient)
+                    {
+                        ViewportClient->ResetKeyState();
+                    }
+                }
+            }
+        }
+        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        {
+            ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
+            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        }
+        break;
     default:
         GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
-        return DefWindowProc(hWnd, Msg, wParam, lParam);
     }
 
-    return 0;
+    return DefWindowProc(hWnd, Msg, wParam, lParam);
+}
+
+LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
+{
+    if (GEngineLoop.SkeletalMeshViewerUIManager)
+    {
+        // 항상 서브 윈도우 컨텍스트로 설정하고 이벤트 처리
+        ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
+        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+        {
+            return true;
+        }
+    }
+
+    switch (Msg)
+    {
+    case WM_DESTROY:
+        // Do Nothing (ShowWindow로 관리하므로 직접 처리할 필요 없음. DESTROY가 호출될 때에는 Exit에서 일괄처리함)
+        break;
+    case WM_SIZE:
+        GEngineLoop.UpdateSubWindowUI();
+        break;
+    case WM_CLOSE:
+        ShowWindow(hWnd, SW_HIDE);
+        return 0;
+    case WM_ACTIVATE:
+        if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.SkeletalMeshViewerUIManager)
+        {
+            break;
+        }
+        
+        // 윈도우가 비활성화될 때 키 상태 초기화
+        if (wParam == WA_INACTIVE)
+        {
+            if (GEngineLoop.GetAssetViewer() && GEngineLoop.GetAssetViewer()->GetActiveViewportClient())
+            {
+                GEngineLoop.GetAssetViewer()->GetActiveViewportClient()->ResetKeyState();
+            }
+        }
+        // 활성화 상태일 때만 컨텍스트 설정 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
+        else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
+        {
+            ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
+            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        }
+        break;
+    default:
+        // @todo MessageHandler 수정
+        GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
+        break;
+    }
+
+    return DefWindowProc(hWnd, Msg, wParam, lParam);
 }
 
 void FEngineLoop::UpdateUI()
 {
-    FConsole::GetInstance().OnResize(AppWnd);
+    FConsole::GetInstance().OnResize(MainAppWnd);
     if (GEngineLoop.GetUnrealEditor())
     {
-        GEngineLoop.GetUnrealEditor()->OnResize(AppWnd);
+        GEngineLoop.GetUnrealEditor()->OnResize(MainAppWnd);
     }
-    ViewportTypePanel::GetInstance().OnResize(AppWnd);
+    ViewportTypePanel::GetInstance().OnResize(MainAppWnd);
+}
+
+void FEngineLoop::UpdateSubWindowUI()
+{
+    if (GEngineLoop.GetUnrealEditor())
+    {
+        GEngineLoop.GetUnrealEditor()->OnResize(SkeletalMeshViewerAppWnd, true);
+    }
+    //ViewportTypePanel::GetInstance().OnResize(SkeletalMeshViewerAppWnd);
+}
+
+void FEngineLoop::ToggleWindow(const HWND hWnd)
+{
+    if (hWnd && !IsWindowVisible(hWnd))
+    {
+        ShowWindow(hWnd, SW_SHOWDEFAULT);
+        UpdateWindow(hWnd);
+    }
+    else
+    {
+        ShowWindow(hWnd, SW_HIDE);
+    }
+}
+
+void FEngineLoop::Show(const HWND HWnd)
+{
+    if (HWnd)
+    {
+        ImGuiContext* PreviousContext = ImGui::GetCurrentContext();
+
+        ShowWindow(HWnd, SW_SHOWDEFAULT);
+        UpdateWindow(HWnd);
+
+        // 기존 ImGuiContext 복원 (다른 컨텍스트에서 호출되어도 문제가 없게끔)
+        if (PreviousContext)
+        {
+            ImGui::SetCurrentContext(PreviousContext);
+        }
+    }
+}
+
+void FEngineLoop::Hide(const HWND hWnd)
+{
+    if (hWnd)
+    {
+        ShowWindow(hWnd, SW_HIDE);
+    }
+}
+
+void FEngineLoop::TempRenderDebugImGui()
+{
+    // ImGui 디버그 정보 표시
+    ImGui::Begin("Splitter Debug Info");
+
+    // 마우스 커서 위치 가져오기
+    POINT MousePos;
+    GetCursorPos(&MousePos);
+    ScreenToClient(GEngineLoop.MainAppWnd, &MousePos);
+    FVector2D ClientPos = FVector2D{ static_cast<float>(MousePos.x), static_cast<float>(MousePos.y) };
+
+    ImGui::Text("Mouse Position: (%.1ld, %.1ld)", MousePos.x, MousePos.y);
+    ImGui::Text("Client Position: (%.1f, %.1f)", ClientPos.X, ClientPos.Y);
+
+    FRect Rect = LevelEditor->GetActiveViewportClient()->GetViewport()->GetRect();
+
+    // 현재 Splitter의 Rect 정보 표시
+    ImGui::Text("Selected Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Splitters");
+    Rect = LevelEditor->MainVSplitter->GetRect();
+    ImGui::Text("MainSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->MainVSplitter->SideLT->GetRect();
+    ImGui::Text("- MainSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->MainVSplitter->SideRB->GetRect();
+    ImGui::Text("- MainSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->GetRect();
+    ImGui::Text("EditorSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->SideLT->GetRect();
+    ImGui::Text("- EditorSplitter SideLT Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+    ImGui::Text("- EditorSplitter SideRB Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->ViewportVSplitter->GetRect();
+    ImGui::Text("ViewportVSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+    Rect = LevelEditor->ViewportHSplitter->GetRect();
+    ImGui::Text("ViewportHSplitter Rect: Pos(%.1f, %.1f) Size(%.1f, %.1f)", Rect.TopLeftX, Rect.TopLeftY, Rect.TopLeftX + Rect.Width, Rect.TopLeftY + Rect.Height);
+
+    ImGui::SeparatorText("Viewports");
+    for (int i = 0; i < 4; ++i)
+    {
+        auto ViewportClient = LevelEditor->GetViewports()[i];
+        if (ViewportClient)
+        {
+            auto Viewport = ViewportClient->GetViewport();
+            bool bIsSelected = Viewport == LevelEditor->GetActiveViewportClient()->GetViewport();
+            ImGui::Text("Viewport Rect[%s]: Pos(%.1f, %.1f) Size(%.1f, %.1f)", bIsSelected ? "O" : "X", Viewport->GetRect().TopLeftX, Viewport->GetRect().TopLeftY, Viewport->GetRect().TopLeftX + Viewport->GetRect().Width, Viewport->GetRect().TopLeftY + Viewport->GetRect().Height);
+        }
+    }
+    // IsSplitterHovered 상태 표시
+    // IsSplitterHovered 함수는 const가 아니므로 const_cast 사용 또는 함수를 const로 변경 필요.
+    // 여기서는 const_cast를 사용합니다.
+    // FPoint 생성자에 float 대신 int32를 사용하도록 수정
+    bool bIsMainHovered = LevelEditor->MainVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsEditorHovered = LevelEditor->EditorHSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsViewportVHovered = LevelEditor->ViewportVSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+    bool bIsViewportHHovered = LevelEditor->ViewportHSplitter->IsSplitterHovered(FPoint(static_cast<int32>(MousePos.x), static_cast<int32>(MousePos.y)));
+
+    ImGui::SeparatorText("Hovered");
+    ImGui::Text("IsSplitterHovered: %s", bIsMainHovered ? "true" : "false");
+    ImGui::Text("IsEditorHovered: %s", bIsEditorHovered ? "true" : "false");
+    ImGui::Text("IsViewportVHovered: %s", bIsViewportVHovered ? "true" : "false");
+    ImGui::Text("IsViewportHHovered: %s", bIsViewportHHovered ? "true" : "false");
+
+    ImGui::End();
 }

@@ -32,6 +32,7 @@
 #include "Actors/DirectionalLightActor.h"
 #include "Actors/SpotLightActor.h"
 #include "Actors/AmbientLightActor.h"
+#include "EngineLoop.h" // For GEngineLoop
 
 #include "Actors/CubeActor.h"
 #include "Actors/SphereActor.h"
@@ -50,17 +51,17 @@ void ControlEditorPanel::Render()
 {
     /* Pre Setup */
     const ImGuiIO& IO = ImGui::GetIO();
-    ImFont* IconFont = IO.Fonts->Fonts[FEATHER_FONT];
+    ImFont* IconFont = IO.Fonts->Fonts.size() == 1 ? IO.FontDefault : IO.Fonts->Fonts[FEATHER_FONT];
     constexpr ImVec2 IconSize = ImVec2(32, 32);
 
     const float PanelWidth = (Width) * 0.8f;
-    constexpr float PanelHeight = 45.0f;
+    constexpr float PanelHeight = 72.f;
 
-    constexpr float PanelPosX = 1.0f;
-    constexpr float PanelPosY = 1.0f;
+    constexpr float PanelPosX = 0.0f;
+    constexpr float PanelPosY = 0.0f;
 
-    constexpr ImVec2 MinSize(300, 50);
-    constexpr ImVec2 MaxSize(FLT_MAX, 50);
+    constexpr ImVec2 MinSize(300, 72);
+    constexpr ImVec2 MaxSize(FLT_MAX, 72);
 
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
@@ -72,193 +73,54 @@ void ControlEditorPanel::Render()
     ImGui::SetNextWindowSize(ImVec2(PanelWidth, PanelHeight), ImGuiCond_Always);
 
     /* Panel Flags */
-    constexpr ImGuiWindowFlags PanelFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground;
+    constexpr ImGuiWindowFlags PanelFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_MenuBar;
 
     /* Render Start */
-    ImGui::Begin("Control Panel", nullptr, PanelFlags);
-
-    CreateMenuButton(IconSize, IconFont);
-    ImGui::SameLine();
-    CreateFlagButton();
-    ImGui::SameLine();
-    CreateModifyButton(IconSize, IconFont);
-    ImGui::SameLine();
-    ImGui::SameLine();
-    CreateLightSpawnButton(IconSize, IconFont);
-    ImGui::SameLine();
+    if (!ImGui::Begin("Control Panel", nullptr, PanelFlags))
     {
-        ImGui::PushFont(IconFont);
-        CreatePIEButton(IconSize, IconFont);
-        ImGui::SameLine();
-        /* Get Window Content Region */
-        const float ContentWidth = ImGui::GetWindowContentRegionMax().x;
-        /* Move Cursor X Position */
-        ImGui::SetCursorPosX(ContentWidth - (IconSize.x * 3.0f + 16.0f));
-        CreateSRTButton(IconSize);
-        ImGui::PopFont();
+        ImGui::End();
+        return;
     }
 
-    ImGui::End();
-}
-
-void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconFont)
-{
-    ImGui::PushFont(IconFont);
-    if (ImGui::Button("\ue9ad", ButtonSize)) // Menu
+    /* Menu Bar */
+    if (ImGui::BeginMenuBar())
     {
-        bOpenMenu = !bOpenMenu;
-    }
-    ImGui::PopFont();
-
-    if (bOpenMenu)
-    {
-        ImGui::SetNextWindowPos(ImVec2(10, 55), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(135, 170), ImGuiCond_Always);
-
-        ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-        if (ImGui::MenuItem("New Level"))
+        if (ImGui::BeginMenu("File"))
         {
-            if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
-            {
-                EditorEngine->NewLevel();
-            }
-        }
-
-        if (ImGui::MenuItem("Load Level"))
-        {
-            TArray<FString> FileNames;
-            if (!FDesktopPlatformWindows::OpenFileDialog(
-                "Open Scene File",
-                "",
-                {{
-                    .FilterPattern = "*.scene",
-                    .Description = "Scene file"
-                }},
-                EFileDialogFlag::None,
-                FileNames
-            ))
-            {
-                tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
-                ImGui::End();
-                return;
-            }
-
-            if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
-            {
-                EditorEngine->NewLevel();
-                EditorEngine->LoadLevel(FileNames.Pop());
-            }
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Save Level"))
-        {
-            TArray<FString> FileNames;
-            if (!FDesktopPlatformWindows::SaveFileDialog(
-                "Save Scene File",
-                "",
-                {{
-                    .FilterPattern = "*.scene",
-                    .Description = "Scene file"
-                }},
-                FileNames
-            ))
-            {
-                ImGui::End();
-                return;
-            }
-
-            if (const UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
-            {
-                EditorEngine->SaveLevel(FileNames.Pop());
-                tinyfd_messageBox("알림", "저장되었습니다.", "ok", "info", 1);
-            }
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::Button("ImGui데모"))
-        {
-            bShowImGuiDemoWindow = !bShowImGuiDemoWindow;
-        }
-
-        if (bShowImGuiDemoWindow)
-        {
-            ImGui::ShowDemoWindow(&bShowImGuiDemoWindow); // 창이 닫힐 때 상태를 업데이트
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::BeginMenu("Import"))
-        {
-            if (ImGui::MenuItem("Wavefront (.obj)"))
-            {
-                TArray<FString> FileNames;
-                if (FDesktopPlatformWindows::OpenFileDialog(
-                    "Open OBJ File",
-                    "",
-                    {{
-                        .FilterPattern = "*.obj",
-                        .Description = "Wavefront(.obj) file"
-                    }},
-                    EFileDialogFlag::None,
-                    FileNames
-                ))
-                {
-                    const FString FileName = FileNames.Pop();
-                    UE_LOG(ELogLevel::Display, TEXT("Import Wavefront File: %s"), *FileName);
-
-                    if (UAssetManager::Get().AddAsset(StringToWString(GetData(FileName))) == false)
-                    {
-                        tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
-                    }
-                }
-            }
-
-            if (ImGui::MenuItem("FBX (.fbx)"))
-            {
-                TArray<FString> FileNames;
-                if (FDesktopPlatformWindows::OpenFileDialog(
-                    "Open FBX File",
-                    "",
-                    {{
-                        .FilterPattern = "*.fbx",
-                        .Description = "FBX(.fbx) file"
-                    }},
-                    EFileDialogFlag::None,
-                    FileNames
-                ))
-                {
-                    const FString FileName = FileNames.Pop();
-                    UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
-
-                    if (UAssetManager::Get().AddAsset(StringToWString(GetData(FileName))) == false)
-                    {
-                        tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
-                    }
-                    
-                }
-            }
-
+            CreateMenuButton(IconSize, IconFont);
             ImGui::EndMenu();
         }
 
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Quit"))
+        if (ImGui::BeginMenu("ImGui Demo"))
         {
-            ImGui::OpenPopup("프로그램 종료");
+            if (ImGui::Button("ImGui Demo Window"))
+            {
+                bShowImGuiDemoWindow = !bShowImGuiDemoWindow;
+            }
+            ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("View"))
+        {
+            if (ImGui::MenuItem("Skeletal Mesh Viewer"))
+            {
+                bShowSkeletalMeshViewer = true;
+            }
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMenuBar();
+    }
+
+    if (bOpenModal)
+    {
         const ImVec2 Center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-        if (ImGui::BeginPopupModal("프로그램 종료", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        ImGui::OpenPopup("##Application Quit", ImGuiPopupFlags_AnyPopup);
+        if (ImGui::BeginPopupModal("##Application Quit", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ImGui::Text("정말 프로그램을 종료하시겠습니까?");
-
             ImGui::Separator();
 
             const float ContentWidth = ImGui::GetWindowContentRegionMax().x;
@@ -271,20 +133,137 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
             ImGui::SameLine();
             ImGui::SetItemDefaultFocus();
             ImGui::PushID("CancelButtonWithQuitWindow");
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(ImColor::HSV(0.0f, 1.0f, 1.0f)));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(ImColor::HSV(0.0f, 0.9f, 1.0f)));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(ImColor::HSV(0.0f, 1.0f, 1.0f)));
-            if (ImGui::Button("Cancel", ImVec2(80, 0)))
             {
-                ImGui::CloseCurrentPopup();
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(ImColor::HSV(0.0f, 1.0f, 1.0f)));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(ImColor::HSV(0.0f, 0.9f, 1.0f)));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(ImColor::HSV(0.0f, 1.0f, 1.0f)));
+                {
+                    if (ImGui::Button("Cancel", ImVec2(80, 0)))
+                    {
+                        ImGui::CloseCurrentPopup();
+                        bOpenModal = false;
+                    }
+                }
+                ImGui::PopStyleColor(3);
             }
-            ImGui::PopStyleColor(3);
             ImGui::PopID();
 
             ImGui::EndPopup();
         }
+    }
+    ImGui::SameLine();
+    CreateFlagButton();
+    ImGui::SameLine();
+    CreateModifyButton(IconSize, IconFont);
+    ImGui::SameLine();
+    CreateLightSpawnButton(IconSize, IconFont);
+    ImGui::SameLine();
+    {
+        ImGui::PushFont(IconFont);
+        CreatePIEButton(IconSize, IconFont);
+        ImGui::SameLine();
+        /* Get Window Content Region */
+        const float ContentWidth = ImGui::GetWindowContentRegionMax().x;
+        /* Move Cursor X Position */
+        if (Width >= 880.f)
+        {
+            ImGui::SetCursorPosX(ContentWidth - (IconSize.x * 3.0f + 16.0f));
+        }
+        CreateSRTButton(IconSize);
+        ImGui::PopFont();
+    }
 
-        ImGui::End();
+    ImGui::End();
+
+    if (bShowImGuiDemoWindow)
+    {
+        ImGui::ShowDemoWindow(&bShowImGuiDemoWindow); // 창이 닫힐 때 상태를 업데이트
+    }
+
+    if (bShowSkeletalMeshViewer)
+    {
+        bShowSkeletalMeshViewer = false;
+        if (GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
+        }
+    }
+}
+
+void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconFont)
+{
+    if (ImGui::MenuItem("New Level"))
+    {
+        if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+        {
+            EditorEngine->NewLevel();
+        }
+    }
+
+    if (ImGui::MenuItem("Load Level"))
+    {
+        char const* lFilterPatterns[1] = { "*.scene" };
+        const char* FileName = tinyfd_openFileDialog("Open Scene File", "", 1, lFilterPatterns, "Scene(.scene) file", 0);
+
+        if (FileName == nullptr)
+        {
+            tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
+            return;
+        }
+        if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+        {
+            EditorEngine->NewLevel();
+            EditorEngine->LoadLevel(FileName);
+        }
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Save Level"))
+    {
+        char const* lFilterPatterns[1] = { "*.scene" };
+        const char* FileName = tinyfd_saveFileDialog("Save Scene File", "", 1, lFilterPatterns, "Scene(.scene) file");
+
+        if (FileName == nullptr)
+        {
+            return;
+        }
+        if (const UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+        {
+            EditorEngine->SaveLevel(FileName);
+        }
+
+        tinyfd_messageBox("알림", "저장되었습니다.", "ok", "info", 1);
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::BeginMenu("Import"))
+    {
+        if (ImGui::MenuItem("Wavefront (.obj)"))
+        {
+            char const* lFilterPatterns[1] = { "*.obj" };
+            const char* FileName = tinyfd_openFileDialog("Open OBJ File", "", 1, lFilterPatterns, "Wavefront(.obj) file", 0);
+
+            if (FileName != nullptr)
+            {
+                std::cout << FileName << '\n';
+
+                if (FObjManager::CreateStaticMesh(FileName) == nullptr)
+                {
+                    tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
+                }
+            }
+        }
+
+        ImGui::EndMenu();
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Quit"))
+    {
+        bOpenModal = true;
     }
 }
 
@@ -594,7 +573,7 @@ void ControlEditorPanel::CreateFlagButton()
     ShowFlags::GetInstance().Draw(ActiveViewport);
 }
 
-void ControlEditorPanel::CreatePIEButton(const ImVec2 ButtonSize, ImFont* IconFont)
+void ControlEditorPanel::CreatePIEButton(const ImVec2 ButtonSize, ImFont* IconFont) const
 {
     UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
     if (!Engine)
@@ -602,19 +581,27 @@ void ControlEditorPanel::CreatePIEButton(const ImVec2 ButtonSize, ImFont* IconFo
         return;
     }
 
-    const ImVec2 WindowSize = ImGui::GetIO().DisplaySize;
+    const float WindowSizeX = Width * 0.8f;
+    const float CenterX = (WindowSizeX - ButtonSize.x) / 2.5f;
 
-    const float CenterX = (WindowSize.x - ButtonSize.x) / 2.5f;
+    if (Width >= 1200.f)
+    {
+        ImGui::SetCursorPosX(CenterX - ButtonSize.x * 0.5f);
+    }
 
-    ImGui::SetCursorScreenPos(ImVec2(CenterX - 40.0f, 10.0f));
-    
     if (ImGui::Button("\ue9a8", ButtonSize)) // Play
     {
         UE_LOG(ELogLevel::Display, TEXT("PIE Button Clicked"));
         Engine->StartPIE();
     }
 
-    ImGui::SetCursorScreenPos(ImVec2(CenterX - 10.0f, 10.0f));
+    ImGui::SameLine();
+
+    if (Width >= 1200.f)
+    {
+        ImGui::SetCursorPosX(CenterX + ButtonSize.x * 0.5f);
+    }
+
     if (ImGui::Button("\ue9e4", ButtonSize)) // Stop
     {
         UE_LOG(ELogLevel::Display, TEXT("Stop Button Clicked"));
@@ -622,13 +609,12 @@ void ControlEditorPanel::CreatePIEButton(const ImVec2 ButtonSize, ImFont* IconFo
     }
 }
 
-// code is so dirty / Please refactor
 void ControlEditorPanel::CreateSRTButton(ImVec2 ButtonSize)
 {
     const UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
     AEditorPlayer* Player = Engine->GetEditorPlayer();
 
-    constexpr ImVec4 ActiveColor = ImVec4(0.00f, 0.00f, 0.85f, 1.0f);
+    constexpr ImVec4 ActiveColor = ImVec4(0.00f, 0.30f, 0.00f, 1.0f);
 
     const EControlMode ControlMode = Player->GetControlMode();
 
@@ -676,19 +662,15 @@ void ControlEditorPanel::OnResize(const HWND hWnd)
 {
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
-    Width = ClientRect.right - ClientRect.left;
-    Height = ClientRect.bottom - ClientRect.top;
+    Width = static_cast<float>(ClientRect.right) - static_cast<float>(ClientRect.left);
+    Height = static_cast<float>(ClientRect.bottom) - static_cast<float>(ClientRect.top);
 }
 
 void ControlEditorPanel::CreateLightSpawnButton(const ImVec2 InButtonSize, ImFont* IconFont)
 {
     UWorld* World = GEngine->ActiveWorld;
-    const ImVec2 WindowSize = ImGui::GetIO().DisplaySize;
 
-    const float CenterX = (WindowSize.x - InButtonSize.x) / 2.5f;
-
-    ImGui::SetCursorScreenPos(ImVec2(CenterX + 40.0f, 10.0f));
-    const char* Text = "Light";
+    const char* Text = "LIGHT";
     const ImVec2 TextSize = ImGui::CalcTextSize(Text);
     const ImVec2 Padding = ImGui::GetStyle().FramePadding;
     ImVec2 ButtonSize = ImVec2(

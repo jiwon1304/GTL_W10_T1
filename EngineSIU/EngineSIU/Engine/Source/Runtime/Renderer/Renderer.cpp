@@ -447,9 +447,9 @@ void FRenderer::RenderEditorOverlay(const std::shared_ptr<FEditorViewportClient>
     Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
-void FRenderer::RenderViewport(const std::shared_ptr<FEditorViewportClient>& Viewport) const
+void FRenderer::RenderViewport(HWND hWnd, const std::shared_ptr<FEditorViewportClient>& Viewport) const
 {
     QUICK_SCOPE_CYCLE_COUNTER(SlatePass_CPU)
     QUICK_GPU_SCOPE_CYCLE_COUNTER(SlatePass_GPU, *GPUTimingManager)
-    SlateRenderPass->Render(Viewport);
+    SlateRenderPass->Render(hWnd, Viewport);
 }

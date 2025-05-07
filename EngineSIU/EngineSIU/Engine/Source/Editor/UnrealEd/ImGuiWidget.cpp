@@ -1,4 +1,4 @@
-﻿#include "ImGuiWidget.h"
+#include "ImGuiWidget.h"
 
 #include "Math/Vector.h"
 #include "Math/Rotator.h"
@@ -12,7 +12,7 @@ void FImGuiWidget::DrawVec3Control(const std::string& label, FVector& values, fl
         ImGui::PushID(label.c_str());
 
         // 현재 윈도우 크기 가져오기
-        float windowWidth = ImGui::GetWindowWidth();
+        float windowWidth = ImGui::GetContentRegionAvail().x;
         
         // 컨트롤러 하나의 너비 계산 (대략적인 값)
         float controlWidth = columnWidth + // 라벨 컬럼
@@ -94,7 +94,7 @@ void FImGuiWidget::DrawRot3Control(const std::string& label, FRotator& values, f
         ImGui::PushID(label.c_str());
 
         // 현재 윈도우 크기 가져오기
-        float windowWidth = ImGui::GetWindowWidth();
+        float windowWidth = ImGui::GetContentRegionAvail().x;
         
         // 컨트롤러 하나의 너비 계산 (대략적인 값)
         float controlWidth = columnWidth + // 라벨 컬럼
