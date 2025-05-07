@@ -50,6 +50,25 @@ float GetFloatFromProperty(const FbxProperty& Property, float DefaultValue = 0.0
     }
     return DefaultValue;
 }
+
+// 헬퍼 함수: FbxAnimCurve에서 FKeyframe의 특정 컴포넌트 값 가져오기
+// (이 함수는 특정 시간(EvalTime)의 보간된 값을 가져오므로, 키프레임 자체를 가져오려면 다른 접근 방식 필요)
+// 여기서는 각 키프레임의 시간과 값을 직접 가져오는 방식으로 수정합니다.
+void ExtractKeyframesFromCurve(const FbxAnimCurve* AnimCurve, TArray<float>& OutKeyTimes, TArray<float>& OutKeyValues)
+{
+    if (!AnimCurve) return;
+
+    const int KeyCount = AnimCurve->KeyGetCount();
+    OutKeyTimes.Reserve(KeyCount);
+    OutKeyValues.Reserve(KeyCount);
+
+    for (int k = 0; k < KeyCount; ++k)
+    {
+        FbxAnimCurveKey Key = AnimCurve->KeyGet(k);
+        OutKeyTimes.Add(static_cast<float>(Key.GetTime().GetSecondDouble()));
+        OutKeyValues.Add(Key.GetValue());
+    }
+}
 }
 
 
@@ -300,7 +319,7 @@ void FFbxImporter::ProcessSkeletalMesh(const FbxNode* InNode, FbxMesh* InMesh, U
 
 	ExtractSkinningData(InMesh, OutMesh->SkeletonData, VertexControlPointIndices, OutMesh->Vertices);
 
-	DetectAnimationData(CurrentScene, OutMesh->AnimationClips); // 씬에서 애니메이션 감지
+	DetectAnimationData(CurrentScene, OutMesh->SkeletonData, OutMesh->AnimationClips); // 씬에서 애니메이션 감지
 	OutMesh->bHasAnimationData = OutMesh->AnimationClips.Num() > 0;
 
 	// TODO: DX11 버퍼 생성 로직 호출
@@ -665,7 +684,11 @@ void FFbxImporter::BuildSkeletonHierarchyRecursive(FbxNode* InNode, int32 InPare
 }
 
 // 스킨 웨이트 데이터 추출 및 버텍스에 할당
-void FFbxImporter::ExtractSkinningData(const FbxMesh* InMesh, const FSkeleton& InSkeleton, const TArray<int32>& InVertexControlPointIndices, TArray<FSkinnedVertex>& OutVertices) const
+void FFbxImporter::ExtractSkinningData(
+    const FbxMesh* InMesh, const FSkeleton& InSkeleton,
+    const TArray<int32>& InVertexControlPointIndices,
+    TArray<FSkinnedVertex>& OutVertices
+) const
 {
 	const int DeformerCount = InMesh->GetDeformerCount(FbxDeformer::eSkin);
 	if (DeformerCount == 0 || OutVertices.IsEmpty() || InSkeleton.Bones.IsEmpty()) return;
@@ -761,53 +784,237 @@ void FFbxImporter::ExtractSkinningData(const FbxMesh* InMesh, const FSkeleton& I
 	}
 }
 
+void FFbxImporter::LoadAnimationKeyframes(
+    FbxAnimStack* InAnimStack,
+    FbxNode* InRootNode, // 씬의 루트 노드 또는 스켈레톤의 루트 뼈 노드
+    FAnimationClip& OutClipInfo,
+    const FSkeleton& InSkeleton // 스켈레톤 정보 (BoneNameToIndexMap 등 활용)
+) const
+{
+    if (!InAnimStack || !InRootNode) return;
+
+    const int NumLayers = InAnimStack->GetMemberCount<FbxAnimLayer>();
+    if (NumLayers == 0) return;
+
+    FbxAnimLayer* AnimLayer = InAnimStack->GetMember<FbxAnimLayer>(0); // 보통 첫 번째 레이어 사용
+
+    // FBX 노드를 순회하며 애니메이션이 있는 뼈를 찾습니다.
+    // 스켈레톤의 모든 뼈에 대해 시도하거나, 애니메이션 커브가 연결된 노드만 찾습니다.
+    for (const auto& BonePair : InSkeleton.BoneNameToIndexMap)
+    {
+        const FName BoneName = BonePair.Key;
+        FbxNode* BoneNode = InRootNode->FindChild(BoneName.ToString().ToAnsiString().c_str(), true); // 재귀적으로 뼈 노드 찾기
+
+        if (!BoneNode) continue; // 씬에서 해당 이름의 뼈 노드를 찾지 못함
+
+        FBoneAnimation BoneAnimTrack;
+        BoneAnimTrack.BoneName = BoneName;
+
+        bool bHasTranslation = false;
+        bool bHasRotation = false;
+        bool bHasScaling = false;
+
+        TArray<float> KeyTimesT, KeyValuesTX, KeyValuesTY, KeyValuesTZ;
+        TArray<float> KeyTimesR, KeyValuesRX, KeyValuesRY, KeyValuesRZ; // Euler 또는 Quaternion (더 복잡)
+        TArray<float> KeyTimesS, KeyValuesSX, KeyValuesSY, KeyValuesSZ;
+
+        // Translation 커브 가져오기
+        FbxAnimCurveNode* TranslateCurveNode = BoneNode->LclTranslation.GetCurveNode(AnimLayer);
+        if (TranslateCurveNode)
+        {
+            bHasTranslation = true;
+            // 보통 X, Y, Z 각각 커브가 있음
+            ExtractKeyframesFromCurve(TranslateCurveNode->GetCurve(0), KeyTimesT, KeyValuesTX); // X
+            ExtractKeyframesFromCurve(TranslateCurveNode->GetCurve(1), KeyTimesT, KeyValuesTY); // Y (KeyTimesT는 공유될 수 있음)
+            ExtractKeyframesFromCurve(TranslateCurveNode->GetCurve(2), KeyTimesT, KeyValuesTZ); // Z
+        }
+
+        // Rotation 커브 가져오기 (Euler X, Y, Z 순서로 가정)
+        FbxAnimCurveNode* RotateCurveNode = BoneNode->LclRotation.GetCurveNode(AnimLayer);
+        if (RotateCurveNode)
+        {
+            bHasRotation = true;
+            ExtractKeyframesFromCurve(RotateCurveNode->GetCurve(0), KeyTimesR, KeyValuesRX); // Roll (X)
+            ExtractKeyframesFromCurve(RotateCurveNode->GetCurve(1), KeyTimesR, KeyValuesRY); // Pitch (Y)
+            ExtractKeyframesFromCurve(RotateCurveNode->GetCurve(2), KeyTimesR, KeyValuesRZ); // Yaw (Z)
+            // 만약 FBX가 Quaternion으로 직접 저장했다면 (FbxNode::SetQuaternionInterpolation),
+            // 파싱 방법이 달라져야 하며, 4개의 커브(X,Y,Z,W) 또는 다른 방식일 수 있습니다.
+            // 블렌더는 보통 Euler로 익스포트합니다.
+        }
+
+        // Scaling 커브 가져오기
+        FbxAnimCurveNode* ScaleCurveNode = BoneNode->LclScaling.GetCurveNode(AnimLayer);
+        if (ScaleCurveNode)
+        {
+            bHasScaling = true;
+            ExtractKeyframesFromCurve(ScaleCurveNode->GetCurve(0), KeyTimesS, KeyValuesSX); // X
+            ExtractKeyframesFromCurve(ScaleCurveNode->GetCurve(1), KeyTimesS, KeyValuesSY); // Y
+            ExtractKeyframesFromCurve(ScaleCurveNode->GetCurve(2), KeyTimesS, KeyValuesSZ); // Z
+        }
+
+        // 모든 키 타임들을 모으고 정렬하여 중복 제거 (모든 T,R,S 키프레임 시간 동기화)
+        TSet<float> AllKeyTimesSet; // 중복 제거 및 정렬을 위해 TSet 사용 (또는 TArray 후 Sort, Unique)
+        if(bHasTranslation) for(float t : KeyTimesT) AllKeyTimesSet.Add(t);
+        if(bHasRotation)    for(float t : KeyTimesR) AllKeyTimesSet.Add(t);
+        if(bHasScaling)     for(float t : KeyTimesS) AllKeyTimesSet.Add(t);
+
+        TArray<float> UniqueSortedKeyTimes = AllKeyTimesSet.Array();
+        UniqueSortedKeyTimes.Sort();
+
+        // 각 고유한 시간에 대해 FKeyframe 생성
+        for (float EvalTimeSeconds : UniqueSortedKeyTimes)
+        {
+            FKeyframe NewKeyframe;
+            NewKeyframe.TimeSeconds = EvalTimeSeconds;
+
+            FbxTime EvalFbxTime;
+            EvalFbxTime.SetSecondDouble(EvalTimeSeconds);
+
+            FVector Translation = FVector::ZeroVector;
+            FQuat Rotation = FQuat::Identity; // Euler에서 변환 필요
+            FVector Scale = FVector(1.0f);
+
+            if (bHasTranslation && TranslateCurveNode)
+            {
+                // 특정 시간에서 각 커브 값 보간 (또는 가장 가까운 키 값 사용)
+                // 여기서는 Evaluate를 사용하여 보간된 값을 가져옵니다.
+                // 만약 키프레임 자체의 값을 원한다면, 위에서 추출한 KeyValuesTX/Y/Z 배열에서
+                // EvalTimeSeconds와 가장 가까운 키의 값을 찾아야 합니다.
+                // 이 예제에서는 간단하게 Evaluate 사용.
+                Translation.X = TranslateCurveNode->GetCurve(0) ? TranslateCurveNode->GetCurve(0)->Evaluate(EvalFbxTime) : 0.0f;
+                Translation.Y = TranslateCurveNode->GetCurve(1) ? TranslateCurveNode->GetCurve(1)->Evaluate(EvalFbxTime) : 0.0f;
+                Translation.Z = TranslateCurveNode->GetCurve(2) ? TranslateCurveNode->GetCurve(2)->Evaluate(EvalFbxTime) : 0.0f;
+            }
+            else if(BoneNode->LclTranslation.IsValid()) // 커브는 없지만 기본값이 있다면
+            {
+                FbxDouble3 DefaultT = BoneNode->LclTranslation.Get();
+                Translation = FVector{
+                    static_cast<float>(DefaultT[0]),
+                    static_cast<float>(DefaultT[1]),
+                    static_cast<float>(DefaultT[2])
+                };
+            }
+
+
+            if (bHasRotation && RotateCurveNode)
+            {
+                float Roll  = RotateCurveNode->GetCurve(0) ? RotateCurveNode->GetCurve(0)->Evaluate(EvalFbxTime) : 0.0f;
+                float Pitch = RotateCurveNode->GetCurve(1) ? RotateCurveNode->GetCurve(1)->Evaluate(EvalFbxTime) : 0.0f;
+                float Yaw   = RotateCurveNode->GetCurve(2) ? RotateCurveNode->GetCurve(2)->Evaluate(EvalFbxTime) : 0.0f;
+                // FBX의 Euler 각도는 Degree 단위일 수 있습니다. FQuat은 Radian을 기대합니다.
+                // 또한, 회전 순서(XYZ, ZYX 등)도 중요합니다. FBX 노드의 GetRotationOrder() 확인 필요.
+                // 여기서는 기본 XYZ 순서와 Degree라고 가정하고 Radian으로 변환.
+                FRotator Rotator(Pitch, Yaw, Roll); // Pitch (Y), Yaw (Z), Roll (X) 순서로 FRotator 생성
+                Rotation = Rotator.Quaternion();
+            }
+            else if(BoneNode->LclRotation.IsValid())
+            {
+                FbxDouble3 DefaultR = BoneNode->LclRotation.Get();
+                FRotator Rotator{
+                    static_cast<float>(DefaultR[1]),
+                    static_cast<float>(DefaultR[2]),
+                    static_cast<float>(DefaultR[0])
+                }; // Pitch, Yaw, Roll
+                Rotation = Rotator.Quaternion();
+            }
+
+
+            if (bHasScaling && ScaleCurveNode)
+            {
+                Scale.X = ScaleCurveNode->GetCurve(0) ? ScaleCurveNode->GetCurve(0)->Evaluate(EvalFbxTime) : 1.0f;
+                Scale.Y = ScaleCurveNode->GetCurve(1) ? ScaleCurveNode->GetCurve(1)->Evaluate(EvalFbxTime) : 1.0f;
+                Scale.Z = ScaleCurveNode->GetCurve(2) ? ScaleCurveNode->GetCurve(2)->Evaluate(EvalFbxTime) : 1.0f;
+            }
+             else if(BoneNode->LclScaling.IsValid())
+            {
+                FbxDouble3 DefaultS = BoneNode->LclScaling.Get();
+                Scale = FVector{
+                    static_cast<float>(DefaultS[0]),
+                    static_cast<float>(DefaultS[1]),
+                    static_cast<float>(DefaultS[2])
+                };
+            }
+
+            NewKeyframe.Translation = Translation;
+            NewKeyframe.Rotation = Rotation;
+            NewKeyframe.Scale = Scale;
+
+            BoneAnimTrack.Keyframes.Add(NewKeyframe);
+        }
+
+        if (BoneAnimTrack.Keyframes.Num() > 0)
+        {
+            OutClipInfo.BoneTracks.Add(BoneAnimTrack);
+        }
+    }
+    OutClipInfo.BoneTracks.Shrink();
+}
 
 // 애니메이션 데이터 감지 (기본 정보만 로드)
-void FFbxImporter::DetectAnimationData(FbxScene* InScene, TArray<FAnimationClip>& OutAnimationClips) const
+void FFbxImporter::DetectAnimationData(
+    FbxScene* InScene,
+    const FSkeleton& InSkeletonData, // 스켈레톤 정보 전달
+    TArray<FAnimationClip>& OutAnimationClips
+) const
 {
-	OutAnimationClips.Empty();
-	if (!InScene) return;
+    OutAnimationClips.Empty();
+    if (!InScene) return;
 
-	// FBX는 여러 애니메이션 스택(클립)을 가질 수 있음
-	const int NumAnimStacks = InScene->GetSrcObjectCount<FbxAnimStack>();
+    const int NumAnimStacks = InScene->GetSrcObjectCount<FbxAnimStack>();
 
-	for (int i = 0; i < NumAnimStacks; ++i)
-	{
-		const FbxAnimStack* AnimStack = InScene->GetSrcObject<FbxAnimStack>(i);
-		if (!AnimStack) continue;
+    for (int i = 0; i < NumAnimStacks; ++i)
+    {
+        FbxAnimStack* AnimStack = InScene->GetSrcObject<FbxAnimStack>(i);
+        if (!AnimStack) continue;
 
-		FAnimationClip ClipInfo;
-		ClipInfo.Name = AnimStack->GetName();
+        FAnimationClip ClipInfo;
+        ClipInfo.Name = FName(AnimStack->GetName()); // FName으로 변환
 
-		// 애니메이션 길이 및 타이밍 정보 가져오기 (TakeInfo 사용)
-		const FbxTakeInfo* TakeInfo = InScene->GetTakeInfo(AnimStack->GetName());
-		if (TakeInfo)
-		{
-			FbxTime StartTime = TakeInfo->mLocalTimeSpan.GetStart();
-			FbxTime StopTime = TakeInfo->mLocalTimeSpan.GetStop();
-			ClipInfo.DurationSeconds = static_cast<float>(StopTime.GetSecondDouble() - StartTime.GetSecondDouble());
-			ClipInfo.TicksPerSecond = static_cast<float>(FbxTime::GetFrameRate(InScene->GetGlobalSettings().GetTimeMode()));
-		}
-		else
-		{
-			// TakeInfo가 없으면 AnimCurve에서 직접 계산해야 함 (복잡)
-			ClipInfo.DurationSeconds = 0.0f; // 알 수 없음
-			ClipInfo.TicksPerSecond = static_cast<float>(FbxTime::GetFrameRate(InScene->GetGlobalSettings().GetTimeMode()));
-		}
+        const FbxTakeInfo* TakeInfo = InScene->GetTakeInfo(AnimStack->GetName());
+        if (TakeInfo)
+        {
+            FbxTime StartTime = TakeInfo->mLocalTimeSpan.GetStart();
+            FbxTime StopTime = TakeInfo->mLocalTimeSpan.GetStop();
+            ClipInfo.DurationSeconds = static_cast<float>(StopTime.GetSecondDouble() - StartTime.GetSecondDouble());
 
-		// --- 실제 키프레임 데이터 로드는 나중에 구현 ---
-		// AnimStack -> AnimLayer -> AnimCurveNode (뼈별 변환) -> AnimCurve (T, R, S) 순으로 탐색 필요
-		// 각 뼈의 Transform(T, R, S) 커브를 찾아 FKeyframe 데이터를 채워야 함.
-		// 예시:
-		// int NumLayers = AnimStack->GetMemberCount<FbxAnimLayer>();
-		// for (int LayerIdx = 0; LayerIdx < NumLayers; ++LayerIdx) {
-		//     FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>(LayerIdx);
-		//     // ... 이 레이어에서 스켈레톤의 각 뼈 노드를 찾아 해당 노드의 T, R, S AnimCurveNode를 찾음 ...
-		//     // ... AnimCurveNode에서 실제 AnimCurve를 얻고, 키프레임(시간, 값)을 읽어 FKeyframe으로 변환 ...
-		// }
-		// ClipInfo.BoneTracks.Add(...); // 채워진 뼈 애니메이션 트랙 추가
+            // TicksPerSecond는 AnimStack 또는 Scene의 GlobalSettings에서 가져오는 것이 더 정확할 수 있음
+            // FbxTime::GetFrameRate(InScene->GetGlobalSettings().GetTimeMode()) 는 프레임 레이트를 반환.
+            // 이것이 애니메이션 데이터의 TicksPerSecond와 항상 일치하지 않을 수 있음.
+            // FBX 파일 포맷은 내부적으로 Tick 단위로 시간을 저장할 수 있으며,
+            // TicksPerSecond는 이 Tick을 초로 변환하는 비율임.
+            // 여기서는 프레임 레이트를 TicksPerSecond로 사용.
+            ClipInfo.TicksPerSecond = static_cast<float>(FbxTime::GetFrameRate(InScene->GetGlobalSettings().GetTimeMode()));
+        }
+        else
+        {
+            // TakeInfo가 없으면, AnimCurve에서 최소/최대 시간을 찾아 Duration을 계산해야 함.
+            // 이는 LoadAnimationKeyframes 함수가 모든 키를 읽은 후에야 알 수 있음.
+            ClipInfo.DurationSeconds = 0.0f; // 임시, 나중에 업데이트
+            ClipInfo.TicksPerSecond = static_cast<float>(FbxTime::GetFrameRate(InScene->GetGlobalSettings().GetTimeMode()));
+        }
 
-		OutAnimationClips.Add(ClipInfo);
-	}
-	OutAnimationClips.Shrink();
+        // --- 실제 키프레임 데이터 로드 호출 ---
+        // InScene->GetRootNode()를 전달하거나, 스켈레톤의 루트 뼈에 해당하는 FbxNode를 찾아 전달
+        LoadAnimationKeyframes(AnimStack, InScene->GetRootNode(), ClipInfo, InSkeletonData);
+
+        // TakeInfo가 없었을 경우, 로드된 키프레임으로부터 Duration 업데이트
+        if (!TakeInfo && ClipInfo.BoneTracks.Num() > 0)
+        {
+            float MaxTime = 0.0f;
+            for (const FBoneAnimation& Track : ClipInfo.BoneTracks)
+            {
+                if (Track.Keyframes.Num() > 0)
+                {
+                    MaxTime = FMath::Max(MaxTime, Track.Keyframes.Last().TimeSeconds);
+                }
+            }
+            ClipInfo.DurationSeconds = MaxTime;
+        }
+
+        if (ClipInfo.BoneTracks.Num() > 0 || ClipInfo.DurationSeconds > 0.0f) // 유효한 데이터가 있을 때만 추가
+        {
+            OutAnimationClips.Add(ClipInfo);
+        }
+    }
+    OutAnimationClips.Shrink();
 }

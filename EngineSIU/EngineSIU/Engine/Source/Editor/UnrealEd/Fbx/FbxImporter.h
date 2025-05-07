@@ -101,8 +101,11 @@ private:
     void ExtractSkinningData(
         const FbxMesh* InMesh, const FSkeleton& InSkeleton, const TArray<int32>& InVertexControlPointIndices, TArray<FSkinnedVertex>& OutVertices
     ) const;
+    void LoadAnimationKeyframes(
+        FbxAnimStack* InAnimStack, FbxNode* InRootNode, FAnimationClip& OutClipInfo, const FSkeleton& InSkeleton
+    ) const;
 
-    void DetectAnimationData(FbxScene* InScene, TArray<FAnimationClip>& OutAnimationClips) const;
+    void DetectAnimationData(FbxScene* InScene, const FSkeleton& InSkeletonData, TArray<FAnimationClip>& OutAnimationClips) const;
 
     // FBX Layer Element 데이터 추출 헬퍼
     template <typename TDataType>
