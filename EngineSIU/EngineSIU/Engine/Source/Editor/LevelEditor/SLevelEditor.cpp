@@ -249,7 +249,7 @@ void SLevelEditor::ResizeViewports()
             if (ActiveViewportClient)
             {
                 // 너비 제한을 제거하고, 상/하단 패딩 유지
-                const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
+                const FRect FullRect(ViewportAreaRect.TopLeftX, ViewportAreaRect.TopLeftY + 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
                 ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
             }
         }

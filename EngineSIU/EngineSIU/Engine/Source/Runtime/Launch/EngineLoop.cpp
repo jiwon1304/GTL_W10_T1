@@ -286,6 +286,13 @@ void FEngineLoop::GetClientSize(const HWND hWnd, uint32& OutWidth, uint32& OutHe
 
 void FEngineLoop::Exit()
 {
+    if (AssetViewer)
+    {
+        AssetViewer->Release();
+        delete AssetViewer;
+        AssetViewer = nullptr;
+    }
+
     if (SkeletalMeshViewerAppWnd && IsWindow(SkeletalMeshViewerAppWnd))
     {
         DestroyWindow(SkeletalMeshViewerAppWnd);
