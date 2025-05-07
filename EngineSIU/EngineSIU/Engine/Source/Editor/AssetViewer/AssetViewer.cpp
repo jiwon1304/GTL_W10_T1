@@ -94,8 +94,8 @@ void SAssetViewer::Tick(float DeltaTime)
 {
     if (ActiveViewportClient && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
     {
-        FRect ViewportRect = CenterAndRightVSplitter->SideLT->GetRect();
-        ActiveViewportClient->GetViewport()->ResizeViewport(ViewportRect);
+        //FRect ViewportRect = CenterAndRightVSplitter->SideLT->GetRect();
+        //ActiveViewportClient->GetViewport()->ResizeViewport(ViewportRect);
         ActiveViewportClient->Tick(DeltaTime);
     }
 }
@@ -416,10 +416,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
             if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton)
               && InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
             {
-                if (ActiveViewportClient)
-                {
-                    ActiveViewportClient->MouseMove(InMouseEvent);
-                }
+                ActiveViewportClient->MouseMove(InMouseEvent);
             }
             // @todo Gizmo 조작
         }
