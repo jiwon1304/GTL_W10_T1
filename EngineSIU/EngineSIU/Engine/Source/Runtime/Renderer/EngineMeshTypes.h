@@ -178,14 +178,14 @@ public:
         MatInfo.Roughness = RoughnessFactor;
 
         // 3. 텍스처 정보 변환
-        static auto FindOrLoad = [](const FString& FileName, bool bIsSRGB)
+        static auto FindOrLoad = [](const std::filesystem::path& FileName, bool bIsSRGB)
         {
-            if (FEngineLoop::ResourceManager.GetTexture(FileName.ToWideString()))
+            if (FEngineLoop::ResourceManager.GetTexture(FileName.generic_wstring()))
             {
                 return;
             }
 
-            FEngineLoop::ResourceManager.LoadTextureFromFile(FEngineLoop::GraphicDevice.Device, FileName.ToWideString().c_str(), bIsSRGB);
+            FEngineLoop::ResourceManager.LoadTextureFromFile(FEngineLoop::GraphicDevice.Device, FileName.generic_wstring().c_str(), bIsSRGB);
         };
 
         constexpr uint32 TexturesNum = static_cast<uint32>(EMaterialTextureSlots::MTS_MAX);
@@ -195,7 +195,7 @@ public:
         {
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Diffuse);
             std::filesystem::path TempBaseColorMapPath = BaseColorMapPath.ToWideString();
-            FindOrLoad(BaseColorMapPath, true);
+            FindOrLoad(TempBaseColorMapPath, true);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempBaseColorMapPath.filename(),
                 .TexturePath = TempBaseColorMapPath.generic_wstring(),
@@ -208,7 +208,7 @@ public:
             // OBJ 표준은 map_Bump 또는 단순히 bump. 일부 로더는 norm도 인식.
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Normal);
             std::filesystem::path TempNormalMapPath = NormalMapPath.ToWideString();
-            FindOrLoad(NormalMapPath, false);
+            FindOrLoad(TempNormalMapPath, false);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempNormalMapPath.filename(),
                 .TexturePath = TempNormalMapPath.generic_wstring(),
@@ -222,7 +222,7 @@ public:
             // OBJ 표준에는 Metallic map (map_Pm)이 명확히 없음. PBR 확장.
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Metallic);
             std::filesystem::path TempMetallicMapPath = MetallicMapPath.ToWideString();
-            FindOrLoad(MetallicMapPath, false);
+            FindOrLoad(TempMetallicMapPath, false);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempMetallicMapPath.filename(),
                 .TexturePath = TempMetallicMapPath.generic_wstring(),
@@ -236,7 +236,7 @@ public:
             // 일부는 map_Ns (스펙큘러 지수 맵) 또는 map_Sharpness를 사용.
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Roughness);
             std::filesystem::path TempRoughnessMapPath = RoughnessMapPath.ToWideString();
-            FindOrLoad(RoughnessMapPath, false);
+            FindOrLoad(TempRoughnessMapPath, false);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempRoughnessMapPath.filename(),
                 .TexturePath = TempRoughnessMapPath.generic_wstring(),
@@ -248,7 +248,7 @@ public:
         {
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Emissive);
             std::filesystem::path TempEmissiveMapPath = EmissiveMapPath.ToWideString();
-            FindOrLoad(EmissiveMapPath, true);
+            FindOrLoad(TempEmissiveMapPath, true);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempEmissiveMapPath.filename(),
                 .TexturePath = TempEmissiveMapPath.generic_wstring(),
@@ -261,7 +261,7 @@ public:
             // AO맵은 map_Ka (Ambient Color map)으로 연결하거나 별도 map_ao 등으로 사용.
             constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Ambient);
             std::filesystem::path TempAmbientOcclusionMapPath = AmbientOcclusionMapPath.ToWideString();
-            FindOrLoad(AmbientOcclusionMapPath, false);
+            FindOrLoad(TempAmbientOcclusionMapPath, false);
             MatInfo.TextureInfos[SlotIdx] = {
                 .TextureName = TempAmbientOcclusionMapPath.filename(),
                 .TexturePath = TempAmbientOcclusionMapPath.generic_wstring(),
@@ -274,7 +274,7 @@ public:
         // {
         //     constexpr uint32 SlotIdx = static_cast<uint32>(EMaterialTextureSlots::MTS_Specular);
         //     std::filesystem::path TempSpecularMapPath = SpecularMapPath.ToWideString();
-        //     FindOrLoad(SpecularMapPath, false);
+        //     FindOrLoad(TempSpecularMapPath, false);
         //     ObjMatInfo.TextureInfos.Add({
         //         .TextureName = TempSpecularMapPath.filename(),
         //         .TexturePath = TempSpecularMapPath.generic_wstring(),
