@@ -473,14 +473,32 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
 
         if (SkeletalMeshComponent->SelectedBoneIndex > -1)
         {
-
-            FImGuiWidget::DrawVec3Control("Location", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation, 0, 85);
+            ImGui::Text("Bone Pose");
+            ImGui::SameLine();
+            if (ImGui::Button("Reset Pose"))
+            {
+                SkeletalMeshComponent->ResetPose();
+            }
+            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawRot3Control("Rotation", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Rotation, 0, 85);
+            FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawVec3Control("Scale", SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Scale3D, 0, 85);
+            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
+            
+            ImGui::Text("Reference Pose");
+            FReferenceSkeleton skeleton;
+            SkeletalMeshComponent->GetSkeletalMesh()->GetRefSkeleton(skeleton);
+            FTransform refTransform = skeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("refLocation", refTransform.Translation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale3D, 0, 85);
         }
         //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
 

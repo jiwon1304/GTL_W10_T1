@@ -45,7 +45,7 @@ public:
         TArray<UMaterial*> InMaterials);
 
     bool bCPUSkinned : 1 = true;
-//private: // 잠시 꺼놓음
+private:
     // TODO : UPROPERTIES
     // FbxLoader에 저장되어있음
     // 이건 수정하면 안됨(CPU Skinning에서도 이걸로 수정하면 안됨)
