@@ -176,12 +176,10 @@ void FEngineLoop::Tick()
     QueryPerformanceFrequency(&Frequency);
 
     LARGE_INTEGER StartTime, EndTime;
+    double ElapsedTime = 0.0;
 
     while (bIsExit == false)
     {
-        /* Reset ElapsedTime */
-        double ElapsedTime = 0.0;
-
         QueryPerformanceCounter(&StartTime);
 
         FProfilerStatsManager::BeginFrame();    // Clear previous frame stats
