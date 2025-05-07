@@ -19,7 +19,7 @@ void USkinnedMeshComponent::GetProperties(TMap<FString, FString>& OutProperties)
 {
     UMeshComponent::GetProperties(OutProperties);
 
-    OutProperties["AssetPath"] = SkeletalMesh->Info.GetFullPath();
+    OutProperties["AssetPath"] = SkeletalMesh ? SkeletalMesh->Info.GetFullPath() : FString{};
 }
 
 void USkinnedMeshComponent::SetProperties(const TMap<FString, FString>& Properties)
