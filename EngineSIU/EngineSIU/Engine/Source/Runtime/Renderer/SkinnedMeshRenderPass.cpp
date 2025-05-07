@@ -1,5 +1,6 @@
 ﻿#include "SkinnedMeshRenderPass.h"
 
+#include "RendererHelpers.h"
 #include "UnrealClient.h"
 #include "Components/SkinnedMeshComponent.h"
 #include "Components/Mesh/SkeletalMesh.h"
@@ -207,9 +208,6 @@ void FSkinnedMeshRenderPass::RenderAllSkinnedMeshes()
             bIsCPUSkinning
         );
 
-        // TArray<UMaterial*> Materials = SkinnedMeshComponent->GetSkinnedMesh()->material;
-        // TArray<UMaterial*> OverrideMaterials = SkinnedMeshComponent->GetOverrideMaterials();
-
         FString KeyName = SkeletalMesh->Info.AssetName.ToString();
 
         FVertexInfo VertexInfo;
@@ -233,7 +231,24 @@ void FSkinnedMeshRenderPass::RenderAllSkinnedMeshes()
             Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
         }
 
-        Graphics->DeviceContext->DrawIndexed(IndexInfo.NumIndices, 0, 0);
+        const TArray<UMaterial*>& Materials = SkinnedMeshComponent->GetSkeletalMesh()->Materials;
+
+        // Override는 사용안함
+        // const TArray<UMaterial*>& OverrideMaterials = SkinnedMeshComponent->GetOverrideMaterials();
+
+        for (const FMeshSubset& Subset : SkeletalMesh->Subsets)
+        {
+            const int32 MaterialIndex = Subset.MaterialIndex;
+            // if (OverrideMaterials[MaterialIndex] != nullptr)
+            // {
+            //     MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+            // }
+            // else
+            {
+                MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
+            }
+            Graphics->DeviceContext->DrawIndexed(Subset.IndexCount, Subset.StartIndexLocation, 0);
+        }
     }
 }
 
