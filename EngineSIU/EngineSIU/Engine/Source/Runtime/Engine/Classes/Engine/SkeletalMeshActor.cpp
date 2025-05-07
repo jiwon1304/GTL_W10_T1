@@ -5,4 +5,5 @@
 ASkeletalMeshActor::ASkeletalMeshActor()
 {
     SkeletalMeshComponent = AddComponent<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));
+    RootComponent = SkeletalMeshComponent;
 }
