@@ -18,56 +18,12 @@ FString FString::SanitizeFloat(float InFloat)
 
 float FString::ToFloat(const FString& InString)
 {
-    if (InString.IsEmpty())
-    {
-        return 0.0f;
-    }
-
-    const ElementType* const Ptr = *InString;
-    const ElementType* const EndPtr = Ptr + InString.Len();
-    float Value = 0.0f;
-    auto Result = std::from_chars(Ptr, EndPtr, Value); // TCHAR가 char 또는 wchar_t일 때 작동
-
-    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음 (완전히 변환되지 않은 경우 방지)
-    if (Result.ec == std::errc() && Result.ptr != Ptr)
-    {
-        // 선택적: 변환 후 남은 문자가 있는지 확인 (예: "123.45abc")
-        // 완전한 숫자 문자열만 허용하려면 Result.ptr == EndPtr 인지 확인
-        // 여기서는 일단 변환된 부분까지 인정하고 값을 반환 (UE와 유사)
-        return Value;
-    }
-    else
-    {
-        // 변환 실패 또는 부분 변환 시 0 반환
-        return 0.0f;
-    }
+    return FCString::Atof(*InString);
 }
 
 int FString::ToInt(const FString& InString)
 {
-    if (InString.IsEmpty())
-    {
-        return 0;
-    }
-
-    const ElementType* const Ptr = *InString;
-    const ElementType* const EndPtr = Ptr + InString.Len();
-    int Value = 0;
-
-    // 10진수로 변환 시도
-    auto Result = std::from_chars(Ptr, EndPtr, Value, 10);
-
-    // 성공 조건: 에러 코드가 없고, 포인터가 최소 하나 이상 이동했음
-    if (Result.ec == std::errc() && Result.ptr != Ptr)
-    {
-        // 선택적: 변환 후 남은 문자 확인 (위 ToFloat 주석 참조)
-        return Value;
-    }
-    else
-    {
-        // 변환 실패 시 0 반환
-        return 0;
-    }
+    return FCString::Atoi(*InString);
 }
 
 bool FString::ToBool() const
@@ -533,4 +489,86 @@ FString FString::Printf(const ElementType* Format, ...)
             // if (BufferSize > SOME_MAX_LIMIT) { return FString{}; }
         }
     }
+}
+
+FString operator/(const FString& Lhs, const FString& Rhs)
+{
+    // Lhs가 비어있으면 Rhs만 반환 (Rhs가 절대 경로일 수 있음)
+    if (Lhs.IsEmpty())
+    {
+        return Rhs;
+    }
+
+    // Rhs가 비어있으면 Lhs만 반환
+    if (Rhs.IsEmpty())
+    {
+        return Lhs;
+    }
+
+    FString Result = Lhs; // Lhs 복사
+
+    // Lhs의 마지막 문자가 경로 구분자인지 확인
+    bool bLhsEndsWithSlash = false;
+    if (Result.Len() > 0)
+    {
+        const FString::ElementType LastChar = Result[Result.Len() - 1];
+        if (LastChar == TEXT('/') || LastChar == TEXT('\\')) // 두 종류의 구분자 모두 고려
+        {
+            bLhsEndsWithSlash = true;
+        }
+    }
+
+    // Rhs의 첫 번째 문자가 경로 구분자인지 확인
+    bool bRhsStartsWithSlash = false;
+    if (Rhs.Len() > 0)
+    {
+        const FString::ElementType FirstChar = Rhs[0];
+        if (FirstChar == TEXT('/') || FirstChar == TEXT('\\'))
+        {
+            bRhsStartsWithSlash = true;
+        }
+    }
+
+    // 경로 구분자 처리 로직
+    if (bLhsEndsWithSlash && bRhsStartsWithSlash)
+    {
+        // 예: "Dir/" / "/File.txt" -> "Dir/File.txt"
+        // Rhs에서 첫 번째 슬래시 제거 후 합침
+        Result += Rhs.Mid(1); // Mid(1)은 두 번째 문자부터 끝까지
+    }
+    else if (!bLhsEndsWithSlash && !bRhsStartsWithSlash)
+    {
+        // 예: "Dir" / "File.txt" -> "Dir/File.txt"
+        // 중간에 슬래시 추가 후 합침
+        Result += TEXT("/"); // 표준 경로 구분자로 '/' 사용 권장
+        Result += Rhs;
+    }
+    else // (bLhsEndsWithSlash && !bRhsStartsWithSlash) 또는 (!bLhsEndsWithSlash && bRhsStartsWithSlash)
+    {
+        // 예: "Dir/" / "File.txt" -> "Dir/File.txt"
+        // 예: "Dir" / "/File.txt" -> "Dir/File.txt"
+        // 그냥 합침
+        Result += Rhs;
+    }
+
+    return Result;
+}
+
+// FString과 C-스타일 문자열을 위한 오버로딩
+FString operator/(const FString& Lhs, const FString::ElementType* Rhs)
+{
+    if (Rhs == nullptr || *Rhs == TEXT('\0')) // Rhs가 비어있는지 확인
+    {
+        return Lhs;
+    }
+    return Lhs / FString(Rhs); // FString으로 변환 후 위임
+}
+
+FString operator/(const FString::ElementType* Lhs, const FString& Rhs)
+{
+    if (Lhs == nullptr || *Lhs == TEXT('\0')) // Lhs가 비어있는지 확인
+    {
+        return Rhs;
+    }
+    return FString(Lhs) / Rhs; // FString으로 변환 후 위임
 }

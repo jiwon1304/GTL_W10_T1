@@ -1,0 +1,21 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/@KeyIndexDefined">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Applicability/=Surround/@EntryIndexedValue">False</s:Boolean>
+	
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/IsBlessed/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Reformat/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Shortcut/@EntryValue">Dup</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Text/@EntryValue">if (ThisClass* NewObject = Cast&lt;ThisClass&gt;(Super::Duplicate(InOuter)))
+{
+    $END$
+
+    return NewObject;
+}
+return nullptr;</s:String>
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Field/=CURSOR/@KeyIndexDefined">False</s:Boolean>
+	
+	
+	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Scope/=FB2B1B3627C3074699DE05129AC80274/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=DE64CC0331EFDC4194CB4E39E5FB88E8/Scope/=FB2B1B3627C3074699DE05129AC80274/Type/@EntryValue">InCppCompoundStatement</s:String></wpf:ResourceDictionary>

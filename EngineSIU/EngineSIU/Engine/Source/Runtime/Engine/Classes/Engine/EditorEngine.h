@@ -24,14 +24,19 @@ public:
 
     UWorld* PIEWorld = nullptr;
     UWorld* EditorWorld = nullptr;
+    UWorld* EditorPreviewWorld = nullptr;
 
     void StartPIE();
     void BindEssentialObjects();
     void EndPIE();
 
+    void StartPreviewWorld(class UMeshComponent* TargetMesh);
+    void EndPreviewWorld();
+
     // 주석은 UE에서 사용하던 매개변수.
     FWorldContext& GetEditorWorldContext(/*bool bEnsureIsGWorld = false*/);
     FWorldContext* GetPIEWorldContext(/*int32 WorldPIEInstance = 0*/);
+    FWorldContext* GetEditorPreviewWorldContext();
 
 public:
     void SelectActor(AActor* InActor);

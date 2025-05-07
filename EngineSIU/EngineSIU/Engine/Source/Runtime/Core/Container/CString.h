@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstring>
 #include <cwchar>
 #include <cctype>
@@ -294,7 +295,7 @@ public:
         // 첫 문자(대문자)와 나머지 길이 계산
         CharType FindInitialUpper = ToUpper(*Find);
         int32 Length = static_cast<int32>(Strlen(Find)) - 1; // 첫 문자 제외 길이
-        if (Length < 0) Length = 0;                          // 혹시 Find가 한 글자일 경우 대비
+        Length = std::max(Length, 0);                        // 혹시 Find가 한 글자일 경우 대비
 
         const CharType* FindRest = Find + 1; // Find의 두 번째 문자부터 포인터
 
@@ -324,7 +325,7 @@ public:
                 }
 
                 // 다음 문자로 이동
-                Str++;
+                ++Str;
                 CurrentChar = *Str;
             }
         }
@@ -344,7 +345,7 @@ public:
                 bAlnumPrev = IsAlnum(CurrentChar);
 
                 // 다음 문자로 이동
-                Str++;
+                ++Str;
                 CurrentChar = *Str;
             }
         }
@@ -419,7 +420,7 @@ public:
     static int Atoi(const CharType* str)
     {
         if (!str) return 0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::atoi(str); }
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtol(str, nullptr, 10); }
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return static_cast<int>(std::wcstol(str, nullptr, 10)); } // wcstol 사용 및 캐스팅
         else
         {
@@ -432,7 +433,7 @@ public:
     static long long Atoll(const CharType* str)
     {
         if (!str) return 0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::atoll(str); }
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtoll(str, nullptr, 10); }
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return std::wcstoll(str, nullptr, 10); }
         else
         {
@@ -445,7 +446,7 @@ public:
     static double Atod(const CharType* str)
     {
         if (!str) return 0.0;
-        if constexpr (std::is_same_v<CharType, char>) { return std::atof(str); } // atof는 double 반환
+        if constexpr (std::is_same_v<CharType, char>) { return std::strtod(str, nullptr); } // atof는 double 반환
         else if constexpr (std::is_same_v<CharType, wchar_t>) { return std::wcstod(str, nullptr); }
         else
         {
@@ -537,7 +538,7 @@ public:
             // 숫자 뒤에 남은 문자가 공백 뿐인지 확인
             while (IsSpace(*endptr))
             {
-                endptr++;
+                ++endptr;
             }
 
             // 숫자와 후행 공백 이후 문자열 끝에 도달했다면 유효한 정수 문자열로 간주

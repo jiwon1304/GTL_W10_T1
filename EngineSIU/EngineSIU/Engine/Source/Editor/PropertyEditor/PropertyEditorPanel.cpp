@@ -32,6 +32,9 @@
 #include "Components/Mesh/SkeletalMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "AssetViewer/AssetViewer.h"
+#include "Slate/Widgets/Layout/SSplitter.h"
+#include "Components/Material/Material.h"
 #include "Math/JungleMath.h"
 #include "Renderer/ShadowManager.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -48,16 +51,42 @@ void PropertyEditorPanel::Render()
     {
         return;
     }
-    
-    /* Pre Setup */
-    float PanelWidth = (Width) * 0.2f - 6.0f;
-    float PanelHeight = (Height) * 0.65f;
 
-    float PanelPosX = (Width) * 0.8f + 5.0f;
-    float PanelPosY = (Height) * 0.3f + 15.0f;
+    /* Pre Setup */
+    // Splitter 기반 영역 계산
+    FRect PropertyRect{ 0,0,0,0 };
+    if (this->WindowType == WT_Main)
+    {
+        SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
+        if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideRB)
+        {
+            PropertyRect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+        }
+        else
+        {
+            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
+        }
+    }
+    else if (this->WindowType == WT_Sub)
+    {
+        SAssetViewer* AssetViewer = GEngineLoop.GetAssetViewer();
+        if (AssetViewer && AssetViewer->CenterAndRightVSplitter && AssetViewer->CenterAndRightVSplitter->SideRB)
+        {
+            PropertyRect = AssetViewer->CenterAndRightVSplitter->SideRB->GetRect();
+        }
+        else
+        {
+            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
+        }
+    }
+
+    float PanelPosX = PropertyRect.TopLeftX;
+    float PanelPosY = PropertyRect.TopLeftY;
+    float PanelWidth = PropertyRect.Width;
+    float PanelHeight = PropertyRect.Height;
 
     ImVec2 MinSize(140, 370);
-    ImVec2 MaxSize(FLT_MAX, 900);
+    ImVec2 MaxSize(FLT_MAX, FLT_MAX);
 
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
@@ -83,7 +112,7 @@ void PropertyEditorPanel::Render()
         TargetComponent = SelectedComponent;
     }
     else if (SelectedActor != nullptr)
-    {        
+    {
         TargetComponent = SelectedActor->GetRootComponent();
     }
 
@@ -97,7 +126,7 @@ void PropertyEditorPanel::Render()
     {
         RenderForActor(SelectedActor, TargetComponent);
     }
-    
+
     if (UAmbientLightComponent* LightComponent = GetTargetComponent<UAmbientLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForAmbientLightComponent(LightComponent);
@@ -141,7 +170,7 @@ void PropertyEditorPanel::Render()
     {
         RenderForCameraComponent(CameraComponent);
     }
-  
+
     if (UShapeComponent* ShapeComponent = GetTargetComponent<UShapeComponent>(SelectedActor, SelectedComponent))
     {
         RenderForShapeComponent(ShapeComponent);
@@ -210,7 +239,6 @@ void PropertyEditorPanel::HSVToRGB(const float H, const float S, const float V, 
     R += M;  G += M;  B += M;
 }
 
-
 void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponent, AEditorPlayer* Player) const
 {
     ImGui::SetItemDefaultFocus();
@@ -245,11 +273,11 @@ void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponen
             CoordiButtonLabel = "Local";
         }
 
-        if (ImGui::Button(CoordiButtonLabel.c_str(), ImVec2(ImGui::GetWindowContentRegionMax().x * 0.9f, 32)))
+        if (ImGui::Button(CoordiButtonLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().IndentSpacing, 32)))
         {
             Player->AddCoordiMode();
         }
-         
+
         ImGui::TreePop();
     }
 
@@ -258,7 +286,6 @@ void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponen
 
 void PropertyEditorPanel::RenderForCameraComponent(UCameraComponent* InCameraComponent)
 {
-    
 }
 
 void PropertyEditorPanel::RenderForPlayerActor(APlayer* InPlayerActor)
@@ -278,10 +305,10 @@ void PropertyEditorPanel::RenderForActor(AActor* SelectedActor, USceneComponent*
         Engine->SelectActor(NewActor);
         Engine->DeselectComponent(Engine->GetSelectedComponent());
     }
-    
+
     FString BasePath = FString(L"LuaScripts\\");
     FString LuaDisplayPath;
-    
+
     if (SelectedActor->GetComponentByClass<ULuaScriptComponent>())
     {
         LuaDisplayPath = SelectedActor->GetComponentByClass<ULuaScriptComponent>()->GetDisplayName();
@@ -304,7 +331,7 @@ void PropertyEditorPanel::RenderForActor(AActor* SelectedActor, USceneComponent*
             ULuaScriptComponent* NewScript = SelectedActor->AddComponent<ULuaScriptComponent>();
             FString LuaFilePath = NewScript->GetScriptPath();
             std::filesystem::path FilePath = std::filesystem::path(GetData(LuaFilePath));
-            
+
             try
             {
                 std::filesystem::path Dir = FilePath.parent_path();
@@ -384,7 +411,7 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
                 PreviewName = RenderData->DisplayName;
             }
         }
-        
+
         const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
 
         if (ImGui::BeginCombo("##StaticMesh", GetData(PreviewName), ImGuiComboFlags_None))
@@ -543,7 +570,6 @@ void PropertyEditorPanel::RenderForDirectionalLightComponent(UDirectionalLightCo
         FVector LightDirection = DirectionalLightComponent->GetDirection();
         FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
-
         // --- Cast Shadows 체크박스 추가 ---
         bool bCastShadows = DirectionalLightComponent->GetCastShadows(); // 현재 상태 가져오기
         if (ImGui::Checkbox("Cast Shadows", &bCastShadows)) // 체크박스 UI 생성 및 상호작용 처리
@@ -602,7 +628,7 @@ void PropertyEditorPanel::RenderForPointLightComponent(UPointLightComponent* Poi
         FShadowCubeMapArrayRHI* pointRHI = FEngineLoop::Renderer.ShadowManager->GetPointShadowCubeMapRHI();
         const char* faceNames[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
         float imageSize = 128.0f;
-        int index =  PointlightComponent->GetPointLightInfo().ShadowMapArrayIndex;
+        int index = PointlightComponent->GetPointLightInfo().ShadowMapArrayIndex;
         // CubeMap이므로 6개의 ShadowMap을 그립니다.
         for (int i = 0; i < 6; ++i)
         {
@@ -610,7 +636,7 @@ void PropertyEditorPanel::RenderForPointLightComponent(UPointLightComponent* Poi
             if (faceSRV)
             {
                 ImGui::Image(reinterpret_cast<ImTextureID>(faceSRV), ImVec2(imageSize, imageSize));
-                ImGui::SameLine(); 
+                ImGui::SameLine();
                 ImGui::Text("%s", faceNames[i]);
             }
         }
@@ -824,7 +850,6 @@ void PropertyEditorPanel::RenderForExponentialHeightFogComponent(UHeightFogCompo
             ImGuiColorEditFlags_NoInputs |
             ImGuiColorEditFlags_Float))
         {
-
             R = LightColor[0];
             G = LightColor[1];
             B = LightColor[2];
@@ -959,7 +984,7 @@ void PropertyEditorPanel::RenderForShapeComponent(UShapeComponent* ShapeComponen
             ImGui::TreePop();
         }
     }
-    
+
     ImGui::PopStyleColor();
 }
 
@@ -995,9 +1020,9 @@ void PropertyEditorPanel::RenderForSpringArmComponent(USpringArmComponent* Sprin
         if (ImGui::Checkbox("UsePawnControlRotation", &UsePawnControlRotation))
             SpringArmComponent->bUsePawnControlRotation = UsePawnControlRotation;
 
-		bool UseAbsolRot = SpringArmComponent->IsUsingAbsoluteRotation();
-		if (ImGui::Checkbox("UseAbsoluteRot", &UseAbsolRot))
-			SpringArmComponent->SetUsingAbsoluteRotation(UseAbsolRot);
+        bool UseAbsolRot = SpringArmComponent->IsUsingAbsoluteRotation();
+        if (ImGui::Checkbox("UseAbsoluteRot", &UseAbsolRot))
+            SpringArmComponent->SetUsingAbsoluteRotation(UseAbsolRot);
 
         bool InheritPitch = SpringArmComponent->bInheritPitch;
         if (ImGui::Checkbox("InheritPitch", &InheritPitch))
@@ -1026,7 +1051,7 @@ void PropertyEditorPanel::RenderForSpringArmComponent(USpringArmComponent* Sprin
 
         // --- Lag speeds / limits ---
         ImGui::DragFloat("LocSpeed", &SpringArmComponent->CameraLagSpeed, 0.1f, 0.0f, 100.0f);
-        
+
         ImGui::DragFloat("RotSpeed", &SpringArmComponent->CameraRotationLagSpeed, 0.1f, 0.0f, 100.0f);
         //ImGui::NewLine();
         ImGui::DragFloat("LagMxStep", &SpringArmComponent->CameraLagMaxTimeStep, 0.005f, 0.0f, 1.0f);
@@ -1312,6 +1337,6 @@ void PropertyEditorPanel::OnResize(HWND hWnd)
 {
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
-    Width = ClientRect.right - ClientRect.left;
-    Height = ClientRect.bottom - ClientRect.top;
+    Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);
+    Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }

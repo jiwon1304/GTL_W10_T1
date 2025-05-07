@@ -3,6 +3,8 @@
 #include "EngineLoop.h"
 #include <array>
 
+#include "UObject/Object.h"
+
 FViewportResource::FViewportResource()
 {
     ClearColors.Add(EResourceType::ERT_Compositing, { 0.f, 0.f, 0.f, 1.f });
@@ -35,24 +37,28 @@ void FViewportResource::Initialize(uint32 InWidth, uint32 InHeight)
     hr = CreateDepthStencil(EResourceType::ERT_Scene);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencil Scene failed!", L"UnrealClient Initialize", MB_ICONERROR | MB_OK);
         return;
     }
     
     hr = CreateDepthStencil(EResourceType::ERT_Gizmo);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencil Gizmo failed!", L"UnrealClient Initialize", MB_ICONERROR | MB_OK);
         return;
     }
     
     hr = CreateRenderTarget(EResourceType::ERT_Compositing);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create RenderTarget Compositing failed!", L"UnrealClient Initialize", MB_ICONERROR | MB_OK);
         return;
     }
 
     hr = CreateRenderTarget(EResourceType::ERT_Scene);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create RenderTarget Compositing failed!", L"UnrealClient Initialize", MB_ICONERROR | MB_OK);
         return;
     }
 }
@@ -64,14 +70,25 @@ void FViewportResource::Resize(uint32 NewWidth, uint32 NewHeight)
     D3DViewport.Height = static_cast<float>(NewHeight);
     D3DViewport.Width = static_cast<float>(NewWidth);
 
+    HRESULT hr;
     for (auto& [Type, Resource] : DepthStencils)
     {
-        CreateDepthStencil(Type);
+        hr = CreateDepthStencil(Type);
+        if (FAILED(hr))
+        {
+            MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencil failed!", L"UnrealClient Resize", MB_ICONERROR | MB_OK);
+            return;
+        }
     }
 
     for (auto& [Type, Resource] : RenderTargets)
     {
-        CreateRenderTarget(Type);
+        hr = CreateRenderTarget(Type);
+        if (FAILED(hr))
+        {
+            MessageBox(GEngineLoop.MainAppWnd, L"Create RenderTarget failed!", L"UnrealClient Resize", MB_ICONERROR | MB_OK);
+            return;
+        }
     }
 }
 
@@ -106,6 +123,7 @@ HRESULT FViewportResource::CreateDepthStencil(EResourceType Type)
     hr = FEngineLoop::GraphicDevice.Device->CreateTexture2D(&DepthStencilTextureDesc, nullptr, &NewResource.Texture2D);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencilTexture failed!", L"UnrealClient CreateDepthStencil", MB_ICONERROR | MB_OK);
         return hr;
     }
     
@@ -116,6 +134,7 @@ HRESULT FViewportResource::CreateDepthStencil(EResourceType Type)
     hr = FEngineLoop::GraphicDevice.Device->CreateDepthStencilView(NewResource.Texture2D,  &DepthStencilViewDesc,  &NewResource.DSV);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencilView failed!", L"UnrealClient CreateDepthStencil", MB_ICONERROR | MB_OK);
         return hr;
     }
 
@@ -127,6 +146,7 @@ HRESULT FViewportResource::CreateDepthStencil(EResourceType Type)
     hr = FEngineLoop::GraphicDevice.Device->CreateShaderResourceView(NewResource.Texture2D, &DepthStencilDesc, &NewResource.SRV);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create DepthStencil SRV failed!", L"UnrealClient CreateDepthStencil", MB_ICONERROR | MB_OK);
         return hr;
     }
 
@@ -199,6 +219,7 @@ HRESULT FViewportResource::CreateRenderTarget(EResourceType Type)
     hr = FEngineLoop::GraphicDevice.Device->CreateRenderTargetView(NewResource.Texture2D, &RTVDesc, &NewResource.RTV);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create RenderTargetView failed!", L"UnrealClient CreateRenderTarget", MB_ICONERROR | MB_OK);
         return hr;
     }
     
@@ -210,6 +231,7 @@ HRESULT FViewportResource::CreateRenderTarget(EResourceType Type)
     hr = FEngineLoop::GraphicDevice.Device->CreateShaderResourceView(NewResource.Texture2D, &SRVDesc, &NewResource.SRV);
     if (FAILED(hr))
     {
+        MessageBox(GEngineLoop.MainAppWnd, L"Create RenderTarget SRV failed!", L"UnrealClient CreateRenderTarget", MB_ICONERROR | MB_OK);
         return hr;
     }
 

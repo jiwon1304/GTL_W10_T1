@@ -4,6 +4,8 @@
 #define _TCHAR_DEFINED
 #include <d3d11.h>
 #include <memory>
+
+#include "IRenderPass.h"
 #include "Math/Color.h"
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
@@ -14,25 +16,25 @@ class FDXDShaderManager;
 class FDXDBufferManager;
 class FEditorViewportClient;
 
-class FLightHeatMapRenderPass
+class FLightHeatMapRenderPass : public IRenderPass
 {
 public:
     FLightHeatMapRenderPass();
-    virtual ~FLightHeatMapRenderPass();
+    virtual ~FLightHeatMapRenderPass() override;
     
     // 초기화: 그래픽 디바이스와 셰이더 매니저를 등록
-    void Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManager);
+    virtual void Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManager) override;
 
     // Fog 렌더링용 셰이더 생성 및 입력 레이아웃 설정
     void CreateShader();
 
-    void PrepareRender();
+    virtual void PrepareRenderArr() override;
 
-    void ClearRenderArr();
+    virtual void ClearRenderArr() override;
 
     void PrepareRenderState(const std::shared_ptr<FEditorViewportClient>& Viewport);
     // Fog를 화면에 렌더링
-    void Render(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    virtual void Render(const std::shared_ptr<FEditorViewportClient>& Viewport) override;
 
     void CreateBlendState();
 

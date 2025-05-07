@@ -9,6 +9,7 @@
 #include "UnrealEd/EditorPanel.h"
 #include "Math/Rotator.h"
 #include "UObject/Casts.h"
+#include "Components/Material/Material.h"
 
 class USpringArmComponent;
 class UShapeComponent;

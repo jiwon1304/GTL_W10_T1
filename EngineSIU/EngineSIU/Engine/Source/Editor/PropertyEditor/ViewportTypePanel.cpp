@@ -34,7 +34,9 @@ void ViewportTypePanel::Draw(const std::shared_ptr<FEditorViewportClient>& Activ
                 }
 
                 if (isSelected)
+                {
                     ImGui::SetItemDefaultFocus();
+                }
             }
             ImGui::EndCombo();
         }

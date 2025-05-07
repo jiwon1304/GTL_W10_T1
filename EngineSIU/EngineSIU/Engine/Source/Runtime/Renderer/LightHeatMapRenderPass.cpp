@@ -70,7 +70,7 @@ void FLightHeatMapRenderPass::CreateShader()
     InputLayout = ShaderManager->GetInputLayoutByKey(L"FogVertexShader");
 }
 
-void FLightHeatMapRenderPass::PrepareRender()
+void FLightHeatMapRenderPass::PrepareRenderArr()
 {
     for (const auto iter : TObjectRange<UHeightFogComponent>())
     {
