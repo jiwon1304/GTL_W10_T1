@@ -36,6 +36,7 @@ public:
     static FMatrix Inverse(const FMatrix& Mat);
     static FMatrix CreateRotationMatrix(float roll, float pitch, float yaw);
     static FMatrix CreateScaleMatrix(float scaleX, float scaleY, float scaleZ);
+    static FMatrix CreateScaleMatrix(const FVector& V);
     static FVector TransformVector(const FVector& v, const FMatrix& m);
     static FVector4 TransformVector(const FVector4& v, const FMatrix& m);
     static FMatrix CreateTranslationMatrix(const FVector& position);

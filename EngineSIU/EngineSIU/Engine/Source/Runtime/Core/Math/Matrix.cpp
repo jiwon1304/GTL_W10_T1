@@ -244,6 +244,16 @@ FMatrix FMatrix::CreateScaleMatrix(float scaleX, float scaleY, float scaleZ)
     };
 }
 
+FMatrix FMatrix::CreateScaleMatrix(const FVector& V)
+{
+    return {{
+        {V.X, 0, 0, 0},
+        {0, V.Y, 0, 0},
+        {0, 0, V.Z, 0},
+        {0, 0, 0, 1}
+    }};
+}
+
 FMatrix FMatrix::CreateTranslationMatrix(const FVector& position)
 {
     FMatrix translationMatrix = FMatrix::Identity;
