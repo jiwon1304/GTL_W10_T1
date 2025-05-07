@@ -102,6 +102,11 @@ public:
     T* GetData();
     const T* GetData() const;
 
+    T& First();
+    const T& First() const;
+    T& Last(int32 IndexFromTheEnd = 0);
+    const T& Last(int32 IndexFromTheEnd = 0) const;
+
     /**
      * Array에서 Item을 찾습니다.
      * @param Item 찾으려는 Item
@@ -426,6 +431,36 @@ template <typename T, typename Allocator>
 const T* TArray<T, Allocator>::GetData() const
 {
     return ContainerPrivate.data();
+}
+
+template <typename T, typename Allocator>
+T& TArray<T, Allocator>::First()
+{
+    assert(!IsEmpty());
+    return ContainerPrivate.front();
+}
+
+template <typename T, typename Allocator>
+const T& TArray<T, Allocator>::First() const
+{
+    assert(!IsEmpty());
+    return ContainerPrivate.front();
+}
+
+template <typename T, typename Allocator>
+T& TArray<T, Allocator>::Last(int32 IndexFromTheEnd)
+{
+    assert(!IsEmpty());
+    assert(IndexFromTheEnd >= 0 && IndexFromTheEnd < Num()); // 유효한 인덱스인지 확인
+    return ContainerPrivate[Num() - 1 - IndexFromTheEnd];
+}
+
+template <typename T, typename Allocator>
+const T& TArray<T, Allocator>::Last(int32 IndexFromTheEnd) const
+{
+    assert(!IsEmpty());
+    assert(IndexFromTheEnd >= 0 && IndexFromTheEnd < Num()); // 유효한 인덱스인지 확인
+    return ContainerPrivate[Num() - 1 - IndexFromTheEnd];
 }
 
 template <typename T, typename Allocator>
