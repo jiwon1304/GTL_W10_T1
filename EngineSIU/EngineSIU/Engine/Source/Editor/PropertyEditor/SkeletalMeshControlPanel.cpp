@@ -80,6 +80,12 @@ void SkeletalMeshControlPanel::Render()
                 ImGui::EndMenu();
             }
             
+            // ShowFlags 메뉴 항목 추가
+            if (ImGui::MenuItem("Show Flags"))
+            {
+                bShowShowFlagOptions = !bShowShowFlagOptions;
+            }
+            
             ImGui::EndMenu();
         }
 
@@ -147,6 +153,12 @@ void SkeletalMeshControlPanel::Render()
             ImGui::Combo("Animation", &selectedAnimation, animations, IM_ARRAYSIZE(animations));
         }
         ImGui::End();
+    }
+    
+    // ShowFlag 옵션 팝업 처리
+    if (bShowShowFlagOptions)
+    {
+        CreateShowFlagControls();
     }
 
     ImGui::End();
@@ -279,6 +291,83 @@ void SkeletalMeshControlPanel::CreateBoneDisplayOptions()
         // 본 색상 조절
         static float boneColor[3] = { 1.0f, 0.0f, 0.0f }; // 빨간색 기본값
         ImGui::ColorEdit3("Bone Color", boneColor);
+    }
+    ImGui::End();
+}
+
+void SkeletalMeshControlPanel::CreateShowFlagControls()
+{
+    ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Show Flags", &bShowShowFlagOptions))
+    {
+        auto ViewportClient = GEngineLoop.GetAssetViewer()->GetActiveViewportClient();
+        uint64 CurFlag = ViewportClient->GetShowFlag();
+        
+        // ShowFlag 옵션 표시
+        const char* Items[] = {
+            "AABB",
+            "Primitives",
+            "BillBoardText",
+            "UUID",
+            "Fog",
+            "LightWireframe",
+            "LightWireframeSelectedOnly",
+            "Shadow",
+            "Collision",
+            "CollisionSelectedOnly",
+            "SkeletalMesh",
+            "SkeletalBone",
+        };
+        
+        bool Selected[IM_ARRAYSIZE(Items)] = 
+        {
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_AABB),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_Primitives),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_BillboardText),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_UUIDText),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_Fog),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_LightWireframe),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_LightWireframeSelectedOnly),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_Shadow),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_Collision),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_CollisionSelectedOnly),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_SkeletalMesh),
+            static_cast<bool>(CurFlag & EEngineShowFlags::SF_SkeletalBone),
+        };
+
+        // 옵션별 체크박스 표시 및 플래그 변경 처리
+        for (int i = 0; i < IM_ARRAYSIZE(Items); i++)
+        {
+            if (ImGui::Checkbox(Items[i], &Selected[i]))
+            {
+                // 체크박스 변경 시 ShowFlag 업데이트
+                uint64 NewFlag = ViewportClient->GetShowFlag();
+                
+                const uint64 Flag = 1ULL << i;
+                
+                // 현재 플래그 초기화 후 선택 상태에 따라 설정
+                NewFlag &= ~Flag;
+                if (Selected[i])
+                {
+                    NewFlag |= Flag;
+                }
+                
+                // 특수 케이스 처리 (예: LightWireframeSelectedOnly는 LightWireframe 필요)
+                if (i == 6 && Selected[i]) // LightWireframeSelectedOnly
+                {
+                    NewFlag |= EEngineShowFlags::SF_LightWireframe;
+                    Selected[5] = true;
+                }
+                
+                if (i == 9 && Selected[i]) // CollisionSelectedOnly
+                {
+                    NewFlag |= EEngineShowFlags::SF_Collision;
+                    Selected[8] = true;
+                }
+                
+                ViewportClient->SetShowFlag(NewFlag);
+            }
+        }
     }
     ImGui::End();
 }

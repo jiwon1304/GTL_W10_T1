@@ -3,6 +3,7 @@
 #include "Components/ActorComponent.h"
 #include "UnrealEd/EditorPanel.h"
 #include "ControlEditorPanel.h"
+#include "PropertyEditor/ShowFlags.h"
 
 // SkeletalMeshViewer에서 사용할 컨트롤 패널 클래스
 // 기존 ControlEditorPanel을 상속받아 스켈레탈 메시 특화 기능을 추가함
@@ -32,8 +33,12 @@ private:
     
     // 본 표시 설정
     void CreateBoneDisplayOptions();
+    
+    // ShowFlag 컨트롤 생성
+    void CreateShowFlagControls();
 
     // 모달 창 상태
     bool bShowBoneOptions = false;
     bool bShowAnimationControls = false;
+    bool bShowShowFlagOptions = false;
 };
