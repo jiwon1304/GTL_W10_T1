@@ -40,10 +40,10 @@ public:
     
     DXGI_SWAP_CHAIN_DESC SwapchainDesc;
     
-    UINT ScreenWidth = 0;
-    UINT ScreenHeight = 0;
+    TMap<HWND, UINT> ScreenWidths;
+    TMap<HWND, UINT> ScreenHeights;
 
-    D3D11_VIEWPORT Viewport;
+    TMap<HWND, D3D11_VIEWPORT> Viewports;
     
     FLOAT ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // 화면을 초기화(clear) 할 때 사용할 색상(RGBA)
 
@@ -51,7 +51,7 @@ public:
     void CreateAdditionalSwapChain(HWND hWnd);
     
     void ChangeRasterizer(EViewModeIndex ViewModeIndex);
-    void CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV);
+    //void CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV);
     ID3D11Texture2D* CreateTexture2D(const D3D11_TEXTURE2D_DESC& Description, const void* InitialData);
     
     void Release();

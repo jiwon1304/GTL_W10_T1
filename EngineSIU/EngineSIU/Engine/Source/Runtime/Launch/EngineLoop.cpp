@@ -231,7 +231,7 @@ void FEngineLoop::Tick()
                 UnrealEditor->Render();
 
                 FConsole::GetInstance().Draw();
-                EngineProfiler.Render(GraphicDevice.DeviceContext, GraphicDevice.ScreenWidth, GraphicDevice.ScreenHeight);
+                EngineProfiler.Render(GraphicDevice.DeviceContext, *GraphicDevice.ScreenWidths.Find(MainAppWnd), *GraphicDevice.ScreenHeights.Find(MainAppWnd));
                 TempRenderDebugImGui();
                 TempRenderDebugSubImGui();
             }

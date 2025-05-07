@@ -170,11 +170,6 @@ void FLightHeatMapRenderPass::FinalRender()
     Graphics->DeviceContext->DrawIndexed(6, 0, 0);
 }
 
-void FLightHeatMapRenderPass::CreateRTV()
-{
-    Graphics->CreateRTV(FogBuffer, FogRTV);
-}
-
 void FLightHeatMapRenderPass::SetDebugHeatmapSRV(ID3D11ShaderResourceView* InDebugHeatmapSRV)
 {
     DebugHeatmapSRV = InDebugHeatmapSRV;

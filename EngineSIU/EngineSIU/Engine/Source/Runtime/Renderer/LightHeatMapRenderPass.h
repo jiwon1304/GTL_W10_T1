@@ -1,4 +1,4 @@
-﻿
+
 #pragma once
 
 #define _TCHAR_DEFINED
@@ -39,8 +39,6 @@ public:
     void CreateBlendState();
 
     void FinalRender();
-
-    void CreateRTV();
 
     void SetDebugHeatmapSRV(ID3D11ShaderResourceView* InDebugHeatmapSRV);
     

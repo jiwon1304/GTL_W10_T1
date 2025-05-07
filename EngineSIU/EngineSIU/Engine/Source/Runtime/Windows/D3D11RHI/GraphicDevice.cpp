@@ -84,18 +84,10 @@ void FGraphicsDevice::CreateDeviceAndSwapChain(HWND hWnd, bool bIsInitialDevice)
     if (NewSwapChain)
     {
         SwapChains.Add(hWnd, NewSwapChain);
-        if (bIsInitialDevice)
-        {
-            NewSwapChain->GetDesc(&SwapchainDesc);
-            ScreenWidth = SwapchainDesc.BufferDesc.Width;
-            ScreenHeight = SwapchainDesc.BufferDesc.Height;
-            Viewport.Width = static_cast<float>(ScreenWidth);
-            Viewport.Height = static_cast<float>(ScreenHeight);
-            Viewport.MinDepth = 0.0f;
-            Viewport.MaxDepth = 1.0f;
-            Viewport.TopLeftX = 0;
-            Viewport.TopLeftY = 0;
-        }
+        NewSwapChain->GetDesc(&SwapchainDesc);
+        ScreenWidths.Add(hWnd, SwapchainDesc.BufferDesc.Width);
+        ScreenHeights.Add(hWnd, SwapchainDesc.BufferDesc.Height);
+        Viewports.Add(hWnd, {0.f, 0.f, static_cast<FLOAT>(SwapchainDesc.BufferDesc.Width),  static_cast<FLOAT>(SwapchainDesc.BufferDesc.Height), 0.f, 1.f });
     }
 }
 
@@ -386,6 +378,11 @@ void FGraphicsDevice::Resize(HWND hWnd)
 
     if (!SwapChains.IsEmpty() && SwapChains.begin()->Key == hWnd)
     {
+        // 기존 정보 삭제
+        ScreenWidths.Remove(hWnd);
+        ScreenHeights.Remove(hWnd);
+        Viewports.Remove(hWnd);
+
         DXGI_SWAP_CHAIN_DESC Desc;
         hr = (*SpecificSwapChain)->GetDesc(&Desc);
         if (FAILED(hr))
@@ -393,16 +390,11 @@ void FGraphicsDevice::Resize(HWND hWnd)
             MessageBox(hWnd, L"Get Desc failed", L"Error", MB_ICONERROR | MB_OK);
             return;
         }
+        // 변경된 정보 저장
         SwapchainDesc = Desc;
-        ScreenWidth = Desc.BufferDesc.Width;
-        ScreenHeight = Desc.BufferDesc.Height;
-
-        Viewport.Width = static_cast<float>(ScreenWidth);
-        Viewport.Height = static_cast<float>(ScreenHeight);
-        Viewport.MinDepth = 0.0f;
-        Viewport.MaxDepth = 1.0f;
-        Viewport.TopLeftX = 0;
-        Viewport.TopLeftY = 0;
+        ScreenWidths.Add(hWnd, Desc.BufferDesc.Width);
+        ScreenHeights.Add(hWnd, Desc.BufferDesc.Height);
+        Viewports.Add(hWnd, {0.f, 0.f, static_cast<FLOAT>(Desc.BufferDesc.Width), static_cast<FLOAT>(Desc.BufferDesc.Height), 0.f, 1.f});
     }
 
     CreateBackBuffer(hWnd);
@@ -452,6 +444,7 @@ void FGraphicsDevice::ChangeRasterizer(EViewModeIndex ViewModeIndex)
     DeviceContext->RSSetState(CurrentRasterizer); //레스터 라이저 상태 설정
 }
 
+/*
 void FGraphicsDevice::CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV)
 {
     D3D11_TEXTURE2D_DESC TextureDesc = {};
@@ -474,7 +467,7 @@ void FGraphicsDevice::CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTarget
 
     Device->CreateRenderTargetView(OutTexture, &FogRTVDesc, &OutRTV);
 }
-
+*/
 void FGraphicsDevice::Prepare(HWND hWnd)
 {
     if (!DeviceContext)
