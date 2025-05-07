@@ -1,0 +1,50 @@
+# Blender 4.3.2 MTL File: 'None'
+# www.blender.org
+
+newmtl Body_Gen_red
+Kd 0.597845 0.015404 0.015404
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.140909
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Bump -bm 1.000000 Body_Gen_red_normal.png
+
+newmtl Body_gen
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Pr 0.200000
+Pm 1.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Body_gen_baseColor.png
+map_Bump -bm 1.000000 Body_Gen_red_normal.png
+
+newmtl Zgara
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Pr 0.200000
+Pm 1.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Zgara_baseColor.png
+map_Bump -bm 1.000000 Zgara_normal.png

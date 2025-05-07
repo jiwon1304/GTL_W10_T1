@@ -1,0 +1,43 @@
+# Blender 4.3.2 MTL File: 'None'
+# www.blender.org
+
+newmtl MI_PrototypeGrid_Gray
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.676124 0.676124 0.676124
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_d MI_PrototypeGrid_Gray_BaseColor_3.png
+
+newmtl MI_PrototypeGrid_TopDark
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_Kd MI_PrototypeGrid_TopDark_BaseColor_1.png
+map_d MI_PrototypeGrid_TopDark_BaseColor_1.png
+
+newmtl MI_Solid_Blue
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.002428 0.138432 0.577580
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+
+newmtl WorldGridMaterial
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.266283 0.266283 0.266283
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_d WorldGridMaterial_BaseColor_0.png
+map_Bump -bm 1.000000 WorldGridMaterial_Normal_0.png

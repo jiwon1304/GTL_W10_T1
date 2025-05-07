@@ -126,7 +126,7 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
             if (RightSidebarHSplitter)
             {
                 RightSidebarHSplitter->SetRect(RightSidebarAreaRect);
-            }
+            } 
         }
 
         ResizeViewport();
