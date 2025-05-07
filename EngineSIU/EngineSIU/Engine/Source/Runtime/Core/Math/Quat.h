@@ -12,27 +12,32 @@ struct FMatrix;
 struct alignas(16) FQuat
 {
 public:
-    float W, X, Y, Z;
+    float X, Y, Z, W;
 
     using FReal = float;
 
     static const FQuat Identity;
 
 public:
-    // 기본 생성자
+    // 기본 생성자 (항등 쿼터니언: X=0, Y=0, Z=0, W=1)
     FQuat()
-        : W(1.0f), X(0.0f), Y(0.0f), Z(0.0f)
+        : X(0.0f), Y(0.0f), Z(0.0f), W(1.0f)
     {}
 
-    // FQuat 생성자 추가: 회전 축과 각도를 받아서 FQuat 생성
-    FQuat(const FVector& Axis, float Angle);
-
-    // W, X, Y, Z 값으로 초기화
-    FQuat(float InW, float InX, float InY, float InZ)
-        : W(InW), X(InX), Y(InY), Z(InZ)
+    // X, Y, Z, W 값으로 초기화
+    FQuat(float InX, float InY, float InZ, float InW)
+        : X(InX), Y(InY), Z(InZ), W(InW)
     {}
 
-    FQuat(const FMatrix& InMatrix);
+    // 회전 축과 각도(라디안)를 받아서 FQuat 생성
+    FQuat(const FVector& Axis, float AngleRad);
+
+    // 회전 행렬로부터 FQuat 생성
+    FQuat(const FMatrix& M);
+
+    // 오일러 각(FRotator)으로부터 FQuat 생성 (Pitch, Yaw, Roll 순서로 도(degree) 단위 입력)
+    explicit FQuat(const FRotator& R);
+
 
 public:
     /**
@@ -53,7 +58,7 @@ public:
     FQuat operator*(const FQuat& Other) const;
 
     // (쿼터니언) 벡터 회전
-    FVector RotateVector(const FVector& Vec) const;
+    FVector RotateVector(const FVector& V) const;
 
     // 단위 쿼터니언 여부 확인
     bool IsNormalized() const;
@@ -70,7 +75,7 @@ public:
     }
 
     /**
-     * 쿼터니언을 회전축과 각도로 분해합니다.
+     * 쿼터니언을 회전축과 각도(라디안)로 분해합니다.
      * 
      * @param Axis 회전축 단위벡터
      * @param Angle 라디안 단위 회전각 (0 <= Angle <= 2π)
@@ -126,13 +131,15 @@ public:
     }
 
     // 회전 각도와 축으로부터 쿼터니언 생성 (axis-angle 방식)
-    static FQuat FromAxisAngle(const FVector& Axis, float Angle);
+    static FQuat FromAxisAngle(const FVector& Axis, float AngleRad);
 
-    static FQuat CreateRotation(float roll, float pitch, float yaw);
+    // 오일러 각(Roll, Pitch, Yaw - 도 단위)으로부터 쿼터니언 생성. 회전 순서는 Z(Yaw) -> Y(Pitch) -> X(Roll).
+    static FQuat MakeFromEuler(const FVector& EulerDegrees); // EulerDegrees.X = Roll, .Y = Pitch, .Z = Yaw
 
     // 쿼터니언을 회전 행렬로 변환
     FMatrix ToMatrix() const;
 
+    // 쿼터니언을 FRotator (오일러 각, 도 단위)로 변환
     FRotator Rotator() const;
 };
 
