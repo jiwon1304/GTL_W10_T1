@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <unordered_map>
 
+#include "Set.h"
+#include "Array.h"
 #include "ContainerAllocator.h"
 #include "Pair.h"
 #include "Serialization/Archive.h"
@@ -133,6 +135,19 @@ public:
     {
         ContainerPrivate.clear();
         ContainerPrivate.reserve(Number);
+    }
+
+    template <typename ArrayAllocator>
+    int32 GetKeys(TArray<KeyType, ArrayAllocator>& OutKeys) const
+    {
+        OutKeys.Empty();
+
+        for (auto& [Key, _] : ContainerPrivate)
+        {
+            OutKeys.Add(Key);
+        }
+
+        return OutKeys.Num();
     }
 
     // 검색 및 조회
