@@ -5,6 +5,7 @@
 #include "PropertyEditor/OutlinerEditorPanel.h"
 #include "PropertyEditor/PropertyEditorPanel.h"
 #include "PropertyEditor/SubEditor/SkeletalTreePanel.h"
+#include "PropertyEditor/SkeletalMeshControlPanel.h"
 
 void UnrealEd::Initialize()
 {
@@ -22,6 +23,10 @@ void UnrealEd::Initialize()
 
     auto SubWindowSkeletalTreePanel = std::make_shared<SkeletalTreePanel>();
     AddEditorPanel("SubWindowSkeletalTreePanel", SubWindowSkeletalTreePanel, true);
+    
+    // SkeletalMeshViewer용 컨트롤 패널 추가
+    auto SkeletalControlPanel = std::make_shared<SkeletalMeshControlPanel>();
+    AddEditorPanel("SkeletalControlPanel", SkeletalControlPanel, true);
 }
 
 void UnrealEd::Render() const
