@@ -25,6 +25,7 @@ public:
     FMatrix operator+(const FMatrix& Other) const;
     FMatrix operator-(const FMatrix& Other) const;
     FMatrix operator*(const FMatrix& Other) const;
+    FMatrix& operator*=(const FMatrix& Other);
     FMatrix operator*(float Scalar) const;
     FMatrix operator/(float Scalar) const;
     float* operator[](int row);
