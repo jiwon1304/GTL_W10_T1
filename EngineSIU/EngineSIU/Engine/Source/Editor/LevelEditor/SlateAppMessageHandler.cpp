@@ -21,18 +21,14 @@ FSlateAppMessageHandler::FSlateAppMessageHandler()
         KeyState = false;
     }
 
-    RawInputHandler = std::make_unique<FRawInput>(GEngineLoop.MainAppWnd, [this](const RAWINPUT& RawInput)
+    RawInputHandler = std::make_unique<FRawInput>([this](HWND hWnd, const RAWINPUT& RawInput)
     {
-        HandleRawInput(RawInput);
+        HandleRawInput(hWnd, RawInput);
     });
 }
 
-void FSlateAppMessageHandler::HandleRawInput(const RAWINPUT& RawInput)
-{
-    // RawInput 이벤트에는 명시적으로 윈도우 정보가 없으므로, 메인 앱 윈도우를 사용
-    // 향후 필요하면 RawInput.header.hDevice를 기반으로 관련 윈도우를 찾는 로직 구현
-    HWND hWnd = GEngineLoop.MainAppWnd;
-    
+void FSlateAppMessageHandler::HandleRawInput(HWND hWnd, const RAWINPUT& RawInput)
+{    
     if (RawInput.header.dwType == RIM_TYPEMOUSE)
     {
         OnRawMouseInput(hWnd, RawInput.data.mouse);
@@ -350,7 +346,7 @@ void FSlateAppMessageHandler::ProcessMessage(HWND hWnd, uint32 Msg, WPARAM wPara
     case WM_INPUT:
     {
         // RawInput을 처리하는 부분
-        RawInputHandler->ProcessRawInput(lParam);
+        RawInputHandler->ProcessRawInput(hWnd, lParam);
         return;
     }
 

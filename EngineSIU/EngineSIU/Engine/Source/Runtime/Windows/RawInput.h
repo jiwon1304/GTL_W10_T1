@@ -8,9 +8,9 @@
 class FRawInput
 {
 public:
-    using InputCallback = std::function<void(const RAWINPUT& RawInput)>;
+    using InputCallback = std::function<void(HWND hWnd, const RAWINPUT& RawInput)>;
 
-    FRawInput(HWND hWnd, InputCallback InCallback);
+    FRawInput(InputCallback InCallback);
 
     ~FRawInput()
     {
@@ -24,7 +24,7 @@ public:
 
 public:
     // 메시지 처리 함수
-    void ProcessRawInput(LPARAM lParam) const;
+    void ProcessRawInput(HWND hWnd, LPARAM lParam) const;
 
     void ReRegisterDevices()
     {
@@ -42,7 +42,6 @@ private:
     static void LogRawInput(ELogLevel Level, const std::string& Message);
 
 private:
-    HWND AppWnd;
     InputCallback Callback;
 
     bool bIsValid = false;

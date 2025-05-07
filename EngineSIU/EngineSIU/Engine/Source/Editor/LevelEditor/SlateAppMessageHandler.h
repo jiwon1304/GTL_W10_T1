@@ -108,5 +108,5 @@ private:
     std::unique_ptr<FRawInput> RawInputHandler;
 
 private:
-    void HandleRawInput(const RAWINPUT& RawInput);
+    void HandleRawInput(HWND hWnd, const RAWINPUT& RawInput);
 };
