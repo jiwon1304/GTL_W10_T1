@@ -15,8 +15,8 @@ SAssetViewer::SAssetViewer()
     : PrimaryVSplitter(nullptr)
     , CenterAndRightVSplitter(nullptr)
     , RightSidebarHSplitter(nullptr)
-    , EditorWidth(800)
-    , EditorHeight(600)
+    , EditorWidth(1800)
+    , EditorHeight(1100)
 {
 }
 

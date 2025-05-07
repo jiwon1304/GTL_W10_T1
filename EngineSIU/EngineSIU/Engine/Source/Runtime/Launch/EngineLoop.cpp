@@ -370,7 +370,7 @@ void FEngineLoop::SubWindowInit(HINSTANCE hInstance)
     // WS_VISIBLE 제거, 숨김 초기 상태
     SkeletalMeshViewerAppWnd = CreateWindowExW(
         0, WindowClass, Title, WS_POPUP | WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1800, 1100,
         MainAppWnd, nullptr, hInstance, nullptr
     );
 
