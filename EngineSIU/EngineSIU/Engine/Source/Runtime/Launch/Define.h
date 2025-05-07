@@ -461,10 +461,10 @@ struct FViewportSize
 
 struct FVertexInfo
 {
-    uint32 NumVertices;
-    uint32 Stride;
-    uint32 Offset;
-    ID3D11Buffer* VertexBuffer;
+    uint32 NumVertices = 0;
+    uint32 Stride = 0;
+    uint32 Offset = 0;
+    ID3D11Buffer* VertexBuffer = nullptr;
 };
 
 struct FIndexInfo
