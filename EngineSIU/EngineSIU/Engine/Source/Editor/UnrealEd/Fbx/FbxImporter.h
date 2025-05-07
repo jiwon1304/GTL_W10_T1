@@ -92,7 +92,7 @@ private:
         const FbxNode* InNode, FbxMesh* InMesh,
         TArray<FMaterialInfo>& OutMaterials,
         TArray<FMeshSubset>& OutSubsets,
-        TArray<uint32>& OutTriangleIndices
+        const TArray<uint32>& InTriangleIndices
     ) const;
 
     void ExtractSkeletonData(const FbxMesh* InMesh, FSkeleton& OutSkeleton);

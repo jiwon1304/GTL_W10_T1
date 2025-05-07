@@ -310,23 +310,11 @@ void FFbxImporter::ExtractMaterialData(
     const FbxNode* InNode, FbxMesh* InMesh,
     TArray<FMaterialInfo>& OutMaterials,
     TArray<FMeshSubset>& OutSubsets,
-    TArray<uint32>& OutTriangleIndices
+    const TArray<uint32>& InTriangleIndices
 ) const {
     const int MaterialCount = InNode->GetMaterialCount();
     OutMaterials.Empty(MaterialCount > 0 ? MaterialCount : 1);
     OutSubsets.Empty();
-    OutTriangleIndices.Empty(); // 최종 인덱스 배열 초기화
-
-    TArray<uint32> TempOriginalIndices;
-    const int NumPolygons = InMesh->GetPolygonCount(); // 메쉬의 폴리곤 개수
-    TempOriginalIndices.Reserve(NumPolygons * 3);
-
-    for (int PolyIdx = 0; PolyIdx < NumPolygons; ++PolyIdx)
-    {
-        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 0)));
-        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 1)));
-        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 2)));
-    }
 
     // 1. 머티리얼 정보 파싱
     for (int i = 0; i < MaterialCount; ++i)
@@ -453,10 +441,9 @@ void FFbxImporter::ExtractMaterialData(
         FMeshSubset Subset;
         Subset.MaterialIndex = 0;
         Subset.StartIndexLocation = 0;
-        Subset.IndexCount = TempOriginalIndices.Num(); // 삼각형화된 인덱스 수
+        Subset.IndexCount = InTriangleIndices.Num(); // 삼각형화된 인덱스 수
         Subset.BaseVertexLocation = 0;
         OutSubsets.Add(Subset);
-        OutTriangleIndices = TempOriginalIndices; // 원본 인덱스 그대로 사용
         return;
     }
 
@@ -477,10 +464,9 @@ void FFbxImporter::ExtractMaterialData(
         FMeshSubset Subset;
         Subset.MaterialIndex = MaterialSlotIndex; // OutMaterials 배열의 인덱스
         Subset.StartIndexLocation = 0;
-        Subset.IndexCount = TempOriginalIndices.Num();
+        Subset.IndexCount = InTriangleIndices.Num();
         Subset.BaseVertexLocation = 0;
         OutSubsets.Add(Subset);
-        OutTriangleIndices = TempOriginalIndices;
     }
     else if (MappingMode == FbxLayerElement::eByPolygon)
     {
@@ -505,26 +491,26 @@ void FFbxImporter::ExtractMaterialData(
                 MaterialSlotIndex = 0; // 유효하지 않으면 기본 머티리얼 (0번) 사용
             }
 
-            // 현재 폴리곤(삼각형)에 해당하는 정점 인덱스 3개를 TempOriginalIndices에서 가져옵니다.
-            // TempOriginalIndices는 모든 삼각형의 정점 인덱스가 순차적으로 저장되어 있습니다.
-            const int32 BaseIndexInTempArray = PolyIdx * 3; // 현재 삼각형의 첫 번째 정점 인덱스가 TempOriginalIndices에서 시작하는 위치
+            // 현재 폴리곤(삼각형)에 해당하는 정점 인덱스 3개를 InTriangleIndices에서 가져옵니다.
+            // InTriangleIndices는 모든 삼각형의 정점 인덱스가 순차적으로 저장되어 있습니다.
+            const int32 BaseIndexInTempArray = PolyIdx * 3; // 현재 삼각형의 첫 번째 정점 인덱스가 InTriangleIndices에서 시작하는 위치
 
-            // TempOriginalIndices 배열의 범위를 벗어나지 않는지 확인
-            if ((BaseIndexInTempArray + 2) < TempOriginalIndices.Num())
+            // InTriangleIndices 배열의 범위를 벗어나지 않는지 확인
+            if ((BaseIndexInTempArray + 2) < InTriangleIndices.Num())
             {
                 TArray<uint32>& IndicesForThisMaterialSlot = TempMaterialToVertexIndices.FindOrAdd(MaterialSlotIndex);
 
-                // TempOriginalIndices에서 현재 삼각형의 정점 인덱스 3개를 가져와 추가
-                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 0]);
-                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 1]);
-                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 2]);
+                // InTriangleIndices에서 현재 삼각형의 정점 인덱스 3개를 가져와 추가
+                IndicesForThisMaterialSlot.Add(InTriangleIndices[BaseIndexInTempArray + 0]);
+                IndicesForThisMaterialSlot.Add(InTriangleIndices[BaseIndexInTempArray + 1]);
+                IndicesForThisMaterialSlot.Add(InTriangleIndices[BaseIndexInTempArray + 2]);
             }
             else
             {
-                // 이 경우는 TempOriginalIndices가 잘못 채워졌거나 PolygonCount와 일치하지 않을 때 발생 가능.
+                // 이 경우는 InTriangleIndices가 잘못 채워졌거나 PolygonCount와 일치하지 않을 때 발생 가능.
                 // 또는 Triangulate가 제대로 안 됐을 때 발생할 수도 있음.
                 UE_LOG(
-                    ELogLevel::Warning, "Index out of bounds while accessing TempOriginalIndices for polygon %d in mesh %s.",
+                    ELogLevel::Warning, "Index out of bounds while accessing InTriangleIndices for polygon %d in mesh %s.",
                     PolyIdx, *FString(InMesh->GetName())
                 );
             }
@@ -550,8 +536,6 @@ void FFbxImporter::ExtractMaterialData(
                 Subset.BaseVertexLocation = 0; // 보통 단일 정점 버퍼를 사용하므로 0
                 OutSubsets.Add(Subset);
 
-                // 최종 인덱스 배열(OutTriangleIndices)에 현재 머티리얼의 정점 인덱스들을 추가
-                OutTriangleIndices.Append(VertexIndicesForThisMaterial);
                 CurrentGlobalIndexOffset += VertexIndicesForThisMaterial.Num();
             }
         }
@@ -561,14 +545,12 @@ void FFbxImporter::ExtractMaterialData(
         FMeshSubset Subset;
         Subset.MaterialIndex = 0;
         Subset.StartIndexLocation = 0;
-        Subset.IndexCount = TempOriginalIndices.Num();
+        Subset.IndexCount = InTriangleIndices.Num();
         Subset.BaseVertexLocation = 0;
         OutSubsets.Add(Subset);
-        OutTriangleIndices = TempOriginalIndices;
     }
 
     OutSubsets.Shrink();
-    OutTriangleIndices.Shrink(); // 최종 인덱스 배열도 최적화
 }
 
 
