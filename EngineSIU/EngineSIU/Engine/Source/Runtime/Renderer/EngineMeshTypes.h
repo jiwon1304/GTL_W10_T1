@@ -75,29 +75,50 @@ public:
 };
 
 // 머티리얼 정보 (PBR 기반 예시)
-// TODO: 기본 Material 만들기
 struct FMaterialInfo
 {
-    FName Name;
-    FString DiffuseMapPath;
-    FString NormalMapPath;
-    FString SpecularMapPath;
-    FString RoughnessMapPath;
-    FString MetallicMapPath;
-    FString EmissiveMapPath;
-    FLinearColor DiffuseAlbedo;
+    FName Name; // 머티리얼 이름
+
+    // --- 텍스처 경로 ---
+    FString BaseColorMapPath;        // Albedo 또는 Diffuse 텍스처 (PBR에서는 BaseColor)
+    FString NormalMapPath;           // 탄젠트 공간 노멀 맵
+    FString MetallicMapPath;         // 금속성 맵 (회색조)
+    FString RoughnessMapPath;        // 거칠기 맵 (회색조)
+    FString EmissiveMapPath;         // 발광 맵
+    FString AmbientOcclusionMapPath; // 앰비언트 오클루전 맵 (선택 사항)
+    // FString SpecularMapPath;         // Specular 워크플로우용 (Metallic 워크플로우에서는 덜 직접적)
+
+    // --- 스칼라 PBR 파라미터 (텍스처 없을 시 기본값 또는 텍스처와 곱해질 값) ---
+    FLinearColor BaseColorFactor = FLinearColor::White; // 기본 색상 값 (텍스처와 곱해짐)
+    float MetallicFactor = 0.0f;                        // 기본 금속성 (0: 비금속, 1: 금속)
+    float RoughnessFactor = 0.5f;                       // 기본 거칠기 (0: 매끄러움, 1: 거침)
+    FLinearColor EmissiveFactor = FLinearColor::Black;  // 기본 발광 색상
+    float NormalMapStrength = 1.0f;                     // 노멀맵 강도
+    // float Opacity = 1.0f;                               // 불투명도 (1.0: 불투명, 0.0: 완전 투명)
+    // bool bIsTwoSided = false;                           // 양면 렌더링 여부
 
 public:
+    FMaterialInfo() = default; // 기본 생성자
+
     friend FArchive& operator<<(FArchive& Ar, FMaterialInfo& Data)
     {
-        return Ar << Data.Name
-                  << Data.DiffuseMapPath
-                  << Data.NormalMapPath
-                  << Data.SpecularMapPath
-                  << Data.RoughnessMapPath
-                  << Data.MetallicMapPath
-                  << Data.EmissiveMapPath
-                  << Data.DiffuseAlbedo;
+        Ar << Data.Name
+           << Data.BaseColorMapPath
+           << Data.NormalMapPath
+           << Data.MetallicMapPath
+           << Data.RoughnessMapPath
+           << Data.EmissiveMapPath
+           << Data.AmbientOcclusionMapPath;
+        // << Data.SpecularMapPath;
+
+        Ar << Data.BaseColorFactor
+           << Data.MetallicFactor
+           << Data.RoughnessFactor
+           << Data.EmissiveFactor
+           << Data.NormalMapStrength;
+        // << Data.Opacity
+        // << Data.bIsTwoSided;
+        return Ar;
     }
 };
 

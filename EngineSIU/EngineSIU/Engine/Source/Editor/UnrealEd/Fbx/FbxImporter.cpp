@@ -11,6 +11,48 @@ namespace fs = std::filesystem;
 std::shared_ptr<FFbxImporter> FFbxImporter::StaticInstance = nullptr;
 
 
+namespace
+{
+// 헬퍼 함수: FbxProperty에서 텍스처 경로 추출
+FString GetTexturePathFromProperty(const FbxProperty& Property)
+{
+    if (Property.IsValid() && Property.GetSrcObjectCount<FbxFileTexture>() > 0)
+    {
+        if (const FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(0))
+        {
+            // GetRelativeFileName() 또는 GetFileName() 사용. 상대 경로가 더 좋을 수 있음.
+            return FString{Texture->GetFileName()};
+        }
+    }
+    return FString{};
+}
+
+// 헬퍼 함수: FbxProperty에서 FLinearColor 추출
+FLinearColor GetLinearColorFromProperty(const FbxProperty& Property, const FLinearColor& DefaultValue = FLinearColor::White)
+{
+    if (Property.IsValid())
+    {
+        FbxDouble3 Color = Property.Get<FbxDouble3>();
+        // FBX 색상은 보통 감마 공간일 수 있으므로, 필요시 선형 공간으로 변환해야 함.
+        // 여기서는 이미 선형이라고 가정하거나, 변환 로직 추가.
+        // return FLinearColor{static_cast<float>(Color[0]), static_cast<float>(Color[1]), static_cast<float>(Color[2]), 1.0f};
+        return Convert<FLinearColor>(Color);
+    }
+    return DefaultValue;
+}
+
+// 헬퍼 함수: FbxProperty에서 float 값 추출
+float GetFloatFromProperty(const FbxProperty& Property, float DefaultValue = 0.0f)
+{
+    if (Property.IsValid())
+    {
+        return static_cast<float>(Property.Get<FbxDouble>()); // 또는 FbxFloat 등
+    }
+    return DefaultValue;
+}
+}
+
+
 FFbxImporter::FFbxImporter()
 {
     InitializeSdk();
@@ -264,164 +306,269 @@ void FFbxImporter::ProcessSkeletalMesh(const FbxNode* InNode, FbxMesh* InMesh, U
 }
 
 // 머티리얼 및 서브셋 데이터 추출
-void FFbxImporter::ExtractMaterialData(const FbxNode* InNode, FbxMesh* InMesh, TArray<FMaterialInfo>& OutMaterials, TArray<FMeshSubset>& OutSubsets, const TArray<uint32>& InIndices) const
-{
-	const int MaterialCount = InNode->GetMaterialCount();
-	OutMaterials.Empty(MaterialCount);
-	OutSubsets.Empty(); // 서브셋은 동적으로 생성될 수 있음
+void FFbxImporter::ExtractMaterialData(
+    const FbxNode* InNode, FbxMesh* InMesh,
+    TArray<FMaterialInfo>& OutMaterials,
+    TArray<FMeshSubset>& OutSubsets,
+    TArray<uint32>& OutTriangleIndices
+) const {
+    const int MaterialCount = InNode->GetMaterialCount();
+    OutMaterials.Empty(MaterialCount > 0 ? MaterialCount : 1);
+    OutSubsets.Empty();
+    OutTriangleIndices.Empty(); // 최종 인덱스 배열 초기화
 
-	// 1. 머티리얼 정보 파싱
-	for (int i = 0; i < MaterialCount; ++i)
-	{
-		FbxSurfaceMaterial* SurfaceMaterial = InNode->GetMaterial(i);
-		if (!SurfaceMaterial) continue;
+    TArray<uint32> TempOriginalIndices;
+    const int NumPolygons = InMesh->GetPolygonCount(); // 메쉬의 폴리곤 개수
+    TempOriginalIndices.Reserve(NumPolygons * 3);
 
-		FMaterialInfo NewMaterialInfo;
-		NewMaterialInfo.Name = SurfaceMaterial->GetName();
-
-		// PBR Standard Material 파싱 시도 (예시)
-		if (SurfaceMaterial->GetClassId().Is(FbxSurfacePhong::ClassId)) // 또는 Lambert 등
-		{
-			// Diffuse Texture
-			FbxProperty DiffuseProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sDiffuse);
-			if (DiffuseProp.IsValid() && DiffuseProp.GetSrcObjectCount<FbxFileTexture>() > 0)
-			{
-				const FbxFileTexture* Texture = DiffuseProp.GetSrcObject<FbxFileTexture>(0);
-				if (Texture) NewMaterialInfo.DiffuseMapPath = FString(Texture->GetFileName());
-			}
-			// Diffuse Color Factor
-			FbxDouble3 DiffuseColor = static_cast<FbxSurfacePhong*>(SurfaceMaterial)->Diffuse.Get();
-			NewMaterialInfo.DiffuseAlbedo = Convert<FLinearColor>(DiffuseColor);
-
-			// TODO: Normal Map, Roughness, Metallic 등 파싱 (FBX 표준 속성 또는 커스텀 속성 확인 필요)
-			// 예: Normal Map
-            FbxProperty NormalProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sNormalMap);
-             if (NormalProp.IsValid() && NormalProp.GetSrcObjectCount<FbxFileTexture>() > 0)
-            {
-                const FbxFileTexture* Texture = NormalProp.GetSrcObject<FbxFileTexture>(0);
-                if (Texture) NewMaterialInfo.NormalMapPath = FString(Texture->GetFileName());
-            }
-		}
-		// TODO: 다른 종류의 Surface Material 처리 (StandardPBR 등)
-
-		OutMaterials.Add(NewMaterialInfo);
-	}
-	if(MaterialCount == 0)
-	{
-		// 기본 머티리얼 추가 (만약 필요하다면)
-		FMaterialInfo DefaultMaterial;
-		DefaultMaterial.Name = FName("DefaultMaterial");
-		OutMaterials.Add(DefaultMaterial);
-	}
-
-
-	// 2. 서브셋 정보 생성 (머티리얼 할당 기반)
-	FbxLayerElementMaterial* LayerMaterial = InMesh->GetLayer(0)->GetMaterials();
-	if (!LayerMaterial)
-	{
-		// 머티리얼 할당 정보 없음 -> 단일 서브셋 사용 가정
-		if (OutMaterials.Num() > 0)
-		{
-			FMeshSubset Subset;
-			Subset.MaterialIndex = 0; // 첫 번째 (또는 기본) 머티리얼
-			Subset.StartIndexLocation = 0;
-			Subset.IndexCount = InIndices.Num();
-			Subset.BaseVertexLocation = 0;
-			OutSubsets.Add(Subset);
-		}
-		return;
-	}
-
-	const FbxLayerElement::EMappingMode MappingMode = LayerMaterial->GetMappingMode();
-	const FbxLayerElement::EReferenceMode ReferenceMode = LayerMaterial->GetReferenceMode();
-
-	if (MappingMode == FbxLayerElement::eAllSame)
-	{
-		// 모든 폴리곤이 같은 머티리얼 사용
-		int MaterialIndex = 0;
-		if (ReferenceMode == FbxLayerElement::eIndex || ReferenceMode == FbxLayerElement::eIndexToDirect)
-		{
-			if (LayerMaterial->GetIndexArray().GetCount() > 0)
-				MaterialIndex = LayerMaterial->GetIndexArray().GetAt(0);
-		}
-		// 유효한 인덱스인지 확인
-		if (MaterialIndex < 0 || MaterialIndex >= OutMaterials.Num()) MaterialIndex = 0;
-
-		if (OutMaterials.Num() > 0)
-		{
-			FMeshSubset Subset;
-			Subset.MaterialIndex = MaterialIndex;
-			Subset.StartIndexLocation = 0;
-			Subset.IndexCount = InIndices.Num();
-			Subset.BaseVertexLocation = 0;
-			OutSubsets.Add(Subset);
-		}
-	}
-	else if (MappingMode == FbxLayerElement::eByPolygon)
-	{
-		// 폴리곤별로 머티리얼 인덱스 할당
-		TMap<int32, TArray<uint32>> MaterialToIndicesMap; // MaterialIndex -> 해당 폴리곤들의 인덱스 목록
-		const int PolygonCount = InMesh->GetPolygonCount();
-
-		for (int PolyIdx = 0; PolyIdx < PolygonCount; ++PolyIdx)
-		{
-			int MaterialIndex = 0; // 기본값
-			if (ReferenceMode == FbxLayerElement::eIndex || ReferenceMode == FbxLayerElement::eIndexToDirect)
-			{
-				if (PolyIdx < LayerMaterial->GetIndexArray().GetCount())
-					MaterialIndex = LayerMaterial->GetIndexArray().GetAt(PolyIdx);
-			}
-			// 유효한 인덱스 보장
-			if (MaterialIndex < 0 || MaterialIndex >= OutMaterials.Num()) MaterialIndex = 0;
-			if (OutMaterials.IsEmpty()) MaterialIndex = -1; // 머티리얼 없으면 -1
-
-			// 이 폴리곤(삼각형)에 해당하는 인덱스 3개를 가져옴
-			const int32 StartIdx = PolyIdx * 3;
-			TArray<uint32>& IndicesForMaterial = MaterialToIndicesMap.FindOrAdd(MaterialIndex);
-			IndicesForMaterial.Add(InIndices[StartIdx]);
-			IndicesForMaterial.Add(InIndices[StartIdx + 1]);
-			IndicesForMaterial.Add(InIndices[StartIdx + 2]);
-		}
-
-		// 재구성된 인덱스 버퍼 및 서브셋 생성
-		TArray<uint32> ReorderedIndices;
-		uint32 CurrentStartIndex = 0;
-		for (auto const& Pair : MaterialToIndicesMap)
-		{
-			const int32 MaterialIndex = Pair.Key;
-			const TArray<uint32>& Indices = Pair.Value;
-
-			if (MaterialIndex != -1 && !Indices.IsEmpty())
-			{
-				FMeshSubset Subset;
-				Subset.MaterialIndex = MaterialIndex;
-				Subset.StartIndexLocation = CurrentStartIndex;
-				Subset.IndexCount = Indices.Num();
-				Subset.BaseVertexLocation = 0; // BaseVertexLocation은 보통 0 (모든 버텍스를 하나의 버퍼에 넣는 경우)
-				OutSubsets.Add(Subset);
-
-				ReorderedIndices.Append(Indices);
-				CurrentStartIndex += Indices.Num();
-			}
-		}
-		// 원본 인덱스 배열을 재정렬된 것으로 교체 (주의: 이렇게 하면 원본 InIndices 파라미터는 변경되지 않음. 포인터나 레퍼런스로 받아야 변경 가능)
-		// InIndices = ReorderedIndices; // 실제로는 이렇게 할당 X, OutIndices를 수정해야 함.
-		// --> 이 함수는 InIndices를 const TArray<uint32>& 로 받는 것이 더 안전.
-		// --> 또는 외부에서 인덱스 버퍼를 최종적으로 구성하도록 로직 변경 필요.
-		// 여기서는 서브셋 정보만 생성하는 것으로 가정. 실제 인덱스 버퍼 구성은 별도 단계에서.
-	} else {
-         // UE_LOG(LogFbx, Warning, TEXT("Unsupported material mapping mode: %d"), MappingMode);
-         // 지원하지 않는 모드 -> 기본 처리 (단일 서브셋 등)
-         if (OutMaterials.Num() > 0) {
-             FMeshSubset Subset;
-             Subset.MaterialIndex = 0;
-             Subset.StartIndexLocation = 0;
-             Subset.IndexCount = InIndices.Num();
-             Subset.BaseVertexLocation = 0;
-             OutSubsets.Add(Subset);
-         }
+    for (int PolyIdx = 0; PolyIdx < NumPolygons; ++PolyIdx)
+    {
+        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 0)));
+        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 1)));
+        TempOriginalIndices.Add(static_cast<uint32>(InMesh->GetPolygonVertex(PolyIdx, 2)));
     }
-	OutSubsets.Shrink();
+
+    // 1. 머티리얼 정보 파싱
+    for (int i = 0; i < MaterialCount; ++i)
+    {
+        FbxSurfaceMaterial* SurfaceMaterial = InNode->GetMaterial(i);
+        if (!SurfaceMaterial) continue;
+
+        FMaterialInfo NewMaterialInfo;
+        NewMaterialInfo.Name = FName(SurfaceMaterial->GetName());
+
+        // 블렌더의 Principled BSDF는 내부적으로 FbxSurfacePhong 또는 FbxSurfaceLambert로 익스포트될 수 있으며,
+        // PBR 값들은 표준 프로퍼티 또는 "PBR_" 접두사가 붙은 동적 프로퍼티로 나올 수 있습니다.
+        // Autodesk Standard Surface 규격을 따르는 프로퍼티를 우선적으로 찾아봅니다.
+
+        // --- BaseColor (Albedo) ---
+        FbxProperty BaseColorTexProp = SurfaceMaterial->FindProperty("Maya|baseColor_tex");                // Maya/Stingray PBR
+        if (!BaseColorTexProp.IsValid()) BaseColorTexProp = SurfaceMaterial->FindProperty("DiffuseColor"); // Blender의 일반적인 Diffuse
+        if (!BaseColorTexProp.IsValid()) BaseColorTexProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sDiffuse);
+        NewMaterialInfo.BaseColorMapPath = GetTexturePathFromProperty(BaseColorTexProp);
+
+        FbxProperty BaseColorFactorProp = SurfaceMaterial->FindProperty("Maya|baseColor");
+        if (!BaseColorFactorProp.IsValid()) BaseColorFactorProp = SurfaceMaterial->FindProperty("DiffuseColorFactor");
+        if (!BaseColorFactorProp.IsValid()) BaseColorFactorProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sDiffuseFactor);
+        NewMaterialInfo.BaseColorFactor = GetLinearColorFromProperty(BaseColorFactorProp, FLinearColor::White);
+
+        // --- Metallic ---
+        FbxProperty MetallicTexProp = SurfaceMaterial->FindProperty("Maya|metalness_tex");
+        if (!MetallicTexProp.IsValid()) MetallicTexProp = SurfaceMaterial->FindProperty("MetallicMap"); // 일반적인 이름 시도
+        NewMaterialInfo.MetallicMapPath = GetTexturePathFromProperty(MetallicTexProp);
+
+        FbxProperty MetallicFactorProp = SurfaceMaterial->FindProperty("Maya|metalness");
+        if (!MetallicFactorProp.IsValid()) MetallicFactorProp = SurfaceMaterial->FindProperty("MetallicFactor");
+        if (!MetallicFactorProp.IsValid()) MetallicFactorProp = SurfaceMaterial->FindProperty("PBR_Metallic"); // 언리얼 FBX 임포터가 사용하는 이름
+        NewMaterialInfo.MetallicFactor = GetFloatFromProperty(MetallicFactorProp, 0.0f);
+
+        // --- Roughness ---
+        FbxProperty RoughnessTexProp = SurfaceMaterial->FindProperty("Maya|specularRoughness_tex");
+        if (!RoughnessTexProp.IsValid()) RoughnessTexProp = SurfaceMaterial->FindProperty("RoughnessMap");
+        NewMaterialInfo.RoughnessMapPath = GetTexturePathFromProperty(RoughnessTexProp);
+
+        FbxProperty RoughnessFactorProp = SurfaceMaterial->FindProperty("Maya|specularRoughness");
+        if (!RoughnessFactorProp.IsValid()) RoughnessFactorProp = SurfaceMaterial->FindProperty("RoughnessFactor");
+        if (!RoughnessFactorProp.IsValid()) RoughnessFactorProp = SurfaceMaterial->FindProperty("PBR_Roughness");
+        NewMaterialInfo.RoughnessFactor = GetFloatFromProperty(RoughnessFactorProp, 0.5f);
+
+        // Fallback: Shininess (Ns) to Roughness (Phong)
+        if (NewMaterialInfo.RoughnessMapPath.IsEmpty() && FMath::IsNearlyEqual(NewMaterialInfo.RoughnessFactor, 0.5f))
+        {
+            FbxProperty ShininessProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sShininess);
+            if (ShininessProp.IsValid())
+            {
+                float Ns = static_cast<float>(ShininessProp.Get<FbxDouble>());
+                if (Ns > KINDA_SMALL_NUMBER)
+                {
+                    // Roughness = sqrt(1.0 - sqrt(Ns/1000.0)) for Blender
+                    // หรือ Roughness = pow(1.0 - Ns/1000.0, 2.0)
+                    // 다음은 일반적인 변환 중 하나:
+                    NewMaterialInfo.RoughnessFactor = FMath::Sqrt(2.0f / (Ns + 2.0f));
+                    NewMaterialInfo.RoughnessFactor = FMath::Clamp(NewMaterialInfo.RoughnessFactor, 0.01f, 1.0f);
+                }
+            }
+        }
+
+        // --- Normal Map ---
+        FbxProperty NormalTexProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sNormalMap);
+        if (!NormalTexProp.IsValid()) NormalTexProp = SurfaceMaterial->FindProperty("NormalMap"); // 일부 익스포터
+        NewMaterialInfo.NormalMapPath = GetTexturePathFromProperty(NormalTexProp);
+
+        FbxProperty BumpFactorProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sBumpFactor); // 노멀맵 강도
+        NewMaterialInfo.NormalMapStrength = GetFloatFromProperty(BumpFactorProp, 1.0f);
+
+        // --- Emissive ---
+        FbxProperty EmissiveTexProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sEmissive);
+        NewMaterialInfo.EmissiveMapPath = GetTexturePathFromProperty(EmissiveTexProp);
+
+        FbxProperty EmissiveFactorProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sEmissiveFactor);
+        NewMaterialInfo.EmissiveFactor = GetLinearColorFromProperty(EmissiveFactorProp, FLinearColor::Black);
+
+        // --- Alpha / Opacity ---
+        // 블렌더는 Alpha 입력을 사용. FBX에서는 sTransparencyFactor (0=opaque, 1=transparent) 또는
+        // sTransparentColor (색상의 알파채널)로 표현될 수 있음.
+        // Principled BSDF의 Alpha는 sTransparencyFactor와 반대일 수 있음.
+        FbxProperty AlphaProp = SurfaceMaterial->FindProperty("Maya|opacity"); // Maya
+        if (!AlphaProp.IsValid()) AlphaProp = SurfaceMaterial->FindProperty("Opacity");
+        if (AlphaProp.IsValid())
+        {
+            NewMaterialInfo.BaseColorFactor.A = GetFloatFromProperty(AlphaProp, 1.0f);
+        }
+        else
+        {
+            FbxProperty TransparencyFactorProp = SurfaceMaterial->FindProperty(FbxSurfaceMaterial::sTransparencyFactor);
+            if (TransparencyFactorProp.IsValid())
+            {
+                NewMaterialInfo.BaseColorFactor.A = 1.0f - GetFloatFromProperty(TransparencyFactorProp, 0.0f);
+            }
+        }
+
+        // TODO: Ambient Occlusion (AO) - 블렌더에서 AO맵을 FBX로 직접 보내는 표준 방법이 명확하지 않음.
+        // 보통은 BaseColor와 동일 UV를 사용하는 별도 텍스처로 준비하고, 파일명 규칙으로 찾거나,
+        // glTF 익스포트 시에는 occlusionTexture로 지정됨. FBX에서는 커스텀 프로퍼티를 확인해야 할 수 있음.
+        // 예시: FbxProperty AOTextureProp = SurfaceMaterial->FindProperty("OcclusionMap");
+        // NewMaterialInfo.AmbientOcclusionMapPath = GetTexturePathFromProperty(AOTextureProp);
+
+        OutMaterials.Add(NewMaterialInfo);
+    }
+
+    if (OutMaterials.IsEmpty())
+    {
+        FMaterialInfo DefaultMaterial;
+        DefaultMaterial.Name = FName("DefaultFBXMaterial_Blender");
+        // 기본 PBR 값 설정
+        OutMaterials.Add(DefaultMaterial);
+    }
+
+    // 2. 서브셋 정보 생성 및 인덱스 재정렬
+    FbxLayerElementMaterial* LayerMaterial = nullptr;
+    if (InMesh->GetLayerCount() > 0)
+    {
+        LayerMaterial = InMesh->GetLayer(0)->GetMaterials();
+    }
+
+    if (!LayerMaterial || InMesh->GetPolygonCount() == 0) // 폴리곤이 없거나 머티리얼 정보 없으면
+    {
+        FMeshSubset Subset;
+        Subset.MaterialIndex = 0;
+        Subset.StartIndexLocation = 0;
+        Subset.IndexCount = TempOriginalIndices.Num(); // 삼각형화된 인덱스 수
+        Subset.BaseVertexLocation = 0;
+        OutSubsets.Add(Subset);
+        OutTriangleIndices = TempOriginalIndices; // 원본 인덱스 그대로 사용
+        return;
+    }
+
+    const FbxLayerElement::EMappingMode MappingMode = LayerMaterial->GetMappingMode();
+    const FbxLayerElement::EReferenceMode ReferenceMode = LayerMaterial->GetReferenceMode();
+    uint32 CurrentGlobalIndexOffset = 0;
+
+    if (MappingMode == FbxLayerElement::eAllSame)
+    {
+        int MaterialSlotIndex = 0; // FBX 머티리얼 슬롯 인덱스
+        if (ReferenceMode == FbxLayerElement::eIndexToDirect || ReferenceMode == FbxLayerElement::eIndex)
+        {
+            if (LayerMaterial->GetIndexArray().GetCount() > 0)
+                MaterialSlotIndex = LayerMaterial->GetIndexArray().GetAt(0);
+        }
+        if (MaterialSlotIndex < 0 || MaterialSlotIndex >= OutMaterials.Num()) MaterialSlotIndex = 0;
+
+        FMeshSubset Subset;
+        Subset.MaterialIndex = MaterialSlotIndex; // OutMaterials 배열의 인덱스
+        Subset.StartIndexLocation = 0;
+        Subset.IndexCount = TempOriginalIndices.Num();
+        Subset.BaseVertexLocation = 0;
+        OutSubsets.Add(Subset);
+        OutTriangleIndices = TempOriginalIndices;
+    }
+    else if (MappingMode == FbxLayerElement::eByPolygon)
+    {
+        TMap<int32 /*MaterialSlotIndex*/, TArray<uint32> /*TriangleVertexIndices*/> TempMaterialToVertexIndices;
+        const int PolygonCount = InMesh->GetPolygonCount(); // 각 폴리곤은 삼각형
+
+        for (int PolyIdx = 0; PolyIdx < PolygonCount; ++PolyIdx)
+        {
+            int MaterialSlotIndex = 0; // 이 폴리곤에 할당된 머티리얼 슬롯 인덱스
+            if (ReferenceMode == FbxLayerElement::eIndexToDirect || ReferenceMode == FbxLayerElement::eIndex)
+            {
+                // LayerMaterial의 인덱스 배열은 폴리곤당 하나의 머티리얼 인덱스를 가집니다.
+                if (PolyIdx < LayerMaterial->GetIndexArray().GetCount())
+                {
+                    MaterialSlotIndex = LayerMaterial->GetIndexArray().GetAt(PolyIdx);
+                }
+            }
+
+            // 가져온 MaterialSlotIndex가 OutMaterials 배열 범위 내에 있는지 확인
+            if (MaterialSlotIndex < 0 || MaterialSlotIndex >= OutMaterials.Num())
+            {
+                MaterialSlotIndex = 0; // 유효하지 않으면 기본 머티리얼 (0번) 사용
+            }
+
+            // 현재 폴리곤(삼각형)에 해당하는 정점 인덱스 3개를 TempOriginalIndices에서 가져옵니다.
+            // TempOriginalIndices는 모든 삼각형의 정점 인덱스가 순차적으로 저장되어 있습니다.
+            const int32 BaseIndexInTempArray = PolyIdx * 3; // 현재 삼각형의 첫 번째 정점 인덱스가 TempOriginalIndices에서 시작하는 위치
+
+            // TempOriginalIndices 배열의 범위를 벗어나지 않는지 확인
+            if ((BaseIndexInTempArray + 2) < TempOriginalIndices.Num())
+            {
+                TArray<uint32>& IndicesForThisMaterialSlot = TempMaterialToVertexIndices.FindOrAdd(MaterialSlotIndex);
+
+                // TempOriginalIndices에서 현재 삼각형의 정점 인덱스 3개를 가져와 추가
+                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 0]);
+                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 1]);
+                IndicesForThisMaterialSlot.Add(TempOriginalIndices[BaseIndexInTempArray + 2]);
+            }
+            else
+            {
+                // 이 경우는 TempOriginalIndices가 잘못 채워졌거나 PolygonCount와 일치하지 않을 때 발생 가능.
+                // 또는 Triangulate가 제대로 안 됐을 때 발생할 수도 있음.
+                UE_LOG(
+                    ELogLevel::Warning, "Index out of bounds while accessing TempOriginalIndices for polygon %d in mesh %s.",
+                    PolyIdx, *FString(InMesh->GetName())
+                );
+            }
+        }
+
+        // 머티리얼 슬롯 인덱스 순서대로 (또는 원하는 순서대로) 서브셋 및 최종 인덱스 구성
+        // TMap은 순서가 보장되지 않으므로, 필요시 정렬된 키로 순회
+        TArray<int32> SortedMaterialSlots;
+        TempMaterialToVertexIndices.GetKeys(SortedMaterialSlots);
+        SortedMaterialSlots.Sort(); // 머티리얼 인덱스 순으로 정렬
+
+        for (int32 MaterialSlotIndex : SortedMaterialSlots)
+        {
+            const TArray<uint32>* VertexIndicesPtr = TempMaterialToVertexIndices.Find(MaterialSlotIndex);
+            if (VertexIndicesPtr && VertexIndicesPtr->Num() > 0)
+            {
+                const TArray<uint32>& VertexIndicesForThisMaterial = *VertexIndicesPtr;
+
+                FMeshSubset Subset;
+                Subset.MaterialIndex = MaterialSlotIndex; // 실제 OutMaterials 배열의 인덱스
+                Subset.StartIndexLocation = CurrentGlobalIndexOffset; // 최종 인덱스 배열에서의 시작 위치
+                Subset.IndexCount = VertexIndicesForThisMaterial.Num();
+                Subset.BaseVertexLocation = 0; // 보통 단일 정점 버퍼를 사용하므로 0
+                OutSubsets.Add(Subset);
+
+                // 최종 인덱스 배열(OutTriangleIndices)에 현재 머티리얼의 정점 인덱스들을 추가
+                OutTriangleIndices.Append(VertexIndicesForThisMaterial);
+                CurrentGlobalIndexOffset += VertexIndicesForThisMaterial.Num();
+            }
+        }
+    }
+    else // 기타 지원하지 않는 모드
+    {
+        FMeshSubset Subset;
+        Subset.MaterialIndex = 0;
+        Subset.StartIndexLocation = 0;
+        Subset.IndexCount = TempOriginalIndices.Num();
+        Subset.BaseVertexLocation = 0;
+        OutSubsets.Add(Subset);
+        OutTriangleIndices = TempOriginalIndices;
+    }
+
+    OutSubsets.Shrink();
+    OutTriangleIndices.Shrink(); // 최종 인덱스 배열도 최적화
 }
 
 

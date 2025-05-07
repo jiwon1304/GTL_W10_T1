@@ -89,7 +89,10 @@ private:
     ); // 각 Vertex가 어떤 Control Point에서 왔는지 추적
 
     void ExtractMaterialData(
-        const FbxNode* InNode, FbxMesh* InMesh, TArray<FMaterialInfo>& OutMaterials, TArray<FMeshSubset>& OutSubsets, const TArray<uint32>& InIndices
+        const FbxNode* InNode, FbxMesh* InMesh,
+        TArray<FMaterialInfo>& OutMaterials,
+        TArray<FMeshSubset>& OutSubsets,
+        TArray<uint32>& OutTriangleIndices
     ) const;
 
     void ExtractSkeletonData(const FbxMesh* InMesh, FSkeleton& OutSkeleton);
