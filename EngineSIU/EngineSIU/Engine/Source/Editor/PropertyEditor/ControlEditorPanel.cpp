@@ -249,13 +249,36 @@ void ControlEditorPanel::CreateMenuButton(const ImVec2 ButtonSize, ImFont* IconF
             {
                 std::cout << FileName << '\n';
 
-                if (FObjManager::CreateStaticMesh(FileName) == nullptr)
+                if (UAssetManager::Get().AddAsset(StringToWString(GetData(FileName))) == false)
                 {
                     tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
                 }
             }
         }
+        if (ImGui::MenuItem("FBX (.fbx)"))
+        {
+            TArray<FString> FileNames;
+            if (FDesktopPlatformWindows::OpenFileDialog(
+                "Open FBX File",
+                "",
+                {{
+                    .FilterPattern = "*.fbx",
+                    .Description = "FBX(.fbx) file"
+                }},
+                EFileDialogFlag::None,
+                FileNames
+            ))
+            {
+                const FString FileName = FileNames.Pop();
+                UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
 
+                if (UAssetManager::Get().AddAsset(StringToWString(GetData(FileName))) == false)
+                {
+                    tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
+                }
+                    
+            }
+        }
         ImGui::EndMenu();
     }
 
