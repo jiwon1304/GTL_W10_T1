@@ -491,6 +491,26 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
             GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
         }
 
+        if (ImGui::Button("Apply"))
+        {
+            UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
+            if (Engine)
+            {
+                //if (SkeletalMesh)
+                {
+                    for (auto Actor : Engine->EditorPreviewWorld->GetActiveLevel()->Actors)
+                    {
+                        if (Actor && Actor->IsA<AItemActor>())
+                        {
+                            USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
+                            SkeletalComp->overrideSkinningTransform = (PreviewSkeletalMeshComponent->overrideSkinningTransform);
+                        }
+                    }
+                }
+            }
+            GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
+        }
+
         ImGui::TreePop();
     }
     ImGui::PopStyleColor();
