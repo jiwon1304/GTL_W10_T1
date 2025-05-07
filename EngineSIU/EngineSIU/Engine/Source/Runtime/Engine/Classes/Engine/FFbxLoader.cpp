@@ -368,8 +368,7 @@ void FFbxLoader::LoadFbxSkeleton(
         for (int j = 0; j < 4; ++j)
             Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
-    FTransform Transform;
-    Transform.SetFromMatrix(Mat);
+    FTransform Transform{Mat};
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;
