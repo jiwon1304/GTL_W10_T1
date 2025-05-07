@@ -201,6 +201,23 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
     //}
 }
 
+TArray<int> USkeletalMeshComponent::GetChildrenOfBone(int InParentIndex) const
+{
+    if (SkeletalMesh == nullptr)
+        return TArray<int>();
+    FReferenceSkeleton refBones;
+    SkeletalMesh->GetRefSkeleton(refBones);
+    TArray<FMeshBoneInfo>& rawRefBones = refBones.RawRefBoneInfo;
+    // TODO: FMeshBoneInfo에 children Index 저장해서 접근하기.
+    TArray<int> result;
+    for (int i = std::max(InParentIndex, 0); i < rawRefBones.Num(); ++i)
+    {
+        if (rawRefBones[i].ParentIndex == InParentIndex)
+            result.Add(i);
+    }
+    return result;
+}
+
 const TMap<int, FString> USkeletalMeshComponent::GetBoneIndexToName()
 {
     TMap<int, FString> BoneIndexToName;

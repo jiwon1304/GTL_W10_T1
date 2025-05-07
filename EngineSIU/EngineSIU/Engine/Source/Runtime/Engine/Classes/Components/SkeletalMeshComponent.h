@@ -18,6 +18,7 @@ public:
     void SetSkeletalMesh(USkeletalMesh* InSkeletalMesh);
     void GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const;
     void GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const;
+    TArray<int> GetChildrenOfBone(int InParentIndex) const;
     const TMap<int, FString> GetBoneIndexToName();
     void ResetPose();
     

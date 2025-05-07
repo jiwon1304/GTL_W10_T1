@@ -480,24 +480,39 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
     if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
         ImGui::Text("Bone");
-        ImGui::SameLine();
 
         const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
-        FString PreviewName = boneIndexToName[SkeletalMeshComponent->SelectedBoneIndex];
-        
-        if (ImGui::BeginCombo("##SkinnedMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        std::function<void(int)> CreateNode = [&CreateNode, &SkeletalMeshComponent, &boneIndexToName](int InParentIndex)
         {
-            for (const auto& [index, boneName] : boneIndexToName)
-            {
-                if (ImGui::Selectable(GetData(boneName), false))
-                {
-                    FString MeshName = boneName;
-                    SkeletalMeshComponent->SelectedBoneIndex = index;
-                }
-            }
-            ImGui::EndCombo();
-        }
+            TArray<int> childrenIndices = SkeletalMeshComponent->GetChildrenOfBone(InParentIndex);
 
+            ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None;
+            if (childrenIndices.Num() == 0)
+                Flags |= ImGuiTreeNodeFlags_Leaf;
+            if (SkeletalMeshComponent->SelectedBoneIndex == InParentIndex)
+                Flags |= ImGuiTreeNodeFlags_Selected;
+
+            ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+            bool NodeOpen = ImGui::TreeNodeEx(GetData(boneIndexToName[InParentIndex]), Flags);
+            
+            if (ImGui::IsItemClicked())
+                SkeletalMeshComponent->SelectedBoneIndex = InParentIndex;
+            if (NodeOpen)
+            {
+                for (int childIndex : childrenIndices)
+                {
+                    CreateNode(childIndex);
+                }
+                ImGui::TreePop();
+            }
+        };
+
+        TArray<int> rootIndices = SkeletalMeshComponent->GetChildrenOfBone(-1);
+        for (int rootIndex : rootIndices)
+        {
+            CreateNode(rootIndex);
+        }
+        
         if (SkeletalMeshComponent->SelectedBoneIndex > -1)
         {
             ImGui::Text("Bone Pose");
