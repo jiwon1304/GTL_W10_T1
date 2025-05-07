@@ -3,6 +3,7 @@
 #include "UObject/Object.h"
 #include "EngineLoop.h" // Assuming Launch module, adjust if needed
 #include "UnrealClient.h"
+#include "WindowsCursor.h"
 #include "Widgets/SWindow.h" // Assuming SlateCore module
 #include "Widgets/Layout/SSplitter.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -101,28 +102,48 @@ void SAssetViewer::Tick(float DeltaTime)
 
 void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
 {
+    if (InEditorWidth == EditorWidth && InEditorHeight == EditorHeight)
+    {
+        return;
+    }
+
     EditorWidth = InEditorWidth;
     EditorHeight = InEditorHeight;
 
+    // Primary 스플리터 부터 리사이즈 전파
     if (PrimaryVSplitter)
     {
-        PrimaryVSplitter->SetRect(FRect(0, 0, static_cast<float>(InEditorWidth), static_cast<float>(InEditorHeight)));
+        //PrimaryVSplitter->SetRect(FRect(0, 0, static_cast<float>(InEditorWidth), static_cast<float>(InEditorHeight)));
         PrimaryVSplitter->OnResize(InEditorWidth, InEditorHeight);
+
+        FRect CenterAndRightAreaRect = PrimaryVSplitter->SideRB->GetRect();
+        if (CenterAndRightVSplitter)
+        {
+            CenterAndRightVSplitter->SetRect(CenterAndRightAreaRect);
+            CenterAndRightVSplitter->OnResize(static_cast<uint32>(CenterAndRightAreaRect.Width), static_cast<uint32>(CenterAndRightAreaRect.Height));
+
+            FRect RightSidebarAreaRect = CenterAndRightVSplitter->SideRB->GetRect();
+            if (RightSidebarHSplitter)
+            {
+                RightSidebarHSplitter->SetRect(RightSidebarAreaRect);
+            }
+        }
+
+        ResizeViewport();
     }
 
-    ResizeViewport();
 }
 
 void SAssetViewer::ResizeViewport()
 {
     if (PrimaryVSplitter)
     {
-        PrimaryVSplitter->UpdateChildRects();
-    }
-
-    if (ActiveViewportClient && ActiveViewportClient->GetViewport() && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
-    {
-        ActiveViewportClient->GetViewport()->ResizeViewport(CenterAndRightVSplitter->SideLT->GetRect());
+        FRect ViewportAreaRect = CenterAndRightVSplitter->SideLT->GetRect();
+        if (ActiveViewportClient && ActiveViewportClient->GetViewport() && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
+        {
+            const FRect FullRect(0.f, 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
+            ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
+        }
     }
 }
 
@@ -160,9 +181,8 @@ void SAssetViewer::RegisterViewerInputDelegates()
         Handler->OnRawKeyboardInputDelegate.Remove(Handle);
     }
     
-    InputDelegatesHandles.Empty();
+    //InputDelegatesHandles.Empty();
 
-    // 키보드 입력 델리게이트 등록 (ImGui 필터링 추가)
     InputDelegatesHandles.Add(Handler->OnKeyDownDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
     {
         if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
@@ -197,7 +217,6 @@ void SAssetViewer::RegisterViewerInputDelegates()
         }
     }));
     
-    // 마우스 우클릭 델리게이트
     InputDelegatesHandles.Add(Handler->OnMouseDownDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
         if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
@@ -212,13 +231,23 @@ void SAssetViewer::RegisterViewerInputDelegates()
 
         switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
         {
+        case EKeys::LeftMouseButton:
+            {
+                // @todo 피킹 로직 헬퍼 구현
+                break;
+            }
         case EKeys::RightMouseButton:
             {
                 if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
                 {
-                    // 마우스 커서 숨김
-                    ShowCursor(FALSE);
+                    FWindowsCursor::SetShowMouseCursor(false);
                     MousePinPosition = InMouseEvent.GetScreenSpacePosition();
+
+                    // 마우스 우클릭 상태 설정
+                    if (ActiveViewportClient)
+                    {
+                        ActiveViewportClient->SetRightMouseDown(true);
+                    }
                 }
                 break;
             }
@@ -230,6 +259,10 @@ void SAssetViewer::RegisterViewerInputDelegates()
         GetCursorPos(&Point);
         ScreenToClient(hWnd, &Point);
         const FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+
+        PrimaryVSplitter->OnPressed({ ClientPos.X, ClientPos.Y });
+        CenterAndRightVSplitter->OnPressed({ ClientPos.X, ClientPos.Y });
+        RightSidebarHSplitter->OnPressed({ ClientPos.X, ClientPos.Y });
         
         SelectViewport(ClientPos);
     }));
@@ -244,22 +277,130 @@ void SAssetViewer::RegisterViewerInputDelegates()
         switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
         {
         case EKeys::RightMouseButton:
+        {
+            // 우클릭 해제 시 상태 초기화
+            if (ActiveViewportClient)
             {
-                // 마우스 커서 표시
-                ShowCursor(TRUE);
-                // 마우스 위치 복원
-                SetCursorPos(
-                    static_cast<int>(MousePinPosition.X),
-                    static_cast<int>(MousePinPosition.Y)
-                );
-                break;
+                ActiveViewportClient->SetRightMouseDown(false);
             }
+
+            FWindowsCursor::SetShowMouseCursor(true);
+            FWindowsCursor::SetPosition(
+                static_cast<int32>(MousePinPosition.X),
+                static_cast<int32>(MousePinPosition.Y)
+            );
+            return;
+        }
+        // Viewport 선택 및 스플리터 해제 로직
+        case EKeys::LeftMouseButton:
+        {
+            // 모든 스플리터 해제
+            if (PrimaryVSplitter)
+            {
+                PrimaryVSplitter->OnReleased();
+            }
+            if (CenterAndRightVSplitter)
+            {
+                CenterAndRightVSplitter->OnReleased();
+            }
+            if (RightSidebarHSplitter)
+            {
+                RightSidebarHSplitter->OnReleased();
+            }
+            return;
+        }
+
         default:
-            break;
+            return;
         }
     }));
 
-    // 마우스 이동 델리게이트
+    InputDelegatesHandles.Add(Handler->OnMouseMoveDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
+    {
+        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        {
+            return;
+        }
+        
+        if (ImGui::GetIO().WantCaptureMouse)
+        {
+            return;
+        }
+
+        // Splitter 움직임 로직
+        if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
+        {
+            const auto& [DeltaX, DeltaY] = InMouseEvent.GetCursorDelta();
+
+            bool bIsSplitterDragging = false;
+            if (PrimaryVSplitter && PrimaryVSplitter->IsSplitterPressed())
+            {
+                PrimaryVSplitter->OnDrag(FPoint(DeltaX, DeltaY));
+                bIsSplitterDragging = true;
+            }
+            if (CenterAndRightVSplitter && CenterAndRightVSplitter->IsSplitterPressed())
+            {
+                CenterAndRightVSplitter->OnDrag(FPoint(DeltaX, DeltaY));
+                bIsSplitterDragging = true;
+            }
+            if (RightSidebarHSplitter && RightSidebarHSplitter->IsSplitterPressed())
+            {
+                RightSidebarHSplitter->OnDrag(FPoint(DeltaX, DeltaY));
+                bIsSplitterDragging = true;
+            }
+
+            if (bIsSplitterDragging)
+            {
+                if (PrimaryVSplitter)
+                {
+                    FRect CentralRightAreaRect = PrimaryVSplitter->SideRB->GetRect();
+                    if (CenterAndRightVSplitter)
+                    {
+                        CenterAndRightVSplitter->SetRect(CentralRightAreaRect);
+                        CenterAndRightVSplitter->OnResize(static_cast<uint32>(CentralRightAreaRect.Width), static_cast<uint32>(CentralRightAreaRect.Height));
+
+                        FRect RightSidebarAreaRect = CenterAndRightVSplitter->SideRB->GetRect();
+                        if (RightSidebarHSplitter)
+                        {
+                            RightSidebarHSplitter->SetRect(RightSidebarAreaRect);
+                        }
+                    }
+                }
+
+                ResizeViewport();
+            }
+        }
+
+        if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton) && !InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
+        {
+            ECursorType CursorType = ECursorType::Arrow;
+            POINT Point;
+            GetCursorPos(&Point);
+            FVector2D MousePos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+            //ScreenToClient(GEngineLoop.MainAppWnd, &Point);
+            //FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+
+            // 모든 스플리터에 대해 Hover 검사
+            bool bPrimaryHovered = PrimaryVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            bool bCentralRightHovered = CenterAndRightVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            bool bRightSidebarHovered = RightSidebarHSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            if (bPrimaryHovered)
+            {
+                CursorType = ECursorType::ResizeLeftRight;
+            }
+            else if (bCentralRightHovered)
+            {
+                CursorType = ECursorType::ResizeLeftRight;
+            }
+            else if (bRightSidebarHovered)
+            {
+                CursorType = ECursorType::ResizeUpDown;
+            }
+
+            FWindowsCursor::SetMouseCursor(CursorType);
+        }
+    }));
+
     InputDelegatesHandles.Add(Handler->OnRawMouseInputDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
         if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
@@ -280,10 +421,22 @@ void SAssetViewer::RegisterViewerInputDelegates()
                     ActiveViewportClient->MouseMove(InMouseEvent);
                 }
             }
+            // @todo Gizmo 조작
+        }
+        // 마우스 휠 이벤트
+        else if (InMouseEvent.GetEffectingButton() == EKeys::MouseWheelAxis)
+        {
+            // 카메라 속도 조절
+            if (InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton) && ActiveViewportClient->IsPerspective())
+            {
+                const float CurrentSpeed = ActiveViewportClient->GetCameraSpeedScalar();
+                const float Adjustment = FMath::Sign(InMouseEvent.GetWheelDelta()) * FMath::Loge(CurrentSpeed + 1.0f) * 0.5f;
+
+                ActiveViewportClient->SetCameraSpeed(CurrentSpeed + Adjustment);
+            }
         }
     }));
     
-    // 마우스 휠 델리게이트
     InputDelegatesHandles.Add(Handler->OnMouseWheelDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
         if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
@@ -312,7 +465,6 @@ void SAssetViewer::RegisterViewerInputDelegates()
             }
             else
             {
-                // 정적 메소드 호출
                 FEditorViewportClient::SetOthoSize(-InMouseEvent.GetWheelDelta());
             }
         }
