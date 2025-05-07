@@ -1,4 +1,5 @@
 #pragma once
+#include <format>
 #include "Container/Array.h"
 #include "D3D11RHI/GraphicDevice.h"
 #include "HAL/PlatformType.h"
@@ -22,6 +23,7 @@ static consteval const char* GetFileName(const char* Path)
 
 #define FILENAME GetFileName(__FILE__)
 #define UE_LOG(Level, Fmt, ...) FConsole::GetInstance().AddLog(Level, "[%s:%d] " Fmt, FILENAME, __LINE__, __VA_ARGS__)
+#define UE_LOG_FMT(Level, Fmt, ...) FConsole::GetInstance().AddLog(Level, std::format("[{}:{}] " Fmt, FILENAME, __LINE__, __VA_ARGS__))
 
 enum class ELogLevel : uint8
 {
@@ -99,6 +101,7 @@ public:
     void Clear();
     void AddLog(ELogLevel Level, const ANSICHAR* Fmt, ...);
     void AddLog(ELogLevel Level, const WIDECHAR* Fmt, ...);
+    void AddLog(ELogLevel Level, const FString& Message);
     void Draw();
     void ExecuteCommand(const std::string& Command);
     void OnResize(HWND hWnd);

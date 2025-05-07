@@ -236,6 +236,13 @@ public:
     FORCEINLINE FString& operator+=(const FString& SubStr);
     FORCEINLINE friend FString operator+(const FString& Lhs, const FString& Rhs);
 
+    // FString과 FString을 위한 operator/
+    friend FString operator/(const FString& Lhs, const FString& Rhs);
+
+    // FString과 C-스타일 문자열(TCHAR*)을 위한 operator/
+    friend FString operator/(const FString& Lhs, const ElementType* Rhs);
+    friend FString operator/(const ElementType* Lhs, const FString& Rhs);
+
     FORCEINLINE bool operator==(const FString& Rhs) const;
     FORCEINLINE bool operator==(const ElementType* Rhs) const;
     FORCEINLINE ElementType& operator[](int32 Index)
