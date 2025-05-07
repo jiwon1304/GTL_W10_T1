@@ -25,12 +25,12 @@ void USkeletalMesh::GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const
     }
 }
 
-FWString USkeletalMesh::GetOjbectName() const
+FString USkeletalMesh::GetOjbectName() const
 {
-    return RenderData->ObjectName;
+    return RenderData.ObjectName;
 }
 
-void USkeletalMesh::SetData(FSkeletalMeshRenderData* InRenderData,
+void USkeletalMesh::SetData(FSkeletalMeshRenderData InRenderData,
     FReferenceSkeleton InRefSkeleton, 
     TArray<FMatrix> InInverseBindPoseMatrices, 
     TArray<UMaterial*> InMaterials)

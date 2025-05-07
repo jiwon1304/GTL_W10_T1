@@ -87,7 +87,7 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
 
     FSkeletalMeshRenderData renderData;
-    renderData.ObjectName = StringToWString(*fbxObject->name);
+    renderData.ObjectName = fbxObject->name;
     renderData.RenderSections.SetNum(fbxObject->mesh.Num());
     renderData.MaterialSubsets.SetNum(fbxObject->materialSubsets.Num());
 
@@ -96,6 +96,28 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
         // TArray로 직접 접근해도 돼나?
         // 두 구조체의 메모리 레이아웃이 같아야함.
         renderData.RenderSections[i].Vertices.SetNum(fbxObject->mesh[i].vertices.Num());
+        for (int j = 0; j < fbxObject->mesh[i].vertices.Num(); ++j)
+        {
+            renderData.RenderSections[i].Vertices[j].Position = fbxObject->mesh[i].vertices[j].position;
+            renderData.RenderSections[i].Vertices[j].Color = fbxObject->mesh[i].vertices[j].color;
+            renderData.RenderSections[i].Vertices[j].Normal = fbxObject->mesh[i].vertices[j].normal;
+            renderData.RenderSections[i].Vertices[j].Tangent = fbxObject->mesh[i].vertices[j].tangent;
+            renderData.RenderSections[i].Vertices[j].UV = fbxObject->mesh[i].vertices[j].uv;
+            renderData.RenderSections[i].Vertices[j].MaterialIndex = fbxObject->mesh[i].vertices[j].materialIndex;
+            memcpy(
+                renderData.RenderSections[i].Vertices[j].BoneIndices,
+                fbxObject->mesh[i].vertices[j].boneIndices,
+                sizeof(int8) * 8
+            );
+            memcpy(
+                renderData.RenderSections[i].Vertices[j].BoneWeights,
+                fbxObject->mesh[i].vertices[j].boneWeights,
+                sizeof(float) * 8
+            );
+
+
+
+        }
         memcpy(
             renderData.RenderSections[i].Vertices.GetData(),
             fbxObject->mesh[i].vertices.GetData(),
@@ -110,7 +132,7 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     {
         renderData.MaterialSubsets[i] = fbxObject->materialSubsets[i];
     }
-    RenderDatas.Add(renderData);
+    //RenderDatas.Add(renderData);
 
     FReferenceSkeleton refSkeleton;
     refSkeleton.RawRefBoneInfo.SetNum(fbxObject->skeleton.joints.Num());
@@ -128,8 +150,8 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
 
     TArray<UMaterial*> Materials = fbxObject->material;
 
-    // 추가된 요소의 포인터 얻기
-    FSkeletalMeshRenderData* pRenderData = &RenderDatas[RenderDatas.Num()-1];
+    //// 추가된 요소의 포인터 얻기
+    //FSkeletalMeshRenderData* pRenderData = &RenderDatas[RenderDatas.Num()-1];
 
     TArray<FMatrix> InverseBindPoseMatrices;
     InverseBindPoseMatrices.SetNum(fbxObject->skeleton.joints.Num());
@@ -137,7 +159,7 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     {
         InverseBindPoseMatrices[i] = fbxObject->skeleton.joints[i].inverseBindPose;
     }
-    newSkeletalMesh->SetData(pRenderData, refSkeleton, InverseBindPoseMatrices, Materials);
+    newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
     newSkeletalMesh->bCPUSkinned = true;
     SkeletalMeshMap.Add(filename, newSkeletalMesh);
     return newSkeletalMesh;
@@ -324,6 +346,15 @@ void FFbxLoader::LoadFbxSkeleton(
 
     auto s = node->LclScaling.Get();
     joint.scale = FVector(s[0], s[1], s[2]);
+
+
+    // TEST
+    FMatrix Mat = FMatrix::CreateScaleMatrix(joint.scale.X, joint.scale.Y, joint.scale.Z)
+        * FMatrix::CreateRotationMatrix(joint.rotation.Roll, joint.rotation.Pitch, joint.rotation.Yaw)
+        * FMatrix::CreateTranslationMatrix(joint.position);
+
+    auto Mat2 = node->EvaluateLocalTransform();
+
 
     int thisIndex = fbxObject->skeleton.joints.Num();
     fbxObject->skeleton.joints.Add(joint);

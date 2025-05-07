@@ -18,7 +18,7 @@ public:
     const TArray<UMaterial*>& GetMaterials() const { return Materials; }
     uint32 GetMaterialIndex(FString MaterialSlotName) const;
     void GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const;
-    FSkeletalMeshRenderData* GetRenderData() const { return RenderData; }
+    const FSkeletalMeshRenderData& GetRenderData() const { return RenderData; }
     void GetRefSkeleton(FReferenceSkeleton& OutRefSkeleton) const
     {
         OutRefSkeleton = RefSkeleton;
@@ -37,9 +37,9 @@ public:
     //}
 
     //ObjectName은 경로까지 포함
-    FWString GetOjbectName() const;
+    FString GetOjbectName() const;
 
-    void SetData(FSkeletalMeshRenderData* InRenderData,
+    void SetData(FSkeletalMeshRenderData InRenderData,
         FReferenceSkeleton InRefSkeleton,
         TArray<FMatrix> InInverseBindPoseMatrices,
         TArray<UMaterial*> InMaterials);
@@ -49,7 +49,7 @@ private:
     // TODO : UPROPERTIES
     // FbxLoader에 저장되어있음
     // 이건 수정하면 안됨(CPU Skinning에서도 이걸로 수정하면 안됨)
-    FSkeletalMeshRenderData* RenderData = nullptr;
+    FSkeletalMeshRenderData RenderData;
 
     // 로드 당시의 Skeleton로 초기화. Matrix는 매번 생성해서 사용
     FReferenceSkeleton RefSkeleton;

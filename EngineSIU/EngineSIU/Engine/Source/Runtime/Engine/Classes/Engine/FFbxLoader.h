@@ -45,6 +45,6 @@ private:
     static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
     inline static TMap<FString, FFbxSkeletalMesh*> fbxMap;
     inline static TMap<FString, USkeletalMesh*> SkeletalMeshMap;
-    inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
+    //inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
     static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
 };

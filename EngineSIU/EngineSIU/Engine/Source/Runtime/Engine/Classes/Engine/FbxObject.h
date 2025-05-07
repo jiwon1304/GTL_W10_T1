@@ -6,12 +6,12 @@
 struct FFbxVertex
 {
     FVector position;
-    FVector4 color;
+    FLinearColor color;
     FVector normal;
     FVector4 tangent;
     FVector2D uv;
     int materialIndex = -1;
-    int8 boneIndices[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+    int boneIndices[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
     float boneWeights[8] = { 0,0,0,0,0,0,0,0 };
     //inline const static D3D11_INPUT_ELEMENT_DESC LayoutDesc[] = {
     //    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},

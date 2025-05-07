@@ -201,8 +201,7 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         // FSkeletalMeshRenderData* RenderData = SkinnedMeshData->GetSkeletalMesh()->GetRenderData();
         USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
         if (!SkeletalMesh) continue;
-        FSkeletalMeshRenderData* Renderdata = SkeletalMesh->GetRenderData();
-        if (!Renderdata) continue;
+        const FSkeletalMeshRenderData& Renderdata = SkeletalMesh->GetRenderData();
 
         // Bone Matrix는 CPU에서 처리
         // Model -> j -> transform -> model space로 변환하는 행렬
@@ -222,9 +221,9 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         SkeletalMesh->GetUsedMaterials(Materials);
         TArray<UMaterial*> OverrideMaterials = SkeletalMeshComponent->GetOverrideMaterials();
 
-        for (int SectionIndex = 0; SectionIndex < Renderdata->RenderSections.Num(); ++SectionIndex)
+        for (int SectionIndex = 0; SectionIndex < Renderdata.RenderSections.Num(); ++SectionIndex)
         {
-            const FSkelMeshRenderSection& RenderSection = Renderdata->RenderSections[SectionIndex];
+            const FSkelMeshRenderSection& RenderSection = Renderdata.RenderSections[SectionIndex];
             FVertexInfo VertexInfo;
             if (SkeletalMesh->bCPUSkinned)
             {
@@ -255,7 +254,7 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
             for (int i = 0; i < RenderSection.SubsetIndex.Num(); ++i)
             {
                 uint32 SubsetIndex = RenderSection.SubsetIndex[i];
-                uint32 MaterialIndex = Renderdata->MaterialSubsets[SubsetIndex].MaterialIndex;
+                uint32 MaterialIndex = Renderdata.MaterialSubsets[SubsetIndex].MaterialIndex;
 
                 if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
                 {
@@ -266,8 +265,8 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
                     MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
                 }
 
-                uint32 StartIndex = Renderdata->MaterialSubsets[SubsetIndex].IndexStart;
-                uint32 IndexCount = Renderdata->MaterialSubsets[SubsetIndex].IndexCount;
+                uint32 StartIndex = Renderdata.MaterialSubsets[SubsetIndex].IndexStart;
+                uint32 IndexCount = Renderdata.MaterialSubsets[SubsetIndex].IndexCount;
                 Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
             }
         }
@@ -390,7 +389,7 @@ void FSkeletalMeshRenderPass::UpdateVertexBuffer(FFbxMeshData& meshData, const T
 
 void FSkeletalMeshRenderPass::GetSkinnedVertices(USkeletalMesh* SkeletalMesh, uint32 Section, const TArray<FMatrix>& BoneMatrices, TArray<FSkeletalVertex>& OutVertices) const
 {
-    const FSkelMeshRenderSection& RenderSection = SkeletalMesh->GetRenderData()->RenderSections[Section];
+    const FSkelMeshRenderSection& RenderSection = SkeletalMesh->GetRenderData().RenderSections[Section];
     const TArray<FSkeletalVertex>& Vertices = RenderSection.Vertices;
     OutVertices.SetNum(Vertices.Num());
     for (int i = 0; i < Vertices.Num(); ++i)
