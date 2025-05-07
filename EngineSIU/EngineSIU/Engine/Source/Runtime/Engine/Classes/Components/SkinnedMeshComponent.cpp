@@ -47,32 +47,26 @@ TArray<FMatrix> USkinnedMeshComponent::CalculateBoneMatrices() const
     }
 
     const TArray<FBoneInfo>& Bones = SkeletalMesh->SkeletonData.Bones;
-    OutBoneMatrices.Reserve(Bones.Num());
 
+    OutBoneMatrices.Reserve(Bones.Num()); // 크기 미리 설정
     for (const FBoneInfo& Bone : Bones)
     {
-        FMatrix ModelToBone = FMatrix::Identity;
+        FMatrix CurrentBoneGlobalTransform;
         if (Bone.ParentIndex != -1)
         {
-            // 부모의 ModelToBone * 내 BindPoseMatrix (row-vector 기준)
-            ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.LocalBindPoseMatrix;
-
-            // if (BoneIdx == SelectedBoneIndex)
-            // {
-            //     FMatrix Translation = FMatrix::CreateTranslationMatrix(SelectedLocation);
-            //     FMatrix Rotation = FMatrix::CreateRotationMatrix(SelectedRotation.Roll, SelectedRotation.Pitch, SelectedRotation.Yaw);
-            //     FMatrix Scale = FMatrix::CreateScaleMatrix(SelectedScale.X, SelectedScale.Y, SelectedScale.Z);
-            //
-            //     ModelToBone = OutBoneMatrices[Bone.ParentIndex] * Bone.LocalBindPoseMatrix * Scale * Rotation * Translation;
-            // }
+            // 부모의 모델 공간 기준 변환 * 현재 뼈의 로컬 바인드 포즈 변환
+            CurrentBoneGlobalTransform = Bone.LocalBindPoseMatrix * OutBoneMatrices[Bone.ParentIndex];
         }
-        else
+        else // 루트 뼈
         {
-            ModelToBone = Bone.LocalBindPoseMatrix;
+            CurrentBoneGlobalTransform = Bone.LocalBindPoseMatrix;
         }
+        OutBoneMatrices.Add(CurrentBoneGlobalTransform); // 현재 뼈의 모델 공간 기준 변환 저장
+    }
 
-        // 스키닝 행렬
-        OutBoneMatrices.Add(ModelToBone * Bone.InverseBindPoseMatrix);
+    for (int32 Idx = 0; Idx < Bones.Num(); ++Idx)
+    {
+        OutBoneMatrices[Idx] = Bones[Idx].InverseBindPoseMatrix * OutBoneMatrices[Idx];
     }
 
     return OutBoneMatrices;
