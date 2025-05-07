@@ -66,5 +66,5 @@ private:
 
 public:
     // TODO: 나중에 참고 https://github.com/gudtldn/GTL_W09_T6/blob/feature/test_fbx_loader/EngineSIU/EngineSIU/Engine/Source/Runtime/Core/Serialization/SerializeMeshAsset.h
-    void SerializeMesh(FArchive& Ar);
+    bool SerializeMesh(FArchive& Ar);
 };

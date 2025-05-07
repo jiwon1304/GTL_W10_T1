@@ -47,14 +47,24 @@ void USkeletalMesh::SetData(const FSkeletalMeshRenderData& InRenderData,
     //}
 }
 
-void USkeletalMesh::SerializeMesh(FArchive& Ar)
+bool USkeletalMesh::SerializeMesh(FArchive& Ar)
 {
-    Ar << RenderData
-       << RefSkeleton
-       << InverseBindPoseMatrices;
-
-    for (UMaterial* Material : Materials)
+    bool bSuccess = false;
+    try
     {
-        Ar << Material->GetMaterialInfo();
+        Ar << RenderData
+           << RefSkeleton
+           << InverseBindPoseMatrices;
+    
+        for (UMaterial* Material : Materials)
+        {
+            Ar << Material->GetMaterialInfo();
+        }
+        bSuccess = true;
     }
+    catch (const std::exception& Err)
+    {
+        UE_LOG(ELogLevel::Error, "USkeletalMesh::SerializeMesh Error: %s", Err.what());
+    }
+    return bSuccess;
 }
