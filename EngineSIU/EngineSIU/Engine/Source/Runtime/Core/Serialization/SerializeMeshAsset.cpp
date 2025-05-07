@@ -108,11 +108,12 @@ bool FSerializeMeshAsset::SaveSkeletalMeshToBinary(const FString& FilePath, USke
     return true;
 }
 
-FArchive& FSerializeMeshAsset::SerializeVersion(FArchive& Ar)
+bool FSerializeMeshAsset::SerializeVersion(FArchive& Ar)
 {
     if (Ar.IsSaving())
     {
-        return Ar << Version;
+        Ar << Version;
+        return true;
     }
 
     uint32 FileVersion;
@@ -121,9 +122,10 @@ FArchive& FSerializeMeshAsset::SerializeVersion(FArchive& Ar)
     if (FileVersion != Version)
     {
         UE_LOG_FMT(ELogLevel::Error, "MeshAsset version mismatch: {} != {}", FileVersion, Version);
+        return false;
     }
 
-    return Ar;
+    return true;
 }
 
 FArchive& FSerializeMeshAsset::SerializeMeshAssetBase(FArchive& Ar, UMeshAsset* Mesh)

@@ -18,7 +18,7 @@ public:
     static bool SaveSkeletalMeshToBinary(const FString& FilePath, USkeletalMesh* SkeletalMesh);
 
 private:
-    static FArchive& SerializeVersion(FArchive& Ar);
+    static bool SerializeVersion(FArchive& Ar);
     static FArchive& SerializeMeshAssetBase(FArchive& Ar, UMeshAsset* Mesh);
     static FArchive& SerializeMeshAsset(FArchive& Ar, UStaticMeshTest* StaticMesh);
     static FArchive& SerializeMeshAsset(FArchive& Ar, USkeletalMesh* SkeletalMesh);
