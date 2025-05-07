@@ -29,8 +29,16 @@ public:
     FVector GetScale3D() const { return Scale3D; }
     void SetScale3D(const FVector& InScale3D) { Scale3D = InScale3D; }
 
-protected:
+public:
     FVector Translation;
     FRotator Rotation;
     FVector Scale3D;
+
+public:
+    friend FArchive& operator<<(FArchive& Ar, FTransform& Data)
+    {
+        return Ar << Data.Translation
+                  << Data.Rotation
+                  << Data.Scale3D;
+    }
 };
