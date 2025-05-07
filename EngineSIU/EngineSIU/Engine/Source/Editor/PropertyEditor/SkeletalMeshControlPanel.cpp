@@ -4,6 +4,8 @@
 #include "EngineLoop.h"
 #include "AssetViewer/AssetViewer.h"
 #include "tinyfiledialogs.h"
+#include "WindowsFileDialog.h"
+#include "Engine/AssetManager.h"
 
 void SkeletalMeshControlPanel::Render()
 {
@@ -160,21 +162,31 @@ void SkeletalMeshControlPanel::OnResize(HWND hWnd)
 
 void SkeletalMeshControlPanel::CreateSkeletalMenuButton(const ImVec2 ButtonSize, ImFont* IconFont)
 {
-    if (ImGui::MenuItem("Import Skeletal Mesh"))
+    if (ImGui::MenuItem("FBX (.fbx)"))
     {
-        char const* lFilterPatterns[2] = { "*.fbx", "*.obj" };
-        const char* FileName = tinyfd_openFileDialog("Open Skeletal Mesh File", "", 2, lFilterPatterns, "3D Model Files (*.fbx, *.obj)", 0);
-
-        if (FileName == nullptr)
+        TArray<FString> FileNames;
+        if (FDesktopPlatformWindows::OpenFileDialog(
+            "Open FBX File",
+            "",
+            { {
+                .FilterPattern = "*.fbx",
+                .Description = "FBX(.fbx) file"
+            } },
+            EFileDialogFlag::None,
+            FileNames
+        ))
         {
-            return;
+            const FString FileName = FileNames.Pop();
+            UE_LOG(ELogLevel::Display, TEXT("Import FBX File: %s"), *FileName);
+
+
+
+            if (UAssetManager::Get().AddAsset(StringToWString(GetData(FileName))) == false)
+            {
+                tinyfd_messageBox("Error", "파일을 불러올 수 없습니다.", "ok", "error", 1);
+            }
+
         }
-        
-        UE_LOG(ELogLevel::Display, TEXT("Skeletal Mesh File: %s"), *FString(FileName));
-        
-        // 여기서 스켈레탈 메시 임포트 코드 구현
-        // UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine);
-        // EditorEngine->ImportSkeletalMesh(FileName);
     }
 
     if (ImGui::MenuItem("Import Animation"))

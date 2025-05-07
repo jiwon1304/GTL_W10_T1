@@ -35,6 +35,7 @@
 #include "AssetViewer/AssetViewer.h"
 #include "Slate/Widgets/Layout/SSplitter.h"
 #include "Components/Material/Material.h"
+#include "Contents/Actors/ItemActor.h"
 #include "Math/JungleMath.h"
 #include "Renderer/ShadowManager.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -159,7 +160,7 @@ void PropertyEditorPanel::Render()
     if (USkeletalMeshComponent* SkeletalMeshComponent = GetTargetComponent<USkeletalMeshComponent>(SelectedActor, SelectedComponent))
     {
         RenderForSkeletalMesh(SkeletalMeshComponent);
-        RenderForModifySkeletalBone(SkeletalMeshComponent);
+        //RenderForModifySkeletalBone(SkeletalMeshComponent);
     }
     if (UHeightFogComponent* FogComponent = GetTargetComponent<UHeightFogComponent>(SelectedActor, SelectedComponent))
     {
@@ -467,6 +468,27 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
                 }
             }
             ImGui::EndCombo();
+        }
+
+        if (ImGui::Button("Preview"))
+        {
+            UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
+            if (Engine)
+            {
+                USkeletalMesh* SkeletalMesh = SkeletalComp->GetSkeletalMesh();
+                if (SkeletalMesh)
+                {
+                    for (auto Actor : Engine->EditorPreviewWorld->GetActiveLevel()->Actors)
+                    {
+                        if (Actor && Actor->IsA<AItemActor>())
+                        {
+                            USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
+                            PreviewSkeletalMeshComponent->SetSkeletalMesh(SkeletalMesh);
+                        }
+                    }
+                }
+            }
+            GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
         }
 
         ImGui::TreePop();

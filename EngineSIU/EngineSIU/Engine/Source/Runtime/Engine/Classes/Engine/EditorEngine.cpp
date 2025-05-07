@@ -8,6 +8,8 @@
 #include "Classes/Engine/AssetManager.h"
 #include "Components/Light/DirectionalLightComponent.h"
 #include "UObject/UObjectIterator.h"
+#include "FFbxLoader.h"
+#include "Contents/Actors/ItemActor.h"
 
 namespace PrivateEditorSelection
 {
@@ -198,7 +200,9 @@ void UEditorEngine::StartPreviewWorld(UMeshComponent* TargetMesh)
 
     EditorPreviewWorldContext.SetCurrentWorld(EditorPreviewWorld);
 
-    EditorPreviewWorld->SpawnActor<ACube>()->SetActorLocation(FVector(0, 0, 0));
+    AItemActor* Temp = EditorPreviewWorld->SpawnActor<AItemActor>();
+    Temp->SetActorLocation({ 0.f, 0.f, 0.f });
+    Temp->SetActorLabel(TEXT("OBJ_PREVIEW_ACTOR"));
 
     EditorPreviewWorld->SpawnActor<ADirectionalLight>();
 
