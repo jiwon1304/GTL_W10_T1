@@ -186,6 +186,11 @@ FMatrix FMatrix::Inverse(const FMatrix& Mat)
     return Result;
 }
 
+FMatrix FMatrix::CreateRotationMatrix(const FRotator& R)
+{
+    return CreateRotationMatrix(R.Roll, R.Pitch, R.Yaw);
+}
+
 FMatrix FMatrix::CreateRotationMatrix(float roll, float pitch, float yaw)
 {
     float radRoll = roll * (PI / 180.0f);
