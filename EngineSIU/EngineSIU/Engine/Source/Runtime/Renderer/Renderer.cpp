@@ -304,7 +304,10 @@ void FRenderer::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     }
 
     RenderWorldScene(Viewport);
-    RenderPostProcess(Viewport);
+    if (GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
+    {
+        RenderPostProcess(Viewport);
+    }
     RenderEditorOverlay(Viewport);
 
     Graphics->DeviceContext->PSSetShaderResources(
@@ -346,7 +349,7 @@ void FRenderer::RenderWorldScene(const std::shared_ptr<FEditorViewportClient>& V
             StaticMeshRenderPass->Render(Viewport);
         }
     }
-    if (ShowFlag & EEngineShowFlags::SF_SkeletalMesh)
+    if (ShowFlag & EEngineShowFlags::SF_SkeletalMesh || GEngine->ActiveWorld->WorldType == EWorldType::EditorPreview)
     {
         {
             QUICK_SCOPE_CYCLE_COUNTER(SkeletalMeshPass_CPU)
@@ -411,7 +414,7 @@ void FRenderer::RenderEditorOverlay(const std::shared_ptr<FEditorViewportClient>
     const uint64 ShowFlag = Viewport->GetShowFlag();
     const EViewModeIndex ViewMode = Viewport->GetViewMode();
     
-    if (GEngine->ActiveWorld->WorldType != EWorldType::Editor)
+    if (GEngine->ActiveWorld->WorldType != EWorldType::Editor && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
     {
         return;
     }
@@ -423,27 +426,27 @@ void FRenderer::RenderEditorOverlay(const std::shared_ptr<FEditorViewportClient>
      *       텍스처를 전달해서 렌더하는 방식이 더 좋음.
      *       이렇게 하는 경우 필요없는 빌보드 컴포넌트가 아웃라이너에 나오지 않음.
      */
-    if (ShowFlag & EEngineShowFlags::SF_BillboardText)
+    if (ShowFlag & EEngineShowFlags::SF_BillboardText && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
     {
         QUICK_SCOPE_CYCLE_COUNTER(EditorBillboardPass_CPU)
         QUICK_GPU_SCOPE_CYCLE_COUNTER(EditorBillboardPass_GPU, *GPUTimingManager)
         EditorBillboardRenderPass->Render(Viewport);
     }
 
-    {
-        QUICK_SCOPE_CYCLE_COUNTER(EditorRenderPass_CPU)
-        QUICK_GPU_SCOPE_CYCLE_COUNTER(EditorRenderPass_GPU, *GPUTimingManager)
-        EditorRenderPass->Render(Viewport); // TODO: 임시로 이전에 작성되었던 와이어 프레임 렌더 패스이므로, 이후 개선 필요.
-    }
-    {
-        QUICK_SCOPE_CYCLE_COUNTER(LinePass_CPU)
-        QUICK_GPU_SCOPE_CYCLE_COUNTER(LinePass_GPU, *GPUTimingManager)
-        //LineRenderPass->Render(Viewport); // 기존 뎁스를 그대로 사용하지만 뎁스를 클리어하지는 않음
-    }
+    //{
+    //    QUICK_SCOPE_CYCLE_COUNTER(LinePass_CPU)
+    //    QUICK_GPU_SCOPE_CYCLE_COUNTER(LinePass_GPU, *GPUTimingManager)
+    //    //LineRenderPass->Render(Viewport); // 기존 뎁스를 그대로 사용하지만 뎁스를 클리어하지는 않음
+    //}
     {
         QUICK_SCOPE_CYCLE_COUNTER(GizmoPass_CPU)
         QUICK_GPU_SCOPE_CYCLE_COUNTER(GizmoPass_GPU, *GPUTimingManager)
         GizmoRenderPass->Render(Viewport); // 기존 뎁스를 SRV로 전달해서 샘플 후 비교하기 위해 기즈모 전용 DSV 사용
+    }
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(EditorRenderPass_CPU)
+        QUICK_GPU_SCOPE_CYCLE_COUNTER(EditorRenderPass_GPU, *GPUTimingManager)
+        EditorRenderPass->Render(Viewport); // TODO: 임시로 이전에 작성되었던 와이어 프레임 렌더 패스이므로, 이후 개선 필요.
     }
 
     Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);

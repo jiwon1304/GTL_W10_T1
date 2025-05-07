@@ -336,7 +336,7 @@ void FEditorRenderPass::PrepareRenderArr()
     ClearRenderArr();
     // gizmo 제외하고 넣기
 
-    if (GEngine->ActiveWorld->WorldType != EWorldType::Editor)
+    if (GEngine->ActiveWorld->WorldType != EWorldType::Editor && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
     {
         return;
     }
@@ -456,7 +456,14 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
     }
 
     PrepareRendertarget(Viewport);
+
     RenderGrid(Viewport);
+    if (GEngine->ActiveWorld->WorldType == EWorldType::EditorPreview)
+    {
+        RenderSkinnedMeshs();
+        return;
+    }
+
     RenderAxis();
     if (Viewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
     {

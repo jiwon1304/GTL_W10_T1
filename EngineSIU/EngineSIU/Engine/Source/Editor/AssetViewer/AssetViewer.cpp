@@ -49,6 +49,7 @@ void SAssetViewer::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
         EViewScreenLocation Location = EViewScreenLocation::EVL_MAX;
         FRect Rect = CenterAndRightVSplitter->SideLT->GetRect();
         ActiveViewportClient->Initialize(Location, Rect);
+        ActiveViewportClient->SetGridSize(10);
     }
 
     LoadConfig();

@@ -665,7 +665,7 @@ void FEditorViewportClient::LoadConfig(const TMap<FString, FString>& Config)
     FString ViewportNum = std::to_string(ViewportIndex);
     CameraSpeedSetting = GetValueFromConfig(Config, "CameraSpeedSetting" + ViewportNum, 1);
     CameraSpeed = GetValueFromConfig(Config, "CameraSpeedScalar" + ViewportNum, 1.0f);
-    GridSize = GetValueFromConfig(Config, "GridSize"+ ViewportNum, 10.0f);
+    //GridSize = GetValueFromConfig(Config, "GridSize"+ ViewportNum, 10.0f);
     PerspectiveCamera.ViewLocation.X = GetValueFromConfig(Config, "PerspectiveCameraLocX" + ViewportNum, 0.0f);
     PerspectiveCamera.ViewLocation.Y = GetValueFromConfig(Config, "PerspectiveCameraLocY" + ViewportNum, 0.0f);
     PerspectiveCamera.ViewLocation.Z = GetValueFromConfig(Config, "PerspectiveCameraLocZ" + ViewportNum, 0.0f);
