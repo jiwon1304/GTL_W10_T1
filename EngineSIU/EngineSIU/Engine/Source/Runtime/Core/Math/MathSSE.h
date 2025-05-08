@@ -2,7 +2,8 @@
 #include <immintrin.h>
 #include "HAL/PlatformType.h"
 
-#define __SSE_EXPERIMENTAL__
+//#define __SSE_EXPERIMENTAL__
+
 /**
  * @param A0    Selects which element (0-3) from 'A' into 1st slot in the result
  * @param A1    Selects which element (0-3) from 'A' into 2nd slot in the result
