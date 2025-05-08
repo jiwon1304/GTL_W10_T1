@@ -160,7 +160,7 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
         InverseBindPoseMatrices[i] = fbxObject->skeleton.joints[i].inverseBindPose;
     }
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
-    newSkeletalMesh->bCPUSkinned = true;
+    newSkeletalMesh->bCPUSkinned = InverseBindPoseMatrices.Num() > 128 ? 1 : 0; // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
     SkeletalMeshMap.Add(filename, newSkeletalMesh);
     return newSkeletalMesh;
 }

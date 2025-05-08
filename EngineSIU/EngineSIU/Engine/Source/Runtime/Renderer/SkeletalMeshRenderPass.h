@@ -44,7 +44,6 @@ private:
     void UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices);
     void GetSkinnedVertices(USkeletalMesh* SkeletalMesh, uint32 Section, const TArray<FMatrix>& BoneMatrices, TArray<FSkeletalVertex>& OutVertices) const;
 
-    bool bIsCPUSkinning = true;
 protected:
     TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
 

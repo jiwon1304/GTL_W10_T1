@@ -217,7 +217,7 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
             SkeletalMeshComponent->GetWorldMatrix(),
             SkeletalMeshComponent->EncodeUUID() / 255.0f,
             SkeletalMeshComponent->IsActive(),
-            bIsCPUSkinning
+            SkeletalMeshComponent->GetSkeletalMesh()->bCPUSkinned
         );
 
         TArray<UMaterial*> Materials;

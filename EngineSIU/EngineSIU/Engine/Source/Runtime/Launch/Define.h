@@ -593,6 +593,6 @@ struct FDiffuseMultiplier
 
 struct FBoneMatrices
 {
-    FMatrix BoneMatrices[64];
+    FMatrix BoneMatrices[128];
 };
 #pragma endregion
