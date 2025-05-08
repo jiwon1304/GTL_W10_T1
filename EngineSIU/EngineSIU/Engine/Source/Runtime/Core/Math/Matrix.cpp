@@ -101,6 +101,11 @@ FMatrix FMatrix::Transpose(const FMatrix& Mat)
 FMatrix FMatrix::Inverse(const FMatrix& Mat)
 {
     FMatrix Result;
+#ifdef __SSE_EXPERIMENTAL__
+    SSE::InverseMatrix(&Result, &Mat);
+    return Result;
+#endif // __SSE_EXPERIMENTAL__
+
     FMatrix Tmp;
     float Det[4];
 
@@ -184,6 +189,19 @@ FMatrix FMatrix::Inverse(const FMatrix& Mat)
     );
 
     return Result;
+}
+
+// Affine 변환을 위한 역행렬 계산
+// Bone / World / Model Matrix 등에서 사용됨
+// 그 이외에서 사용할 시 정확한 결과를 보장하지 않음
+FMatrix FMatrix::InverseAffine() const
+{
+#ifdef __SSE_EXPERIMENTAL__
+    FMatrix Result;
+    SSE::InverseTransform(&Result, this);
+    return Result;
+#endif // __SSE_EXPERIMENTAL__
+    return this->Inverse();
 }
 
 FMatrix FMatrix::CreateRotationMatrix(const FRotator& R)
@@ -270,6 +288,13 @@ FMatrix FMatrix::CreateTranslationMatrix(const FVector& position)
 
 FVector FMatrix::TransformVector(const FVector& v, const FMatrix& m)
 {
+#ifdef __SSE_EXPERIMENTAL__
+    FVector4 Result4;
+    FVector4 Vec4 = { v, 1 };
+    SSE::TransformPosition_SSE(&Result4, &Vec4, &m);
+    return FVector(Result4.X, Result4.Y, Result4.Z);
+#endif // __SSE_EXPERIMENTAL__
+    
     FVector result;
 
     // 4x4 행렬을 사용하여 벡터 변환 (W = 0으로 가정, 방향 벡터)
@@ -284,6 +309,12 @@ FVector FMatrix::TransformVector(const FVector& v, const FMatrix& m)
 // FVector4를 변환하는 함수
 FVector4 FMatrix::TransformVector(const FVector4& v, const FMatrix& m)
 {
+#ifdef __SSE_EXPERIMENTAL__
+    FVector4 Result4;
+    SSE::TransformVector4_SSE(&Result4, &v, &m);
+    return FVector(Result4.X, Result4.Y, Result4.Z);
+#endif // __SSE_EXPERIMENTAL__
+
     FVector4 result;
     result.X = v.X * m.M[0][0] + v.Y * m.M[1][0] + v.Z * m.M[2][0] + v.W * m.M[3][0];
     result.Y = v.X * m.M[0][1] + v.Y * m.M[1][1] + v.Z * m.M[2][1] + v.W * m.M[3][1];
@@ -294,6 +325,12 @@ FVector4 FMatrix::TransformVector(const FVector4& v, const FMatrix& m)
 
 FVector4 FMatrix::TransformFVector4(const FVector4& vector) const
 {
+#ifdef __SSE_EXPERIMENTAL__
+    FVector4 Result4;
+    SSE::TransformVector4_SSE(&Result4, &vector, this);
+    return FVector(Result4.X, Result4.Y, Result4.Z);
+#endif // __SSE_EXPERIMENTAL__
+
     return FVector4(
         M[0][0] * vector.X + M[1][0] * vector.Y + M[2][0] * vector.Z + M[3][0] * vector.W,
         M[0][1] * vector.X + M[1][1] * vector.Y + M[2][1] * vector.Z + M[3][1] * vector.W,
@@ -304,6 +341,13 @@ FVector4 FMatrix::TransformFVector4(const FVector4& vector) const
 
 FVector FMatrix::TransformPosition(const FVector& vector) const
 {
+#ifdef __SSE_EXPERIMENTAL__
+    FVector4 Result4;
+    FVector4 Vec4 = { vector, 1 };
+    SSE::TransformPosition_SSE(&Result4, &Vec4, this);
+    return FVector(Result4.X, Result4.Y, Result4.Z);
+#endif // __SSE_EXPERIMENTAL__
+
     float x = M[0][0] * vector.X + M[1][0] * vector.Y + M[2][0] * vector.Z + M[3][0];
     float y = M[0][1] * vector.X + M[1][1] * vector.Y + M[2][1] * vector.Z + M[3][1];
     float z = M[0][2] * vector.X + M[1][2] * vector.Y + M[2][2] * vector.Z + M[3][2];

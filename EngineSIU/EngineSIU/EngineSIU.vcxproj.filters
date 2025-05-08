@@ -1651,14 +1651,18 @@
     <ClCompile Include="Engine\Source\Runtime\Windows\WindowsFileDialog.cpp">
       <Filter>Engine\Source\Runtime\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMeshRenderData.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\FFbxLoader.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\SkeletalMeshRenderPass.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleCollision.cpp" />
-    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkinnedMeshComponent.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\FbxObject.cpp" />
     <ClCompile Include="Engine\Source\Developer\DrawDebug\DrawDebugHelpers.cpp" />
+    <ClCompile Include="Engine\Source\Editor\AssetViewer\AssetViewer.cpp" />
+    <ClCompile Include="Engine\Source\Editor\PropertyEditor\SkeletalMeshControlPanel.cpp" />
+    <ClCompile Include="Engine\Source\Editor\PropertyEditor\SubEditor\SkeletalTreePanel.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMesh.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Renderer\DebugRenderPass.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\MathSSE.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineSIU.natvis" />
@@ -1691,13 +1695,17 @@
       <Filter>Engine\Source\Runtime\Core\Math</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Source\Runtime\Core\Math\JungleCollision.h" />
-    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMeshRenderData.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\SkeletalMeshComponent.h" />
-    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\SkinnedMeshComponent.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\FFbxLoader.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\FbxObject.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\SkeletalMeshRenderPass.h" />
     <ClInclude Include="Engine\Source\Developer\DrawDebug\DrawDebugHelpers.h" />
+    <ClInclude Include="Engine\Source\Editor\AssetViewer\AssetViewer.h" />
+    <ClInclude Include="Engine\Source\Editor\PropertyEditor\SkeletalMeshControlPanel.h" />
+    <ClInclude Include="Engine\Source\Editor\PropertyEditor\SubEditor\SkeletalTreePanel.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMesh.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\Asset\SkeletalMeshAsset.h" />
+    <ClInclude Include="Engine\Source\Runtime\Renderer\DebugRenderPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
