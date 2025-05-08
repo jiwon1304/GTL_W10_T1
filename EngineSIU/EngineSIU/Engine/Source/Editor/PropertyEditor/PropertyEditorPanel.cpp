@@ -460,7 +460,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
                 if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
                 {
                     FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetFbxObject(MeshName.ToWideString());
+                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
                     if (SkeletalMesh)
                     {
                         SkeletalComp->SetSkeletalMesh(SkeletalMesh);

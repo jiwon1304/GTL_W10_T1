@@ -14,13 +14,75 @@ struct BoneWeights
     float weight;
 };
 
+void FFbxLoader::Init()
+{
+    if (!Manager)
+    {
+        Manager = FbxManager::Create();
+    }
+}
+
+void FFbxLoader::LoadFBX(const FString& filename)
+{
+    {
+        std::lock_guard<std::mutex> lock(MapMutex);
+        if (MeshMap.Contains(filename)) return;
+
+        // 바로 Loading 상태 등록
+        MeshMap.Add(filename, { LoadState::Loading, nullptr });
+    }
+
+    std::thread loader([filename]() {
+        USkeletalMesh* mesh = GetFbxObject(filename);
+        std::lock_guard<std::mutex> lock(MapMutex);
+        if (mesh) {
+            MeshMap[filename] = { LoadState::Completed, mesh };
+        }
+        else
+        {
+            MeshMap[filename] = { LoadState::Failed, nullptr };
+        }
+        });
+    loader.detach();
+}
+
+USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
+{
+    while (true)
+    {
+        {
+            std::lock_guard<std::mutex> lock(MapMutex);
+
+            if (MeshMap.Contains(filename))
+            {
+                const MeshEntry& entry = MeshMap[filename];
+                switch (entry.State)
+                {
+                case LoadState::Completed:
+                    return entry.Mesh;
+                case LoadState::Failed:
+                    return nullptr;
+                case LoadState::Loading:
+                    break; //switch break : 기다림
+                }
+            }
+            else
+            {
+                break; // while break : 메인 쓰레드에서 로드
+            }
+        }
+
+        // Sleep 없이 무한 루프 → CPU 낭비 방지
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    return GetFbxObject(filename);
+}
+
 FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
-    if (fbxMap.Contains(FBXFilePath))
-        return fbxMap[FBXFilePath];
-    
-    FbxScene* scene = FbxScene::Create(FFbxLoader::GetFbxManager(), "");
-    FbxImporter* importer = FbxImporter::Create(GetFbxManager(), "");
+    FbxScene* scene = FbxScene::Create(FFbxLoader::Manager, "");
+    FbxImporter* importer = FbxImporter::Create(Manager, "");
     
     if (!importer->Initialize(GetData(FBXFilePath), -1, GetFbxIOSettings()))
     {
@@ -61,13 +123,12 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         FbxSystemUnit::cm.ConvertScene(scene);
     }
     
-    FbxGeometryConverter converter(GetFbxManager());
+    FbxGeometryConverter converter(Manager);
     converter.Triangulate(scene, true);
 
     FFbxSkeletalMesh* result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
-    fbxMap[FBXFilePath] = result;
     return result;
 }
 
@@ -76,11 +137,16 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     // 미리 저장해놓은게 있으면 반환
     if (SkeletalMeshMap.Contains(filename))
         return SkeletalMeshMap[filename];
-    
-    // 없으면 파싱
-    FFbxSkeletalMesh* fbxObject = GetFbxObjectInternal(filename);
-    if (!fbxObject) // 파싱 실패
-        return nullptr;
+
+    FFbxSkeletalMesh* fbxObject = nullptr;
+    {
+        // SDK는 멀티스레드 지원 안함.
+        std::lock_guard<std::mutex> lock(SDKMutex);
+        // 없으면 파싱
+        fbxObject = ParseFBX(filename);
+        if (!fbxObject) // 파싱 실패
+            return nullptr;
+    }
 
 
     // SkeletalMesh로 변환
@@ -114,9 +180,6 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
                 fbxObject->mesh[i].vertices[j].boneWeights,
                 sizeof(float) * 8
             );
-
-
-
         }
         memcpy(
             renderData.RenderSections[i].Vertices.GetData(),
@@ -161,15 +224,8 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     }
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
     newSkeletalMesh->bCPUSkinned = InverseBindPoseMatrices.Num() > 128 ? 1 : 0; // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
-    SkeletalMeshMap.Add(filename, newSkeletalMesh);
+    //SkeletalMeshMap.Add(filename, newSkeletalMesh);
     return newSkeletalMesh;
-}
-
-FFbxSkeletalMesh* FFbxLoader::GetFbxObjectInternal(const FString& filename)
-{
-    if (!fbxMap.Contains(filename))
-        ParseFBX(filename);
-    return fbxMap[filename];
 }
 
 FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
@@ -233,19 +289,14 @@ FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
     return result;
 }
 
-FbxManager* FFbxLoader::GetFbxManager()
-{
-    static FbxManager* fbxManager = FbxManager::Create();
-    return fbxManager;
-}
 
 FbxIOSettings* FFbxLoader::GetFbxIOSettings()
 {
-    if (GetFbxManager()->GetIOSettings() == nullptr)
+    if (Manager->GetIOSettings() == nullptr)
     {
-        GetFbxManager()->SetIOSettings(FbxIOSettings::Create(GetFbxManager(), "IOSRoot"));
+        Manager->SetIOSettings(FbxIOSettings::Create(Manager, "IOSRoot"));
     }
-    return GetFbxManager()->GetIOSettings();
+    return Manager->GetIOSettings();
 }
 
 FbxCluster* FFbxLoader::FindClusterForBone(FbxNode* boneNode)
@@ -312,6 +363,7 @@ void FFbxLoader::LoadFbxSkeleton(
     // bone은 joint사이의 공간을 말하는거지만, 사실상 joint와 동일한 의미로 사용되고 있음.
     if (cluster)
     {
+        // Inverse Pose Matrix를 구함
         FbxAMatrix LinkMatrix, Matrix;
         cluster->GetTransformLinkMatrix(LinkMatrix);  // !!! 실제 joint Matrix : joint->model space 변환 행렬
         cluster->GetTransformMatrix(Matrix);      // Fbx 모델의 전역 오프셋 : 모든 joint가 같은 값을 가짐
@@ -362,14 +414,14 @@ void FFbxLoader::LoadFbxSkeleton(
         joint.inverseBindPose = FMatrix::Inverse(joint.inverseBindPose);
     }
 
-    FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
-    FMatrix Mat;
-    for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
-            Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
+    //FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
+    //FMatrix Mat;
+    //for (int i = 0; i < 4; ++i)
+    //    for (int j = 0; j < 4; ++j)
+    //        Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
     FTransform Transform;
-    Transform.SetFromMatrix(Mat);
+    Transform.SetFromMatrix(joint.localBindPose);
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;

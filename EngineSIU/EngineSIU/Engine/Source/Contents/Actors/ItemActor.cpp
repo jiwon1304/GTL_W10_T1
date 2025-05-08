@@ -10,7 +10,7 @@
 AItemActor::AItemActor()
 {
     MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
-    auto mesh = FFbxLoader::GetFbxObject("Contents/X Bot.fbx");
+    auto mesh = FFbxLoader::GetSkeletalMesh("Contents/X Bot.fbx");
     MeshComponent->SetSkeletalMesh(mesh);
 }
 

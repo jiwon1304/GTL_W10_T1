@@ -33,7 +33,8 @@ private:
     std::unique_ptr<FAssetRegistry> AssetRegistry;
 
 public:
-    UAssetManager() = default;
+    UAssetManager();
+
 
     static bool IsInitialized();
 

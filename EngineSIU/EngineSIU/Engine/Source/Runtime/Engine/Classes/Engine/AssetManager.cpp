@@ -6,6 +6,10 @@
 #include "FFbxLoader.h"
 #include "Engine/FObjLoader.h"
 
+inline UAssetManager::UAssetManager() {
+    FFbxLoader::Init();
+}
+
 bool UAssetManager::IsInitialized()
 {
     return GEngine && GEngine->AssetManager;
@@ -34,7 +38,9 @@ void UAssetManager::InitAssetManager()
 {
     AssetRegistry = std::make_unique<FAssetRegistry>();
 
+#ifndef DEBUG
     LoadObjFiles();
+#endif // DEBUG
 }
 
 const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
@@ -49,7 +55,7 @@ bool UAssetManager::AddAsset(std::wstring filePath) const
     if (path.extension() == ".fbx")
     {
         assetType = EAssetType::SkeletalMesh;
-        if (!FFbxLoader::GetFbxObject(filePath))
+        if (!FFbxLoader::GetSkeletalMesh(filePath))
             return false;
     }
     else if (path.extension() == ".obj")
@@ -105,7 +111,7 @@ void UAssetManager::LoadObjFiles()
             AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 
             FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
-            FFbxLoader::GetFbxObject(MeshName);
+            FFbxLoader::LoadFBX(MeshName);
         }
     }
 }
