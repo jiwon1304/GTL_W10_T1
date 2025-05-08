@@ -19,7 +19,9 @@ void AItemActor::PostSpawnInitialize()
     AActor::PostSpawnInitialize();
     /*
     MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
-    auto mesh = FFbxLoader::GetFbxObject("Contents/X Bot.fbx");
+    const FString Path = "./Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx";
+    USkeletalMesh* BinMesh = FFbxLoader::LoadBinaryObject(Path);
+    USkeletalMesh* mesh = BinMesh ? BinMesh : FFbxLoader::GetFbxObject(Path);
     MeshComponent->SetSkeletalMesh(mesh);
     // MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
     //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/hand/girl.fbx"));

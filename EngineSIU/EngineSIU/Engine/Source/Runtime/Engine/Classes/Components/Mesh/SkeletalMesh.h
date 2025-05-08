@@ -16,7 +16,7 @@ public:
     virtual UObject* Duplicate(UObject* InOuter) override;
 
     const TArray<UMaterial*>& GetMaterials() const { return Materials; }
-    uint32 GetMaterialIndex(FString MaterialSlotName) const;
+    uint32 GetMaterialIndex(const FString& MaterialSlotName) const;
     void GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const;
     const FSkeletalMeshRenderData& GetRenderData() const { return RenderData; }
     void GetRefSkeleton(FReferenceSkeleton& OutRefSkeleton) const
@@ -39,10 +39,10 @@ public:
     //ObjectName은 경로까지 포함
     FString GetOjbectName() const;
 
-    void SetData(FSkeletalMeshRenderData InRenderData,
-        FReferenceSkeleton InRefSkeleton,
-        TArray<FMatrix> InInverseBindPoseMatrices,
-        TArray<UMaterial*> InMaterials);
+    void SetData(const FSkeletalMeshRenderData& InRenderData,
+        const FReferenceSkeleton& InRefSkeleton,
+        const TArray<FMatrix>& InInverseBindPoseMatrices,
+        const TArray<UMaterial*>& InMaterials);
 
     bool bCPUSkinned : 1 = true;
 private:
@@ -64,4 +64,7 @@ private:
     //typedef TArray<FSkeletalVertex> DuplicateVerticesSection;
     //TArray<DuplicateVerticesSection> DuplicatedVertices;
 
+public:
+    // TODO: 나중에 참고 https://github.com/gudtldn/GTL_W09_T6/blob/feature/test_fbx_loader/EngineSIU/EngineSIU/Engine/Source/Runtime/Core/Serialization/SerializeMeshAsset.h
+    bool SerializeMesh(FArchive& Ar);
 };

@@ -572,7 +572,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
 
             FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
             
-            ImGui::Text("Reference Pose");
+            ImGui::SeparatorText("Reference Pose");
             FReferenceSkeleton skeleton;
             SkeletalMeshComponent->GetSkeletalMesh()->GetRefSkeleton(skeleton);
             FTransform refTransform = skeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex];

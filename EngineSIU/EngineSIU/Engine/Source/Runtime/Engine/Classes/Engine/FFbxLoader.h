@@ -11,9 +11,12 @@ struct FFbxSkeletalMesh;
 struct BoneWeights;
 class USkeletalMesh;
 
-struct FFbxLoader
+struct FFbxLoader // TODO: 나중에 이름 바꿔야 할듯
 {
-    static USkeletalMesh* GetFbxObject(const FString& filename);
+    static USkeletalMesh* GetFbxObject(const FString& FilePath);
+    static USkeletalMesh* LoadBinaryObject(const FString& FilePath);
+    static bool SaveBinaryObject(const FString& FilePath, USkeletalMesh* SkeletalMesh);
+
 private:
     static FFbxSkeletalMesh* GetFbxObjectInternal(const FString& filename);
     static FbxManager* GetFbxManager();

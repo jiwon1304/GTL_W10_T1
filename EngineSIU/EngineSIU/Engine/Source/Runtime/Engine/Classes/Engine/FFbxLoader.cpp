@@ -1,5 +1,7 @@
 #include "FFbxLoader.h"
 
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include "FbxObject.h"
 #include "UObject/ObjectFactory.h"
@@ -7,6 +9,10 @@
 #include "Engine/Asset/SkeletalMeshAsset.h"
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Container/StringConv.h"
+#include "Serialization/MemoryArchive.h"
+
+namespace fs = std::filesystem;
+
 
 struct BoneWeights
 {
@@ -22,7 +28,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     FbxScene* scene = FbxScene::Create(FFbxLoader::GetFbxManager(), "");
     FbxImporter* importer = FbxImporter::Create(GetFbxManager(), "");
     
-    if (!importer->Initialize(GetData(FBXFilePath), -1, GetFbxIOSettings()))
+    if (!importer->Initialize(*FBXFilePath, -1, GetFbxIOSettings()))
     {
         importer->Destroy();
         return nullptr;
@@ -71,14 +77,15 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     return result;
 }
 
-USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
+USkeletalMesh* FFbxLoader::GetFbxObject(const FString& FilePath)
 {
     // 미리 저장해놓은게 있으면 반환
-    if (SkeletalMeshMap.Contains(filename))
-        return SkeletalMeshMap[filename];
-    
+    if (SkeletalMeshMap.Contains(FilePath))
+        return SkeletalMeshMap[FilePath];
+
+    fs::path asdljhakdjhaskjh = fs::current_path();
     // 없으면 파싱
-    FFbxSkeletalMesh* fbxObject = GetFbxObjectInternal(filename);
+    FFbxSkeletalMesh* fbxObject = GetFbxObjectInternal(FilePath);
     if (!fbxObject) // 파싱 실패
         return nullptr;
 
@@ -161,8 +168,92 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     }
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
     newSkeletalMesh->bCPUSkinned = true;
-    SkeletalMeshMap.Add(filename, newSkeletalMesh);
+    SkeletalMeshMap.Add(FilePath, newSkeletalMesh);
+    SaveBinaryObject(FilePath, newSkeletalMesh);
     return newSkeletalMesh;
+}
+
+USkeletalMesh* FFbxLoader::LoadBinaryObject(const FString& FilePath)
+{
+    const fs::path Path = FilePath.ToWideString();
+
+    TArray<uint8> LoadData;
+    {
+        std::ifstream InputStream{Path, std::ios::binary | std::ios::ate};
+        if (!InputStream.is_open())
+        {
+            return nullptr;
+        }
+    
+        const std::streamsize FileSize = InputStream.tellg();
+        if (FileSize < 0)
+        {
+            // Error getting size
+            InputStream.close();
+            return nullptr;
+        }
+        if (FileSize == 0)
+        {
+            // Empty file is valid
+            InputStream.close();
+            return nullptr; // Buffer remains empty
+        }
+    
+        InputStream.seekg(0, std::ios::beg);
+    
+        LoadData.SetNum(static_cast<int32>(FileSize));
+        InputStream.read(reinterpret_cast<char*>(LoadData.GetData()), FileSize);
+    
+        if (InputStream.fail() || InputStream.gcount() != FileSize)
+        {
+            return nullptr;
+        }
+        InputStream.close();
+    }
+
+    USkeletalMesh* NewSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
+    FMemoryReader Reader{LoadData}; // TODO: FFileArchive 만들기
+
+    if (NewSkeletalMesh->SerializeMesh(Reader))
+    {
+        SkeletalMeshMap.Add(FilePath, NewSkeletalMesh);
+        return NewSkeletalMesh;
+    }
+
+    GUObjectArray.MarkRemoveObject(NewSkeletalMesh);
+    return nullptr;
+}
+
+bool FFbxLoader::SaveBinaryObject(const FString& FilePath, USkeletalMesh* SkeletalMesh)
+{
+    const fs::path Path = FilePath.ToWideString();
+
+    TArray<uint8> SaveData;
+    FMemoryWriter Writer{SaveData}; // TODO: FFileArchive 만들기
+
+    if (!SkeletalMesh->SerializeMesh(Writer))
+    {
+        return false;
+    }
+
+    std::ofstream OutputStream{Path, std::ios::binary | std::ios::trunc};
+    if (!OutputStream.is_open())
+    {
+        return false;
+    }
+
+    if (SaveData.Num() > 0)
+    {
+        OutputStream.write(reinterpret_cast<const char*>(SaveData.GetData()), SaveData.Num());
+
+        if (OutputStream.fail())
+        {
+            return false;
+        }
+    }
+
+    OutputStream.close();
+    return true;
 }
 
 FFbxSkeletalMesh* FFbxLoader::GetFbxObjectInternal(const FString& filename)
@@ -368,8 +459,7 @@ void FFbxLoader::LoadFbxSkeleton(
         for (int j = 0; j < 4; ++j)
             Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
-    FTransform Transform;
-    Transform.SetFromMatrix(Mat);
+    FTransform Transform{Mat};
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;

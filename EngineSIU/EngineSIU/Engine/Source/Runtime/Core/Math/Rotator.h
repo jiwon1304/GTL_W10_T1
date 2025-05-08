@@ -23,10 +23,6 @@ struct FRotator
         : Pitch(InPitch), Yaw(InYaw), Roll(InRoll)
     {}
 
-    FRotator(const FRotator& Other)
-        : Pitch(Other.Pitch), Yaw(Other.Yaw), Roll(Other.Roll)
-    {}
-
     explicit FRotator(const FVector& InVector);
     explicit FRotator(const FQuat& InQuat);
 
