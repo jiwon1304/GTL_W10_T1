@@ -503,7 +503,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
                         if (Actor && Actor->IsA<AItemActor>())
                         {
                             USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
-                            SkeletalComp->overrideSkinningTransform = (PreviewSkeletalMeshComponent->overrideSkinningTransform);
+                            SkeletalComp->CurrentPose = (PreviewSkeletalMeshComponent->CurrentPose);
                         }
                     }
                 }
@@ -563,7 +563,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             {
                 SkeletalMeshComponent->ResetPose();
             }
-            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FTransform& boneTransform = SkeletalMeshComponent->CurrentPose[SkeletalMeshComponent->SelectedBoneIndex];
             FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 
@@ -1315,6 +1315,7 @@ void PropertyEditorPanel::RenderCreateMaterialView()
     const FVector MatSpecularColor = tempMaterialInfo.SpecularColor;
     const FVector MatAmbientColor = tempMaterialInfo.AmbientColor;
     const FVector MatEmissiveColor = tempMaterialInfo.EmissiveColor;
+    const float MatEmissiveIntensity = tempMaterialInfo.EmissiveIntensity;
 
     const float DiffuseR = MatDiffuseColor.X;
     const float DiffuseG = MatDiffuseColor.Y;
@@ -1373,6 +1374,7 @@ void PropertyEditorPanel::RenderCreateMaterialView()
     {
         const FVector NewColor = { EmissiveColorPick[0], EmissiveColorPick[1], EmissiveColorPick[2] };
         tempMaterialInfo.EmissiveColor = NewColor;
+        tempMaterialInfo.EmissiveIntensity = 1.f;
     }
     ImGui::Unindent();
 

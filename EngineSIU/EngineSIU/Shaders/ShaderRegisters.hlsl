@@ -44,11 +44,12 @@ struct FMaterial
     float Shininess;
     
     float3 EmissiveColor;
-    float Opacity;
+    float EmissiveFactor;
     
+    float Opacity;
     float Metallic;
     float Roughness;
-    float2 MaterialPadding;
+    float MaterialPadding;
 };
 
 #define TEXTURE_FLAG_DIFFUSE       (1 << 0)

@@ -32,6 +32,7 @@ namespace MaterialUtils
         Data.Shininess = MaterialInfo.SpecularExponent;
         
         Data.EmissiveColor = MaterialInfo.EmissiveColor;
+        Data.EmissiveIntensity = MaterialInfo.EmissiveIntensity;
         Data.Transparency = MaterialInfo.Transparency;
 
         Data.Metallic = MaterialInfo.Metallic;

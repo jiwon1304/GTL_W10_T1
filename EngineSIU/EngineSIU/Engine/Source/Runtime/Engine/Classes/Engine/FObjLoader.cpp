@@ -751,6 +751,7 @@ bool FObjManager::SaveStaticMeshToBinary(const FWString& FilePath, const FStatic
         File.write(reinterpret_cast<const char*>(&Material.SpecularColor), sizeof(Material.SpecularColor));
         File.write(reinterpret_cast<const char*>(&Material.AmbientColor), sizeof(Material.AmbientColor));
         File.write(reinterpret_cast<const char*>(&Material.EmissiveColor), sizeof(Material.EmissiveColor));
+        File.write(reinterpret_cast<const char*>(&Material.EmissiveIntensity), sizeof(Material.EmissiveIntensity));
         
         File.write(reinterpret_cast<const char*>(&Material.SpecularExponent), sizeof(Material.SpecularExponent));
         File.write(reinterpret_cast<const char*>(&Material.IOR), sizeof(Material.IOR));
@@ -834,6 +835,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
         File.read(reinterpret_cast<char*>(&Material.SpecularColor), sizeof(Material.SpecularColor));
         File.read(reinterpret_cast<char*>(&Material.AmbientColor), sizeof(Material.AmbientColor));
         File.read(reinterpret_cast<char*>(&Material.EmissiveColor), sizeof(Material.EmissiveColor));
+        File.read(reinterpret_cast<char*>(&Material.EmissiveIntensity), sizeof(Material.EmissiveIntensity));
         
         File.read(reinterpret_cast<char*>(&Material.SpecularExponent), sizeof(Material.SpecularExponent));
         File.read(reinterpret_cast<char*>(&Material.IOR), sizeof(Material.IOR));

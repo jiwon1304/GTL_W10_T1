@@ -5,6 +5,7 @@
 #include "Engine/FFbxLoader.h"
 #include "UObject/Casts.h"
 #include "Components/Mesh/SkeletalMesh.h"
+#include "Math/JungleMath.h"
 
 UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 {
@@ -75,21 +76,21 @@ void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) c
     
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
-    if (overrideSkinningTransform.Num() == 0)
+    if (CurrentPose.Num() == 0)
     {
         OutMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const TArray<FTransform>& BonePose = overrideSkinningTransform;
-    OutMatrices.SetNum(overrideSkinningTransform.Num());
+    const TArray<FTransform>& BonePose = CurrentPose;
+    OutMatrices.SetNum(CurrentPose.Num());
     TArray<FMatrix> CurrentPoseMatrices; // joint -> model space
-    CurrentPoseMatrices.SetNum(overrideSkinningTransform.Num());
+    CurrentPoseMatrices.SetNum(CurrentPose.Num());
 
     TArray<FMatrix> InverseBindPose;
     SkeletalMesh->GetInverseBindPoseMatrices(InverseBindPose);
 
-    for (int JointIndex = 0; JointIndex < overrideSkinningTransform.Num(); ++JointIndex)
+    for (int JointIndex = 0; JointIndex < CurrentPose.Num(); ++JointIndex)
     {
         const FTransform& RefPose = BonePose[JointIndex];
         FMatrix BoneToModel = FMatrix::Identity;
@@ -126,13 +127,13 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
     
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
-    if (overrideSkinningTransform.Num() == 0)
+    if (CurrentPose.Num() == 0)
     {
         OutMatrices.Add(FMatrix::Identity);
         return;
     }
 
-    const TArray<FTransform>& BonePose = overrideSkinningTransform;
+    const TArray<FTransform>& BonePose = CurrentPose;
     OutMatrices.SetNum(RefSkeleton.RawRefBonePose.Num());
 
     TArray<FMatrix> InverseBindPose;
@@ -238,7 +239,7 @@ const TMap<int, FString> USkeletalMeshComponent::GetBoneIndexToName()
 
 void USkeletalMeshComponent::ResetPose()
 {
-    overrideSkinningTransform.Empty();
+    CurrentPose.Empty();
     
     FReferenceSkeleton RefSkeleton;
     if (!SkeletalMesh)
@@ -248,9 +249,72 @@ void USkeletalMeshComponent::ResetPose()
         return;
     const TArray<FTransform>& RefBonePose = RefSkeleton.RawRefBonePose;
     
-    overrideSkinningTransform.SetNum(RefBonePose.Num());
+    CurrentPose.SetNum(RefBonePose.Num());
     for (int i = 0; i < RefBonePose.Num(); ++i)
     {
-        overrideSkinningTransform[i] = RefBonePose[i];
+        CurrentPose[i] = RefBonePose[i];
     }
+}
+
+int USkeletalMeshComponent::CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const
+{
+    if (!AABB.Intersect(InRayOrigin, InRayDirection, OutHitDistance))
+    {
+        return 0;
+    }
+    if (SkeletalMesh == nullptr)
+    {
+        return 0;
+    }
+
+    OutHitDistance = FLT_MAX;
+
+    int IntersectionNum = 0;
+
+    const FSkeletalMeshRenderData& RenderData = SkeletalMesh->GetRenderData();
+
+    for (int i = 0; i < RenderData.RenderSections.Num(); ++i)
+    {
+        const FSkelMeshRenderSection& RenderSection = RenderData.RenderSections[i];
+
+        const TArray<FSkeletalVertex>& Vertices = RenderSection.Vertices;
+        const int32 VertexNum = Vertices.Num();
+        if (VertexNum == 0)
+        {
+            return 0;
+        }
+
+        const TArray<UINT>& Indices = RenderSection.Indices;
+        const int32 IndexNum = Indices.Num();
+        const bool bHasIndices = (IndexNum > 0);
+
+        int32 TriangleNum = bHasIndices ? (IndexNum / 3) : (VertexNum / 3);
+        for (int32 i = 0; i < TriangleNum; i++)
+        {
+            int32 Idx0 = i * 3;
+            int32 Idx1 = i * 3 + 1;
+            int32 Idx2 = i * 3 + 2;
+
+            if (bHasIndices)
+            {
+                Idx0 = Indices[Idx0];
+                Idx1 = Indices[Idx1];
+                Idx2 = Indices[Idx2];
+            }
+
+            // 각 삼각형의 버텍스 위치를 FVector로 불러옵니다.
+            FVector v0 = FVector(Vertices[Idx0].Position.X, Vertices[Idx0].Position.Y, Vertices[Idx0].Position.Z);
+            FVector v1 = FVector(Vertices[Idx1].Position.X, Vertices[Idx1].Position.Y, Vertices[Idx1].Position.Z);
+            FVector v2 = FVector(Vertices[Idx2].Position.X, Vertices[Idx2].Position.Y, Vertices[Idx2].Position.Z);
+
+            float HitDistance = FLT_MAX;
+            if (IntersectRayTriangle(InRayOrigin, InRayDirection, v0, v1, v2, HitDistance))
+            {
+                OutHitDistance = FMath::Min(HitDistance, OutHitDistance);
+                IntersectionNum++;
+            }
+        }
+    }
+
+    return IntersectionNum;
 }

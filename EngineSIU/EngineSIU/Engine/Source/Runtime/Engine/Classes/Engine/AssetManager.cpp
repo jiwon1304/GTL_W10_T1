@@ -38,7 +38,10 @@ void UAssetManager::InitAssetManager()
 {
     AssetRegistry = std::make_unique<FAssetRegistry>();
 
-#ifndef DEBUG
+    // 디버그 시 로딩을 빠르게 하기 위해서 일부만 로드
+#ifdef _DEBUG
+    FFbxLoader::LoadFBX("Contents/dragon/Dragon 2.5_fbx.fbx");
+#else
     LoadObjFiles();
 #endif // DEBUG
 }

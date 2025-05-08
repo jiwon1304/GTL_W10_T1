@@ -132,7 +132,7 @@ void SkeletalTreePanel::CreateSkeletalTreeNode()
             {
                 SkeletalMeshComponent->ResetPose();
             }
-            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FTransform& boneTransform = SkeletalMeshComponent->CurrentPose[SkeletalMeshComponent->SelectedBoneIndex];
             FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 

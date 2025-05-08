@@ -76,7 +76,20 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    return GetFbxObject(filename);
+    USkeletalMesh* mesh = nullptr;
+    {
+        mesh = GetFbxObject(filename);
+        std::lock_guard<std::mutex> lock(MapMutex);
+        if (mesh) {
+            MeshMap[filename] = { LoadState::Completed, mesh };
+        }
+        else
+        {
+            MeshMap[filename] = { LoadState::Failed, nullptr };
+        }
+    }
+
+    return mesh;
 }
 
 FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
@@ -223,7 +236,11 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
         InverseBindPoseMatrices[i] = fbxObject->skeleton.joints[i].inverseBindPose;
     }
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
-    newSkeletalMesh->bCPUSkinned = InverseBindPoseMatrices.Num() > 128 ? 1 : 0; // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
+    if (InverseBindPoseMatrices.Num() > 128)
+    {
+        // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
+        newSkeletalMesh->bCPUSkinned = true;
+    }
     //SkeletalMeshMap.Add(filename, newSkeletalMesh);
     return newSkeletalMesh;
 }
@@ -782,10 +799,12 @@ void FFbxLoader::LoadFBXMaterials(
 
         // emissive
         FbxProperty emissive = material->FindProperty(FbxSurfaceMaterial::sEmissive);
+        FbxProperty emissiveFactor = material->FindProperty(FbxSurfaceMaterial::sEmissiveFactor);
         if (ambient.IsValid())
         {
             FbxDouble3 color = emissive.Get<FbxDouble3>();
-            materialInfo->SetEmissive(FVector(color[0], color[1], color[2]));
+            double intensity = emissiveFactor.Get<FbxDouble>();
+            materialInfo->SetEmissive(FVector(color[0], color[1], color[2]), intensity);
             
             FbxTexture* texture = emissive.GetSrcObject<FbxTexture>();
             FbxFileTexture* fileTexture = FbxCast<FbxFileTexture>(texture);
