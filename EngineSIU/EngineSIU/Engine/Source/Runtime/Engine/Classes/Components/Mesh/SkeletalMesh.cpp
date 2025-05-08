@@ -1,5 +1,7 @@
 #include "SkeletalMesh.h"
 
+#include "UObject/ObjectFactory.h"
+
 UObject* USkeletalMesh::Duplicate(UObject* InOuter)
 {
 
@@ -55,9 +57,25 @@ bool USkeletalMesh::SerializeMesh(FArchive& Ar)
         Ar << RenderData
            << RefSkeleton
            << InverseBindPoseMatrices;
-    
-        for (UMaterial* Material : Materials)
+
+        if (Ar.IsSaving())
         {
+            int32 Num = Materials.Num();
+            Ar << Num;
+        }
+        else
+        {
+            int32 Num;
+            Ar << Num;
+            Materials.SetNum(Num);
+        }
+
+        for (UMaterial*& Material : Materials)
+        {
+            if (Ar.IsLoading())
+            {
+                Material = FObjectFactory::ConstructObject<UMaterial>(nullptr);
+            }
             Ar << Material->GetMaterialInfo();
         }
         bSuccess = true;

@@ -77,18 +77,26 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     return result;
 }
 
-USkeletalMesh* FFbxLoader::GetFbxObject(const FString& FilePath)
+USkeletalMesh* FFbxLoader::GetFbxObject(const FString& FilePath, bool bUseBinary)
 {
     // 미리 저장해놓은게 있으면 반환
     if (SkeletalMeshMap.Contains(FilePath))
         return SkeletalMeshMap[FilePath];
 
-    fs::path asdljhakdjhaskjh = fs::current_path();
+    if (bUseBinary)
+    {
+        fs::path Path = FilePath.ToWideString();
+        Path.replace_extension(".bin");
+        if (USkeletalMesh* Ret = LoadBinaryObject(Path.generic_string()))
+        {
+            return Ret;
+        }
+    }
+
     // 없으면 파싱
     FFbxSkeletalMesh* fbxObject = GetFbxObjectInternal(FilePath);
     if (!fbxObject) // 파싱 실패
         return nullptr;
-
 
     // SkeletalMesh로 변환
     USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
@@ -226,7 +234,8 @@ USkeletalMesh* FFbxLoader::LoadBinaryObject(const FString& FilePath)
 
 bool FFbxLoader::SaveBinaryObject(const FString& FilePath, USkeletalMesh* SkeletalMesh)
 {
-    const fs::path Path = FilePath.ToWideString();
+    fs::path Path = FilePath.ToWideString();
+    Path.replace_extension(".bin");
 
     TArray<uint8> SaveData;
     FMemoryWriter Writer{SaveData}; // TODO: FFileArchive 만들기

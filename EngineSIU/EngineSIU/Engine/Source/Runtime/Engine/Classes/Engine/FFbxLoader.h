@@ -13,7 +13,7 @@ class USkeletalMesh;
 
 struct FFbxLoader // TODO: 나중에 이름 바꿔야 할듯
 {
-    static USkeletalMesh* GetFbxObject(const FString& FilePath);
+    static USkeletalMesh* GetFbxObject(const FString& FilePath, bool bUseBinary = true);
     static USkeletalMesh* LoadBinaryObject(const FString& FilePath);
     static bool SaveBinaryObject(const FString& FilePath, USkeletalMesh* SkeletalMesh);
 

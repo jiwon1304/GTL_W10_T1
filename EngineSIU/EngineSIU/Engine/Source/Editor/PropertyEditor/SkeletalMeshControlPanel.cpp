@@ -278,9 +278,11 @@ void SkeletalMeshControlPanel::CreateBoneDisplayOptions()
     ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Bone Display Options", &bShowBoneOptions))
     {
-        ImGui::Checkbox("Show All Bones", nullptr);
-        ImGui::Checkbox("Show Names", nullptr);
-        ImGui::Checkbox("Show Axes", nullptr);
+        bool Temp = false;
+        ImGui::Checkbox("Show All Bones", &Temp);
+        ImGui::Checkbox("Show Names", &Temp);
+        ImGui::Checkbox("Show Axes", &Temp);
+        Temp = false;
         
         ImGui::Separator();
         
