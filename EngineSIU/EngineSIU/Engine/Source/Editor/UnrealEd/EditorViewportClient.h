@@ -113,7 +113,7 @@ protected:
     int32 CameraSpeedSetting = 1;
     /** Camera speed scalar */
     float CameraSpeed = 1.0f;
-    float GridSize;
+    float GridSize = 10.f;
 
     void GetViewInfo(FMinimalViewInfo& OutViewInfo) const;
 
@@ -211,6 +211,13 @@ public:
     float GetGridSize() const { return GridSize; }
     float GetCameraSpeedScalar() const { return CameraSpeed; }
     void SetCameraSpeed(float InValue);
+
+    void ResetKeyState() { PressedKeys.Empty(); }
+    bool IsKeyPressed(EKeys::Type Key) const { return PressedKeys.Contains(Key); }
+    
+    // 마우스 우클릭 상태 제어 메소드
+    void SetRightMouseDown(bool bDown) { bRightMouseDown = bDown; }
+    bool IsRightMouseDown() const { return bRightMouseDown; }
 
 private:
     template <typename T>

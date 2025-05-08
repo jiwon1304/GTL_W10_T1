@@ -16,6 +16,7 @@
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
 #include "Editor/PropertyEditor/ShowFlags.h"
+#include "Components/SkeletalMeshComponent.h"
 
 class UEditorEngine;
 class UStaticMeshComponent;
@@ -98,6 +99,13 @@ void FShadowRenderPass::PrepareRenderArr()
             }
         }
     }
+    for (const auto iter : TObjectRange<USkeletalMeshComponent>())
+    {
+        if (iter->GetOwner() && !iter->GetOwner()->IsHidden())
+        {
+            SkeletalMeshComponents.Add(iter);
+        }
+    }
 }
 
 void FShadowRenderPass::UpdateIsShadowConstant(int32 isShadow) const
@@ -129,24 +137,24 @@ void FShadowRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
     for (const auto DirectionalLight : TObjectRange<UDirectionalLightComponent>())
     {
         // Cascade Shadow Map을 위한 ViewProjection Matrix 설정
-            ShadowManager->UpdateCascadeMatrices(Viewport, DirectionalLight);
+        ShadowManager->UpdateCascadeMatrices(Viewport, DirectionalLight);
 
-            PrepareCSMRenderState();
-            FCascadeConstantBuffer CascadeData = {};
-            uint32 NumCascades = ShadowManager->GetNumCasCades();
-            for (uint32 i = 0; i < NumCascades; i++)
-            {
-                CascadeData.ViewProj[i] = ShadowManager->GetCascadeViewProjMatrix(i);
-            }
+        PrepareCSMRenderState();
+        FCascadeConstantBuffer CascadeData = {};
+        uint32 NumCascades = ShadowManager->GetNumCasCades();
+        for (uint32 i = 0; i < NumCascades; i++)
+        {
+            CascadeData.ViewProj[i] = ShadowManager->GetCascadeViewProjMatrix(i);
+        }
 
-            ShadowManager->BeginDirectionalShadowCascadePass(0);
-            //RenderAllStaticMeshes(Viewport);
+        ShadowManager->BeginDirectionalShadowCascadePass(0);
+        //RenderAllStaticMeshes(Viewport);
 
-            RenderAllStaticMeshesForCSM(Viewport, CascadeData);
+        RenderAllStaticMeshesForCSM(Viewport, CascadeData);
 
-            Graphics->DeviceContext->GSSetShader(nullptr, nullptr, 0);
-            Graphics->DeviceContext->RSSetViewports(0, nullptr);
-            Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+        Graphics->DeviceContext->GSSetShader(nullptr, nullptr, 0);
+        Graphics->DeviceContext->RSSetViewports(0, nullptr);
+        Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
        
     }
     PrepareRenderState();
@@ -264,6 +272,10 @@ void FShadowRenderPass::RenderAllStaticMeshes(const std::shared_ptr<FEditorViewp
         RenderPrimitive(RenderData, Comp->GetStaticMesh()->GetMaterials(), Comp->GetOverrideMaterials(), Comp->GetselectedSubMeshIndex());
         
     }
+}
+
+void FShadowRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+{
 }
 
 void FShadowRenderPass::RenderAllStaticMeshesForCSM(const std::shared_ptr<FEditorViewportClient>& Viewport, FCascadeConstantBuffer FCasCadeData)

@@ -30,6 +30,7 @@ class FEditorViewportClient;
 class FViewportResource;
 
 class FStaticMeshRenderPass;
+class FSkeletalMeshRenderPass;
 class FWorldBillboardRenderPass;
 class FEditorBillboardRenderPass;
 class FGizmoRenderPass;
@@ -59,7 +60,8 @@ public:
     // 렌더 패스 관련 함수
     //==========================================================================
     void Render(const std::shared_ptr<FEditorViewportClient>& Viewport);
-    void RenderViewport(const std::shared_ptr<FEditorViewportClient>& Viewport) const; // TODO: 추후 RenderSlate로 변경해야함
+    void RenderMinimal(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    void RenderViewport(HWND hWnd, const std::shared_ptr<FEditorViewportClient>& Viewport) const; // TODO: 추후 RenderSlate로 변경해야함
 
 protected:
     void BeginRender(const std::shared_ptr<FEditorViewportClient>& Viewport);
@@ -98,6 +100,7 @@ public:
     class FShadowRenderPass* ShadowRenderPass;
 
     FStaticMeshRenderPass* StaticMeshRenderPass = nullptr;
+    FSkeletalMeshRenderPass* SkeletalMeshRenderPass = nullptr;
     FWorldBillboardRenderPass* WorldBillboardRenderPass = nullptr;
     FEditorBillboardRenderPass* EditorBillboardRenderPass = nullptr;
     FGizmoRenderPass* GizmoRenderPass = nullptr;

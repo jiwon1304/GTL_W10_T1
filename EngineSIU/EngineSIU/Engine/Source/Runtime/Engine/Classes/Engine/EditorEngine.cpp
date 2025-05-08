@@ -7,7 +7,10 @@
 #include "GameFramework/Actor.h"
 #include "Classes/Engine/AssetManager.h"
 #include "Components/Light/DirectionalLightComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "UObject/UObjectIterator.h"
+#include "FFbxLoader.h"
+#include "Contents/Actors/ItemActor.h"
 
 namespace PrivateEditorSelection
 {
@@ -41,6 +44,8 @@ void UEditorEngine::Init()
         AssetManager->InitAssetManager();
     }
     LoadLevel("Saved/AutoSaves.scene");
+
+    StartPreviewWorld(nullptr);
 }
 
 void UEditorEngine::Release()
@@ -52,7 +57,7 @@ void UEditorEngine::Tick(float DeltaTime)
 {
     for (FWorldContext* WorldContext : WorldList)
     {
-        if (WorldContext->WorldType == EWorldType::Editor)
+        if (WorldContext->WorldType == EWorldType::Editor || WorldContext->WorldType == EWorldType::EditorPreview)
         {
             if (UWorld* World = WorldContext->World())
             {
@@ -176,6 +181,54 @@ void UEditorEngine::EndPIE()
     Handler->OnPIEModeEnd();
     // 다시 EditorWorld로 돌아옴.
     ActiveWorld = EditorWorld;
+}
+
+void UEditorEngine::StartPreviewWorld(UMeshComponent* TargetMesh)
+{
+    // PreviewWorld는 AcitveWorld가 되면 안됨.
+    // 함수 떄문에 ActiveWorld로 변경하였으면 다시 돌려놔야 함.
+    if (EditorPreviewWorld)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("EditorPreviewWorld already exists!"));
+        return;
+    }
+
+    FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
+
+    FWorldContext& EditorPreviewWorldContext = CreateNewWorldContext(EWorldType::EditorPreview);
+
+    EditorPreviewWorld = UWorld::CreateWorld(this, EWorldType::EditorPreview, FString("EditorPreviewWorld"));
+
+    EditorPreviewWorldContext.SetCurrentWorld(EditorPreviewWorld);
+
+    AItemActor* Temp = EditorPreviewWorld->SpawnActor<AItemActor>();
+    Temp->SetActorLocation({ 0.f, 0.f, 0.f });
+    Temp->SetActorLabel(TEXT("OBJ_PREVIEW_ACTOR"));
+
+    EditorPreviewWorld->SpawnActor<ADirectionalLight>();
+
+    // 임시로 ActiveWorld 변경
+    UWorld* CurrentWorld = ActiveWorld;
+    
+    // BindEssentialObjects()는 ActiveWorld기준임.  
+    ActiveWorld = EditorPreviewWorld;
+    BindEssentialObjects();
+
+    ActiveWorld = CurrentWorld;
+}
+
+void UEditorEngine::EndPreviewWorld()
+{
+    if (EditorPreviewWorld)
+    {
+        WorldList.Remove(GetWorldContextFromWorld(EditorPreviewWorld));
+        EditorPreviewWorld->Release();
+        GUObjectArray.MarkRemoveObject(EditorPreviewWorld);
+        EditorPreviewWorld = nullptr;
+
+        DeselectActor(GetSelectedActor());
+        DeselectComponent(GetSelectedComponent());
+    }
 }
 
 FWorldContext& UEditorEngine::GetEditorWorldContext(/*bool bEnsureIsGWorld*/)

@@ -5,18 +5,31 @@
 #include <Engine/Engine.h>
 #include "PropertyEditor/ShowFlags.h"
 
-void FGraphicsDevice::Initialize(HWND hWindow)
+void FGraphicsDevice::Initialize(HWND hWnd)
 {
-    CreateDeviceAndSwapChain(hWindow);
-    CreateBackBuffer();
+    CreateDeviceAndSwapChain(hWnd, true);
+    CreateBackBuffer(hWnd);
     CreateDepthStencilState();
     CreateRasterizerState();
     CreateAlphaBlendState();
     CurrentRasterizer = RasterizerSolidBack;
 }
 
-void FGraphicsDevice::CreateDeviceAndSwapChain(HWND hWindow)
+void FGraphicsDevice::CreateAdditionalSwapChain(HWND hWnd)
 {
+    if (SwapChains.Contains(hWnd))
+    {
+        return;
+    }
+
+    CreateDeviceAndSwapChain(hWnd, false);
+    CreateBackBuffer(hWnd);
+}
+
+void FGraphicsDevice::CreateDeviceAndSwapChain(HWND hWnd, bool bIsInitialDevice)
+{
+    IDXGISwapChain* NewSwapChain = nullptr;
+
     // 지원하는 Direct3D 기능 레벨을 정의
     D3D_FEATURE_LEVEL FeatureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
 
@@ -27,39 +40,55 @@ void FGraphicsDevice::CreateDeviceAndSwapChain(HWND hWindow)
     SwapchainDesc.SampleDesc.Count = 1;                           // 멀티 샘플링 비활성화
     SwapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;  // 렌더 타겟으로 사용
     SwapchainDesc.BufferCount = 2;                                // 더블 버퍼링
-    SwapchainDesc.OutputWindow = hWindow;                         // 렌더링할 창 핸들
+    SwapchainDesc.OutputWindow = hWnd;                         // 렌더링할 창 핸들
     SwapchainDesc.Windowed = TRUE;                                // 창 모드
     SwapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;     // 스왑 방식
 
     uint32 FLAG = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-#if _DEBUG
+//#if _DEBUG
     FLAG |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
+//#endif
+
     // 디바이스와 스왑 체인 생성
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(
-        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-        FLAG,
-        FeatureLevels, ARRAYSIZE(FeatureLevels), D3D11_SDK_VERSION,
-        &SwapchainDesc, &SwapChain, &Device, nullptr, &DeviceContext
-    );
+    HRESULT hr;
+    if (bIsInitialDevice)
+    {
+        hr = D3D11CreateDeviceAndSwapChain(
+            nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+            FLAG,
+            FeatureLevels, ARRAYSIZE(FeatureLevels), D3D11_SDK_VERSION,
+            &SwapchainDesc, &NewSwapChain, &Device, nullptr, &DeviceContext
+        );
+    }
+    else
+    {
+        IDXGIFactory* DXGIFactory = nullptr;
+        HRESULT hrFactory = CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&DXGIFactory));
+        if (FAILED(hrFactory) || !DXGIFactory)
+        {
+            MessageBox(hWnd, L"Create DXGIFactory failed for additional swap chain!", L"Error", MB_ICONERROR | MB_OK);
+            return;
+        }
+
+        hr = DXGIFactory->CreateSwapChain(Device, &SwapchainDesc, &NewSwapChain);
+        DXGIFactory->Release();
+    }
 
     if (FAILED(hr))
     {
-        MessageBox(hWindow, L"CreateDeviceAndSwapChain failed!", L"Error", MB_ICONERROR | MB_OK);
+        MessageBox(hWnd, L"CreateDeviceAndSwapChain failed!", L"Error", MB_ICONERROR | MB_OK);
         return;
     }
 
     // 스왑 체인 정보 가져오기 (이후에 사용을 위해)
-    SwapChain->GetDesc(&SwapchainDesc);
-    ScreenWidth = SwapchainDesc.BufferDesc.Width;
-    ScreenHeight = SwapchainDesc.BufferDesc.Height;
-
-    Viewport.Width = ScreenWidth;
-    Viewport.Height = ScreenHeight;
-    Viewport.MinDepth = 0.0f;
-    Viewport.MaxDepth = 1.0f;
-    Viewport.TopLeftX = 0;
-    Viewport.TopLeftY = 0;
+    if (NewSwapChain)
+    {
+        SwapChains.Add(hWnd, NewSwapChain);
+        NewSwapChain->GetDesc(&SwapchainDesc);
+        ScreenWidths.Add(hWnd, SwapchainDesc.BufferDesc.Width);
+        ScreenHeights.Add(hWnd, SwapchainDesc.BufferDesc.Height);
+        Viewports.Add(hWnd, {0.f, 0.f, static_cast<FLOAT>(SwapchainDesc.BufferDesc.Width),  static_cast<FLOAT>(SwapchainDesc.BufferDesc.Height), 0.f, 1.f });
+    }
 }
 
 ID3D11Texture2D* FGraphicsDevice::CreateTexture2D(const D3D11_TEXTURE2D_DESC& Description, const void* InitialData)
@@ -70,7 +99,6 @@ ID3D11Texture2D* FGraphicsDevice::CreateTexture2D(const D3D11_TEXTURE2D_DESC& De
     
     ID3D11Texture2D* Texture2D;
     HRESULT hr = Device->CreateTexture2D(&Description, InitialData ? &Data : nullptr, &Texture2D);
-    
     if (FAILED(hr))
     {
         return nullptr;
@@ -145,11 +173,7 @@ void FGraphicsDevice::ReleaseDeviceAndSwapChain()
         DeviceContext->Flush(); // 남아있는 GPU 명령 실행
     }
 
-    if (SwapChain)
-    {
-        SwapChain->Release();
-        SwapChain = nullptr;
-    }
+    ReleaseAllSwapChains();
 
     if (Device)
     {
@@ -164,35 +188,101 @@ void FGraphicsDevice::ReleaseDeviceAndSwapChain()
     }
 }
 
-void FGraphicsDevice::CreateBackBuffer()
+void FGraphicsDevice::ReleaseSwapChain(HWND hWnd)
 {
-    SwapChain->GetBuffer(0, IID_PPV_ARGS(&BackBufferTexture));
+    IDXGISwapChain** ppSwapChain = SwapChains.Find(hWnd);
+    if (ppSwapChain && *ppSwapChain)
+    {
+        (*ppSwapChain)->Release();
+        SwapChains.Remove(hWnd);
+    }
+}
+
+void FGraphicsDevice::ReleaseAllSwapChains()
+{
+    for (auto& SwapChain : SwapChains)
+    {
+        if (SwapChain.Value)
+        {
+            SwapChain.Value->Release();
+        }
+    }
+    SwapChains.Empty();
+}
+
+void FGraphicsDevice::CreateBackBuffer(HWND hWnd)
+{
+    IDXGISwapChain** SpecificSwapChain = SwapChains.Find(hWnd);
+    if (!SpecificSwapChain || !*SpecificSwapChain)
+    {
+        return;
+    }
+
+    ID3D11Texture2D* BackBufferTex = nullptr;
+    HRESULT hr = (*SpecificSwapChain)->GetBuffer(0, IID_PPV_ARGS(&BackBufferTex));
+    if (FAILED(hr))
+    {
+        MessageBox(hWnd, L"Get BackBufferTex failed!", L"Error", MB_ICONERROR | MB_OK);
+        return;
+    }
+
+    BackBufferTextures.Add(hWnd, BackBufferTex);
 
     D3D11_RENDER_TARGET_VIEW_DESC BackBufferRTVDesc = {};
     BackBufferRTVDesc.Format = BackBufferRTVFormat;
     BackBufferRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 
-    HRESULT hr = Device->CreateRenderTargetView(BackBufferTexture, &BackBufferRTVDesc, &BackBufferRTV);
+    ID3D11RenderTargetView* backBufferRTV = nullptr;
+    hr = Device->CreateRenderTargetView(BackBufferTex, &BackBufferRTVDesc, &backBufferRTV);
     if (FAILED(hr))
     {
+        BackBufferTex->Release();
+        BackBufferTextures.Remove(hWnd);
+        MessageBox(hWnd, L"Create BackBufferRTV failed!", L"Error", MB_ICONERROR | MB_OK);
         return;
     }
+
+    BackBufferRTVs.Add(hWnd, backBufferRTV);
 }
 
-void FGraphicsDevice::ReleaseFrameBuffer()
+void FGraphicsDevice::ReleaseFrameBuffer(HWND hWnd)
 {
-    if (BackBufferRTV)
+    ID3D11RenderTargetView** ppRTV = BackBufferRTVs.Find(hWnd);
+    if (ppRTV && *ppRTV)
     {
-        BackBufferRTV->Release();
-        BackBufferRTV = nullptr;
+        (*ppRTV)->Release();
+        BackBufferRTVs.Remove(hWnd);
     }
 
-    if (BackBufferTexture)
+    ID3D11Texture2D** ppTexture = BackBufferTextures.Find(hWnd);
+    if (ppTexture && *ppTexture)
     {
-        BackBufferTexture->Release();
-        BackBufferTexture = nullptr;
+        (*ppTexture)->Release();
+        BackBufferTextures.Remove(hWnd);
     }
 }
+
+void FGraphicsDevice::ReleaseAllFrameBuffers()
+{
+    for (auto& BackBufferRTV : BackBufferRTVs)
+    {
+        if (BackBufferRTV.Value)
+        {
+            BackBufferRTV.Value->Release();
+        }
+    }
+    BackBufferRTVs.Empty();
+
+    for (auto& BackBufferTex : BackBufferTextures)
+    {
+        if (BackBufferTex.Value)
+        {
+            BackBufferTex.Value->Release();
+        }
+    }
+    BackBufferTextures.Empty();
+}
+
 
 void FGraphicsDevice::ReleaseRasterizerState()
 {
@@ -225,52 +315,89 @@ void FGraphicsDevice::ReleaseDepthStencilResources()
 
 void FGraphicsDevice::Release()
 {
-    DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    if (DeviceContext)
+    {
+        DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    }
 
     ReleaseRasterizerState();
     ReleaseDepthStencilResources();
-    ReleaseFrameBuffer();
+
+    ReleaseAllFrameBuffers();
     ReleaseDeviceAndSwapChain();
 }
 
-void FGraphicsDevice::SwapBuffer() const
+void FGraphicsDevice::SwapBuffer(HWND hWnd) const
 {
-    SwapChain->Present(0, 0);
+    IDXGISwapChain* const* ppSwapChain = SwapChains.Find(hWnd);
+    if (ppSwapChain && *ppSwapChain)
+    {
+        (*ppSwapChain)->Present(0, 0);
+    }
+    else
+    {
+        MessageBox(hWnd, L"SwapChain not found!", L"Error", MB_ICONERROR | MB_OK);
+        return;
+    }
 }
 
-void FGraphicsDevice::Resize(HWND hWindow)
+void FGraphicsDevice::Resize(HWND hWnd)
 {
+    if (!DeviceContext)
+    {
+        return;
+    }
     DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
-    ReleaseFrameBuffer();
+    ReleaseFrameBuffer(hWnd);
 
-    if (ScreenWidth == 0 || ScreenHeight == 0)
+    IDXGISwapChain** SpecificSwapChain = SwapChains.Find(hWnd);
+    if (!SpecificSwapChain || !*SpecificSwapChain)
     {
-        MessageBox(hWindow, L"Invalid width or height for ResizeBuffers!", L"Error", MB_ICONERROR | MB_OK);
+        return;
+    }
+
+    RECT ClientRect;
+    GetClientRect(hWnd, &ClientRect);
+    const UINT CurrentWidth = ClientRect.right - ClientRect.left;
+    const UINT CurrentHeight = ClientRect.bottom - ClientRect.top;
+
+    if (CurrentWidth == 0 || CurrentHeight == 0)
+    {
+        MessageBox(hWnd, L"Invalid width or height for ResizeBuffers!", L"Error", MB_ICONERROR | MB_OK);
         return;
     }
 
     // SwapChain 크기 조정
-    HRESULT hr = S_OK;
-    hr = SwapChain->ResizeBuffers(0, 0, 0, BackBufferFormat, 0); // DXGI_FORMAT_B8G8R8A8_UNORM으로 시도
+    HRESULT hr = (*SpecificSwapChain)->ResizeBuffers(0, CurrentWidth, CurrentHeight, BackBufferFormat, 0);
     if (FAILED(hr))
     {
-        MessageBox(hWindow, L"failed", L"ResizeBuffers failed ", MB_ICONERROR | MB_OK);
+        MessageBox(hWnd, L"failed", L"ResizeBuffers failed ", MB_ICONERROR | MB_OK);
         return;
     }
 
-    SwapChain->GetDesc(&SwapchainDesc);
-    ScreenWidth = SwapchainDesc.BufferDesc.Width;
-    ScreenHeight = SwapchainDesc.BufferDesc.Height;
+    if (!SwapChains.IsEmpty() && SwapChains.begin()->Key == hWnd)
+    {
+        // 기존 정보 삭제
+        ScreenWidths.Remove(hWnd);
+        ScreenHeights.Remove(hWnd);
+        Viewports.Remove(hWnd);
 
-    Viewport.Width = ScreenWidth;
-    Viewport.Height = ScreenHeight;
-    Viewport.MinDepth = 0.0f;
-    Viewport.MaxDepth = 1.0f;
-    Viewport.TopLeftX = 0;
-    Viewport.TopLeftY = 0;
+        DXGI_SWAP_CHAIN_DESC Desc;
+        hr = (*SpecificSwapChain)->GetDesc(&Desc);
+        if (FAILED(hr))
+        {
+            MessageBox(hWnd, L"Get Desc failed", L"Error", MB_ICONERROR | MB_OK);
+            return;
+        }
+        // 변경된 정보 저장
+        SwapchainDesc = Desc;
+        ScreenWidths.Add(hWnd, Desc.BufferDesc.Width);
+        ScreenHeights.Add(hWnd, Desc.BufferDesc.Height);
+        Viewports.Add(hWnd, {0.f, 0.f, static_cast<FLOAT>(Desc.BufferDesc.Width), static_cast<FLOAT>(Desc.BufferDesc.Height), 0.f, 1.f});
+    }
 
-    CreateBackBuffer();
+    CreateBackBuffer(hWnd);
 
     // TODO : Resize에 따른 Depth Pre-Pass 리사이징 필요
 }
@@ -317,6 +444,7 @@ void FGraphicsDevice::ChangeRasterizer(EViewModeIndex ViewModeIndex)
     DeviceContext->RSSetState(CurrentRasterizer); //레스터 라이저 상태 설정
 }
 
+/*
 void FGraphicsDevice::CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV)
 {
     D3D11_TEXTURE2D_DESC TextureDesc = {};
@@ -339,11 +467,25 @@ void FGraphicsDevice::CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTarget
 
     Device->CreateRenderTargetView(OutTexture, &FogRTVDesc, &OutRTV);
 }
-
-void FGraphicsDevice::Prepare()
+*/
+void FGraphicsDevice::Prepare(HWND hWnd)
 {
+    if (!DeviceContext)
+    {
+        return;
+    }
     DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-    DeviceContext->ClearRenderTargetView(BackBufferRTV, ClearColor);
+
+    ID3D11RenderTargetView* const* ppRTV = BackBufferRTVs.Find(hWnd);
+    if (ppRTV && *ppRTV)
+    {
+        DeviceContext->ClearRenderTargetView(*ppRTV, ClearColor);
+    }
+    else
+    {
+        MessageBox(hWnd, L"BackBufferRTV not found!", L"Error", MB_ICONERROR | MB_OK);
+        return;
+    }
 }
 
 /* TODO: 픽셀 피킹 관련 함수로, 임시로 주석 처리

@@ -247,7 +247,7 @@ bool FObjLoader::ParseMaterial(FObjInfo& OutObjInfo, FStaticMeshRenderData& OutF
             LineStream >> Line;
             MaterialIndex++;
 
-            FObjMaterialInfo Material;
+            FMaterialInfo Material;
             Material.MaterialName = Line;
             
             constexpr uint32 TexturesNum = static_cast<uint32>(EMaterialTextureSlots::MTS_MAX);
@@ -740,7 +740,7 @@ bool FObjManager::SaveStaticMeshToBinary(const FWString& FilePath, const FStatic
     // Materials
     uint32 MaterialCount = StaticMesh.Materials.Num();
     File.write(reinterpret_cast<const char*>(&MaterialCount), sizeof(MaterialCount));
-    for (const FObjMaterialInfo& Material : StaticMesh.Materials)
+    for (const FMaterialInfo& Material : StaticMesh.Materials)
     {
         Serializer::WriteFString(File, Material.MaterialName);
         
@@ -824,7 +824,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
     uint32 MaterialCount = 0;
     File.read(reinterpret_cast<char*>(&MaterialCount), sizeof(MaterialCount));
     OutStaticMesh.Materials.SetNum(MaterialCount);
-    for (FObjMaterialInfo& Material : OutStaticMesh.Materials)
+    for (FMaterialInfo& Material : OutStaticMesh.Materials)
     {
         Serializer::ReadFString(File, Material.MaterialName);
         File.read(reinterpret_cast<char*>(&Material.TextureFlag), sizeof(Material.TextureFlag));
@@ -889,7 +889,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
     return true;
 }
 
-UMaterial* FObjManager::CreateMaterial(const FObjMaterialInfo& materialInfo)
+UMaterial* FObjManager::CreateMaterial(const FMaterialInfo& materialInfo)
 {
     if (MaterialMap[materialInfo.MaterialName] != nullptr)
         return MaterialMap[materialInfo.MaterialName];

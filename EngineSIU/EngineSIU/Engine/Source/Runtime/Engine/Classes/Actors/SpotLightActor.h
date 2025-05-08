@@ -10,8 +10,5 @@ public:
 protected:
     UPROPERTY
     (USpotLightComponent*, SpotLightComponent, = nullptr);
-
-    UPROPERTY
-    (UBillboardComponent*, BillboardComponent, = nullptr);
 };
 

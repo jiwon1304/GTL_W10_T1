@@ -16,7 +16,7 @@ class UStaticMeshComponent;
 struct FStaticMaterial;
 class FShadowRenderPass;
 
-class FStaticMeshRenderPass : public IRenderPass
+class FStaticMeshRenderPass : public virtual IRenderPass
 {
 public:
     FStaticMeshRenderPass();

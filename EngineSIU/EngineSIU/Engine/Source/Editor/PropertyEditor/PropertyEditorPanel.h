@@ -4,10 +4,12 @@
 #include "Components/ActorComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Actor.h"
 #include "UnrealEd/EditorPanel.h"
 #include "Math/Rotator.h"
 #include "UObject/Casts.h"
+#include "Components/Material/Material.h"
 
 class USpringArmComponent;
 class UShapeComponent;
@@ -59,6 +61,8 @@ private:
     
     /* Static Mesh Settings */
     void RenderForStaticMesh(UStaticMeshComponent* StaticMeshComp) const;
+    void RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp) const;
+    void RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent);
 
     void RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const;
     void RenderForDirectionalLightComponent(UDirectionalLightComponent* DirectionalLightComponent) const;
@@ -96,7 +100,7 @@ private:
     int SelectedMaterialIndex = -1;
     int CurMaterialIndex = -1;
     UStaticMeshComponent* SelectedStaticMeshComp = nullptr;
-    FObjMaterialInfo tempMaterialInfo;
+    FMaterialInfo tempMaterialInfo;
     bool IsCreateMaterial;
 
     const FString TemplateFilePath = FString("LuaScripts/template.lua");

@@ -3,6 +3,7 @@
 #include "RendererHelpers.h"
 #include "Container/Array.h"
 
+class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UMaterial;
 
@@ -52,6 +53,9 @@ protected:
     FDXDShaderManager* ShaderManager;
 
     TArray<UStaticMeshComponent*> StaticMeshComponents;
+
+    // TODO: SkinnedMesh RenderPass로 따로 분리하기?
+    TArray<USkeletalMeshComponent*> SkinnedMeshComponents;
     ID3D11ShaderResourceView* SpotShadowArraySRV = nullptr;
 };
 

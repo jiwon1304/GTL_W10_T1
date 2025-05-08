@@ -7,6 +7,8 @@
 #include "Engine/EditorEngine.h"
 #include "World/World.h"
 #include "Engine/FObjLoader.h"
+#include "Engine/FFbxLoader.h"
+#include "Components/SkeletalMeshComponent.h"
 
 ATransformGizmo::ATransformGizmo()
 {
@@ -79,6 +81,7 @@ ATransformGizmo::ATransformGizmo()
     CircleZ->SetupAttachment(RootComponent);
     CircleZ->SetGizmoType(UGizmoBaseComponent::CircleZ);
     CircleArr.Add(CircleZ);
+
 }
 
 void ATransformGizmo::Tick(float DeltaTime)

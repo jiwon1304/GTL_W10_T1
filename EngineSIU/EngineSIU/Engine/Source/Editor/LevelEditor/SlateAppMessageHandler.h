@@ -11,17 +11,17 @@ namespace EMouseButtons
 enum Type : uint8;
 }
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnKeyCharDelegate, const TCHAR /*Character*/, const bool /*IsRepeat*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnKeyDownDelegate, const FKeyEvent& /*InKeyEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnKeyUpDelegate, const FKeyEvent& /*InKeyEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMouseDownDelegate, const FPointerEvent& /*InMouseEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMouseUpDelegate, const FPointerEvent& /*InMouseEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMouseDoubleClickDelegate, const FPointerEvent& /*InMouseEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMouseWheelDelegate, const FPointerEvent& /*InMouseEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMouseMoveDelegate, const FPointerEvent& /*InMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnKeyCharDelegate, HWND /*WindowHandle*/, const TCHAR /*Character*/, const bool /*IsRepeat*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnKeyDownDelegate, HWND /*WindowHandle*/, const FKeyEvent& /*InKeyEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnKeyUpDelegate, HWND /*WindowHandle*/, const FKeyEvent& /*InKeyEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnMouseDownDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnMouseUpDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnMouseDoubleClickDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnMouseWheelDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnMouseMoveDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InMouseEvent*/);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnRawMouseInputDelegate, const FPointerEvent& /*InRawMouseEvent*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnRawKeyboardInputDelegate, const FKeyEvent& /*InRawKeyboardEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnRawMouseInputDelegate, HWND /*WindowHandle*/, const FPointerEvent& /*InRawMouseEvent*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnRawKeyboardInputDelegate, HWND /*WindowHandle*/, const FKeyEvent& /*InRawKeyboardEvent*/);
 
 DECLARE_MULTICAST_DELEGATE(FOnPIEModeStart);
 DECLARE_MULTICAST_DELEGATE(FOnPIEModeEnd);
@@ -50,17 +50,17 @@ public:
     void OnPIEModeEnd();
 
 protected:
-    void OnKeyChar(const TCHAR Character, const bool IsRepeat);
-    void OnKeyDown(uint32 KeyCode, const uint32 CharacterCode, const bool IsRepeat);
-    void OnKeyUp(uint32 KeyCode, const uint32 CharacterCode, const bool IsRepeat);
-    void OnMouseDown(const EMouseButtons::Type Button, const FVector2D CursorPos);
-    void OnMouseUp(const EMouseButtons::Type Button, const FVector2D CursorPos);
-    void OnMouseDoubleClick(const EMouseButtons::Type Button, const FVector2D CursorPos);
-    void OnMouseWheel(const float Delta, const FVector2D CursorPos);
-    void OnMouseMove();
+    void OnKeyChar(HWND hWnd, const TCHAR Character, const bool IsRepeat);
+    void OnKeyDown(HWND hWnd, uint32 KeyCode, const uint32 CharacterCode, const bool IsRepeat);
+    void OnKeyUp(HWND hWnd, uint32 KeyCode, const uint32 CharacterCode, const bool IsRepeat);
+    void OnMouseDown(HWND hWnd, const EMouseButtons::Type Button, const FVector2D CursorPos);
+    void OnMouseUp(HWND hWnd, const EMouseButtons::Type Button, const FVector2D CursorPos);
+    void OnMouseDoubleClick(HWND hWnd, const EMouseButtons::Type Button, const FVector2D CursorPos);
+    void OnMouseWheel(HWND hWnd, const float Delta, const FVector2D CursorPos);
+    void OnMouseMove(HWND hWnd);
 
-    void OnRawMouseInput(const RAWMOUSE& RawMouseInput);
-    void OnRawKeyboardInput(const RAWKEYBOARD& RawKeyboardInput);
+    void OnRawMouseInput(HWND hWnd, const RAWMOUSE& RawMouseInput);
+    void OnRawKeyboardInput(HWND hWnd, const RAWKEYBOARD& RawKeyboardInput);
 
     // 추가적인 함수는 UnrealEngine [SlateApplication.h:1628]을 참조
 
@@ -108,5 +108,5 @@ private:
     std::unique_ptr<FRawInput> RawInputHandler;
 
 private:
-    void HandleRawInput(const RAWINPUT& RawInput);
+    void HandleRawInput(HWND hWnd, const RAWINPUT& RawInput);
 };

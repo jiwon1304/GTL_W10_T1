@@ -559,6 +559,7 @@ float4 Lighting(float3 WorldPosition, float3 WorldNormal, float3 WorldViewPositi
                 if (GlobalPointLightIndex < MAX_LIGHT_PER_TILE)
                 {
                     FinalColor += PointLight(GlobalPointLightIndex, WorldPosition, WorldNormal, WorldViewPosition, DiffuseColor, SpecularColor, Shininess);
+
                 }
             }
             if (SpotMask & (1u << bit))

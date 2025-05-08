@@ -44,6 +44,7 @@ public:
 
     FVector4 TransformFVector4(const FVector4& vector) const;
     FVector TransformPosition(const FVector& vector) const;
+    FVector TransformVector(const FVector& vector) const;
 
     static FMatrix GetScaleMatrix(const FVector& InScale);
     static FMatrix GetTranslationMatrix(const FVector& InPosition);
@@ -61,6 +62,16 @@ public:
     void RemoveScaling(float Tolerance = SMALL_NUMBER);
 
     bool Equals(const FMatrix& Other, float Tolerance = KINDA_SMALL_NUMBER) const;
+
+    FVector ExtractScaling(float Tolerance = SMALL_NUMBER);
+
+    float Determinant() const;
+
+    void SetAxis(int32 AxisIndex, const FVector& Axis);
+
+    FVector GetScaledAxis(int32 InAxis) const;
+
+    FRotator Rotator() const;
 };
 
 inline FArchive& operator<<(FArchive& Ar, FMatrix& M)

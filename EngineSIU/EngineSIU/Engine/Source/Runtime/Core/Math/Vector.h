@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <cassert>
 #include <compare>
 #include "MathUtility.h"
@@ -146,6 +146,7 @@ public:
     static FORCEINLINE FVector UnitZ() { return ZAxisVector; }
 
     static FORCEINLINE float DistSquared(const FVector& V1, const FVector& V2);
+    FORCEINLINE float LengthSquared() const { return DistSquared(ZeroVector, *this); }
 
     static FORCEINLINE float Distance(const FVector& V1, const FVector& V2);
     static FORCEINLINE float Dist(const FVector& V1, const FVector& V2) { return Distance(V1, V2); }
@@ -219,6 +220,12 @@ public:
     bool IsZero() const;
     bool IsNormalized() const;
 
+    inline static float SegmentDistToSegmentSafe(
+        const FVector& P0, const FVector& P1,
+        const FVector& Q0, const FVector& Q1,
+        float& S, float& T,
+        FVector& ClosestA, FVector& ClosestB);
+
     FString ToString() const;
     bool InitFromString(const FString& InSourceString);
 };
@@ -256,6 +263,74 @@ inline bool FVector::IsNormalized() const
 {
     constexpr float ThreshVectorNormalized = 0.01f;
     return (FMath::Abs(1.f - SizeSquared()) < ThreshVectorNormalized);
+}
+
+// 두 선분(P0-P1, Q0-Q1)의 가장 가까운 점과 거리 계산
+// S, T: 각각 [0,1] 구간 내에서의 parametric 위치
+// ClosestA = P0 + S*(P1-P0), ClosestB = Q0 + T*(Q1-Q0)
+// 반환값: 거리
+inline float FVector::SegmentDistToSegmentSafe(const FVector& P0, const FVector& P1, const FVector& Q0, const FVector& Q1, float& S, float& T, FVector& ClosestA, FVector& ClosestB)
+{
+    const FVector d1 = P1 - P0; // 선분1 방향
+    const FVector d2 = Q1 - Q0; // 선분2 방향
+    const FVector r = P0 - Q0;
+    const float a = FVector::DotProduct(d1, d1); // d1·d1
+    const float e = FVector::DotProduct(d2, d2); // d2·d2
+    const float f = FVector::DotProduct(d2, r);
+
+    // 두 선분이 점인 경우
+    if (a <= KINDA_SMALL_NUMBER && e <= KINDA_SMALL_NUMBER)
+    {
+        S = T = 0.f;
+        ClosestA = P0;
+        ClosestB = Q0;
+        return (ClosestA - ClosestB).Length();
+    }
+    // 첫 번째가 점
+    if (a <= KINDA_SMALL_NUMBER)
+    {
+        S = 0.f;
+        T = f / e;
+        T = FMath::Clamp(T, 0.f, 1.f);
+    }
+    // 두 번째가 점
+    else if (e <= KINDA_SMALL_NUMBER)
+    {
+        T = 0.f;
+        S = -FVector::DotProduct(d1, r) / a;
+        S = FMath::Clamp(S, 0.f, 1.f);
+    }
+    else
+    {
+        const float b = FVector::DotProduct(d1, d2);
+        const float denom = a * e - b * b;
+
+        if (denom != 0.f)
+        {
+            S = (b * f - FVector::DotProduct(d1, r) * e) / denom;
+            S = FMath::Clamp(S, 0.f, 1.f);
+        }
+        else
+        {
+            S = 0.f;
+        }
+        T = (b * S + f) / e;
+
+        if (T < 0.f)
+        {
+            T = 0.f;
+            S = FMath::Clamp(-FVector::DotProduct(d1, r) / a, 0.f, 1.f);
+        }
+        else if (T > 1.f)
+        {
+            T = 1.f;
+            S = FMath::Clamp((b - FVector::DotProduct(d1, r)) / a, 0.f, 1.f);
+        }
+    }
+
+    ClosestA = P0 + d1 * S;
+    ClosestB = Q0 + d2 * T;
+    return (ClosestA - ClosestB).Length();
 }
 
 inline float FVector::operator|(const FVector& Other) const

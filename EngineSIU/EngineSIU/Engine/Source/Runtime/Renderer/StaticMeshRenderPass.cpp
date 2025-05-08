@@ -401,38 +401,38 @@ void FStaticMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient>&
 
     RenderAllStaticMeshes(Viewport);
 
-    // 렌더 타겟 해제
-    Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-    ID3D11ShaderResourceView* nullSRV = nullptr;
-    Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_PointLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
-    Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_DirectionalLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
-    Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_SpotLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
+    //// 렌더 타겟 해제
+    //Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    //ID3D11ShaderResourceView* nullSRV = nullptr;
+    //Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_PointLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
+    //Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_DirectionalLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
+    //Graphics->DeviceContext->PSSetShaderResources(static_cast<int>(EShaderSRVSlot::SRV_SpotLight), 1, &nullSRV); // t51 슬롯을 NULL로 설정
 
-    // 머티리얼 리소스 해제
-    constexpr UINT NumViews = static_cast<UINT>(EMaterialTextureSlots::MTS_MAX);
-    
-    ID3D11ShaderResourceView* NullSRVs[NumViews] = { nullptr };
-    ID3D11SamplerState* NullSamplers[NumViews] = { nullptr};
-    
-    Graphics->DeviceContext->PSSetShaderResources(0, NumViews, NullSRVs);
-    Graphics->DeviceContext->PSSetSamplers(0, NumViews, NullSamplers);
+    //// 머티리얼 리소스 해제
+    //constexpr UINT NumViews = static_cast<UINT>(EMaterialTextureSlots::MTS_MAX);
+    //
+    //ID3D11ShaderResourceView* NullSRVs[NumViews] = { nullptr };
+    //ID3D11SamplerState* NullSamplers[NumViews] = { nullptr};
+    //
+    //Graphics->DeviceContext->PSSetShaderResources(0, NumViews, NullSRVs);
+    //Graphics->DeviceContext->PSSetSamplers(0, NumViews, NullSamplers);
 
-    // for Gouraud shading
-    ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
-    ID3D11SamplerState* NullSampler[1] = { nullptr};
-    Graphics->DeviceContext->VSSetShaderResources(0, 1, NullSRV);
-    Graphics->DeviceContext->VSSetSamplers(0, 1, NullSampler);
-    
-    // @todo 리소스 언바인딩 필요한가? - 답변: 네.
-    // SRV 해제
-    ID3D11ShaderResourceView* NullSRVs2[14] = { nullptr };
-    Graphics->DeviceContext->PSSetShaderResources(0, 14, NullSRVs2);
+    //// for Gouraud shading
+    //ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
+    //ID3D11SamplerState* NullSampler[1] = { nullptr};
+    //Graphics->DeviceContext->VSSetShaderResources(0, 1, NullSRV);
+    //Graphics->DeviceContext->VSSetSamplers(0, 1, NullSampler);
+    //
+    //// @todo 리소스 언바인딩 필요한가? - 답변: 네.
+    //// SRV 해제
+    //ID3D11ShaderResourceView* NullSRVs2[14] = { nullptr };
+    //Graphics->DeviceContext->PSSetShaderResources(0, 14, NullSRVs2);
 
-    // 상수버퍼 해제
-    ID3D11Buffer* NullPSBuffer[9] = { nullptr };
-    Graphics->DeviceContext->PSSetConstantBuffers(0, 9, NullPSBuffer);
-    ID3D11Buffer* NullVSBuffer[2] = { nullptr };
-    Graphics->DeviceContext->VSSetConstantBuffers(0, 2, NullVSBuffer);
+    //// 상수버퍼 해제
+    //ID3D11Buffer* NullPSBuffer[9] = { nullptr };
+    //Graphics->DeviceContext->PSSetConstantBuffers(0, 9, NullPSBuffer);
+    //ID3D11Buffer* NullVSBuffer[2] = { nullptr };
+    //Graphics->DeviceContext->VSSetConstantBuffers(0, 2, NullVSBuffer);
 
 }
 

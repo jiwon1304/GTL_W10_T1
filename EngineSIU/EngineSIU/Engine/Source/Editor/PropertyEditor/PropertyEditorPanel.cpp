@@ -23,10 +23,19 @@
 #include "Engine/Engine.h"
 #include "Components/HeightFogComponent.h"
 #include "Components/ProjectileMovementComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Engine/AssetManager.h"
+#include "Engine/FbxObject.h"
+#include "Engine/FFbxLoader.h"
+#include "Engine/Asset/SkeletalMeshAsset.h"
+#include "Components/Mesh/SkeletalMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "AssetViewer/AssetViewer.h"
+#include "Slate/Widgets/Layout/SSplitter.h"
+#include "Components/Material/Material.h"
+#include "Contents/Actors/ItemActor.h"
 #include "Math/JungleMath.h"
 #include "Renderer/ShadowManager.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -43,16 +52,42 @@ void PropertyEditorPanel::Render()
     {
         return;
     }
-    
-    /* Pre Setup */
-    float PanelWidth = (Width) * 0.2f - 6.0f;
-    float PanelHeight = (Height) * 0.65f;
 
-    float PanelPosX = (Width) * 0.8f + 5.0f;
-    float PanelPosY = (Height) * 0.3f + 15.0f;
+    /* Pre Setup */
+    // Splitter 기반 영역 계산
+    FRect PropertyRect{ 0,0,0,0 };
+    if (this->WindowType == WT_Main)
+    {
+        SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
+        if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideRB)
+        {
+            PropertyRect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+        }
+        else
+        {
+            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
+        }
+    }
+    else if (this->WindowType == WT_Sub)
+    {
+        SAssetViewer* AssetViewer = GEngineLoop.GetAssetViewer();
+        if (AssetViewer && AssetViewer->CenterAndRightVSplitter && AssetViewer->CenterAndRightVSplitter->SideRB)
+        {
+            PropertyRect = AssetViewer->CenterAndRightVSplitter->SideRB->GetRect();
+        }
+        else
+        {
+            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
+        }
+    }
+
+    float PanelPosX = PropertyRect.TopLeftX;
+    float PanelPosY = PropertyRect.TopLeftY;
+    float PanelWidth = PropertyRect.Width;
+    float PanelHeight = PropertyRect.Height;
 
     ImVec2 MinSize(140, 370);
-    ImVec2 MaxSize(FLT_MAX, 900);
+    ImVec2 MaxSize(FLT_MAX, FLT_MAX);
 
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
@@ -78,7 +113,7 @@ void PropertyEditorPanel::Render()
         TargetComponent = SelectedComponent;
     }
     else if (SelectedActor != nullptr)
-    {        
+    {
         TargetComponent = SelectedActor->GetRootComponent();
     }
 
@@ -92,7 +127,7 @@ void PropertyEditorPanel::Render()
     {
         RenderForActor(SelectedActor, TargetComponent);
     }
-    
+
     if (UAmbientLightComponent* LightComponent = GetTargetComponent<UAmbientLightComponent>(SelectedActor, SelectedComponent))
     {
         RenderForAmbientLightComponent(LightComponent);
@@ -122,6 +157,11 @@ void PropertyEditorPanel::Render()
         RenderForStaticMesh(StaticMeshComponent);
         RenderForMaterial(StaticMeshComponent);
     }
+    if (USkeletalMeshComponent* SkeletalMeshComponent = GetTargetComponent<USkeletalMeshComponent>(SelectedActor, SelectedComponent))
+    {
+        RenderForSkeletalMesh(SkeletalMeshComponent);
+        //RenderForModifySkeletalBone(SkeletalMeshComponent);
+    }
     if (UHeightFogComponent* FogComponent = GetTargetComponent<UHeightFogComponent>(SelectedActor, SelectedComponent))
     {
         RenderForExponentialHeightFogComponent(FogComponent);
@@ -131,7 +171,7 @@ void PropertyEditorPanel::Render()
     {
         RenderForCameraComponent(CameraComponent);
     }
-  
+
     if (UShapeComponent* ShapeComponent = GetTargetComponent<UShapeComponent>(SelectedActor, SelectedComponent))
     {
         RenderForShapeComponent(ShapeComponent);
@@ -200,7 +240,6 @@ void PropertyEditorPanel::HSVToRGB(const float H, const float S, const float V, 
     R += M;  G += M;  B += M;
 }
 
-
 void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponent, AEditorPlayer* Player) const
 {
     ImGui::SetItemDefaultFocus();
@@ -235,11 +274,11 @@ void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponen
             CoordiButtonLabel = "Local";
         }
 
-        if (ImGui::Button(CoordiButtonLabel.c_str(), ImVec2(ImGui::GetWindowContentRegionMax().x * 0.9f, 32)))
+        if (ImGui::Button(CoordiButtonLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().IndentSpacing, 32)))
         {
             Player->AddCoordiMode();
         }
-         
+
         ImGui::TreePop();
     }
 
@@ -248,7 +287,6 @@ void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponen
 
 void PropertyEditorPanel::RenderForCameraComponent(UCameraComponent* InCameraComponent)
 {
-    
 }
 
 void PropertyEditorPanel::RenderForPlayerActor(APlayer* InPlayerActor)
@@ -268,10 +306,10 @@ void PropertyEditorPanel::RenderForActor(AActor* SelectedActor, USceneComponent*
         Engine->SelectActor(NewActor);
         Engine->DeselectComponent(Engine->GetSelectedComponent());
     }
-    
+
     FString BasePath = FString(L"LuaScripts\\");
     FString LuaDisplayPath;
-    
+
     if (SelectedActor->GetComponentByClass<ULuaScriptComponent>())
     {
         LuaDisplayPath = SelectedActor->GetComponentByClass<ULuaScriptComponent>()->GetDisplayName();
@@ -294,7 +332,7 @@ void PropertyEditorPanel::RenderForActor(AActor* SelectedActor, USceneComponent*
             ULuaScriptComponent* NewScript = SelectedActor->AddComponent<ULuaScriptComponent>();
             FString LuaFilePath = NewScript->GetScriptPath();
             std::filesystem::path FilePath = std::filesystem::path(GetData(LuaFilePath));
-            
+
             try
             {
                 std::filesystem::path Dir = FilePath.parent_path();
@@ -374,7 +412,7 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
                 PreviewName = RenderData->DisplayName;
             }
         }
-        
+
         const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
 
         if (ImGui::BeginCombo("##StaticMesh", GetData(PreviewName), ImGuiComboFlags_None))
@@ -397,6 +435,162 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
         ImGui::TreePop();
     }
     ImGui::PopStyleColor();
+}
+
+void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp) const
+{
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("Skinned Mesh", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+        ImGui::Text("SkinnedMesh");
+        ImGui::SameLine();
+
+        FString PreviewName = FString("None");
+        if (USkeletalMesh* SkeletalMesh = SkeletalComp->GetSkeletalMesh())
+        {
+            PreviewName = SkeletalMesh->GetOjbectName();
+        }
+        
+        const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
+
+        if (ImGui::BeginCombo("##SkeletalMesh", GetData(PreviewName), ImGuiComboFlags_None))
+        {
+            for (const auto& Asset : Assets)
+            {
+                if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                {
+                    FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
+                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetFbxObject(MeshName.ToWideString());
+                    if (SkeletalMesh)
+                    {
+                        SkeletalComp->SetSkeletalMesh(SkeletalMesh);
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        if (ImGui::Button("Preview"))
+        {
+            UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
+            if (Engine)
+            {
+                USkeletalMesh* SkeletalMesh = SkeletalComp->GetSkeletalMesh();
+                if (SkeletalMesh)
+                {
+                    for (auto Actor : Engine->EditorPreviewWorld->GetActiveLevel()->Actors)
+                    {
+                        if (Actor && Actor->IsA<AItemActor>())
+                        {
+                            USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
+                            PreviewSkeletalMeshComponent->SetSkeletalMesh(SkeletalMesh);
+                        }
+                    }
+                }
+            }
+            GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
+        }
+
+        if (ImGui::Button("Apply"))
+        {
+            UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
+            if (Engine)
+            {
+                //if (SkeletalMesh)
+                {
+                    for (auto Actor : Engine->EditorPreviewWorld->GetActiveLevel()->Actors)
+                    {
+                        if (Actor && Actor->IsA<AItemActor>())
+                        {
+                            USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
+                            SkeletalComp->overrideSkinningTransform = (PreviewSkeletalMeshComponent->overrideSkinningTransform);
+                        }
+                    }
+                }
+            }
+            GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
+        }
+
+        ImGui::TreePop();
+    }
+    ImGui::PopStyleColor();
+}
+
+void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent)
+{
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+        ImGui::Text("Bone");
+
+        const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
+        std::function<void(int)> CreateNode = [&CreateNode, &SkeletalMeshComponent, &boneIndexToName](int InParentIndex)
+        {
+            TArray<int> childrenIndices = SkeletalMeshComponent->GetChildrenOfBone(InParentIndex);
+
+            ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None;
+            if (childrenIndices.Num() == 0)
+                Flags |= ImGuiTreeNodeFlags_Leaf;
+            if (SkeletalMeshComponent->SelectedBoneIndex == InParentIndex)
+                Flags |= ImGuiTreeNodeFlags_Selected;
+
+            ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+            bool NodeOpen = ImGui::TreeNodeEx(GetData(boneIndexToName[InParentIndex]), Flags);
+            
+            if (ImGui::IsItemClicked())
+                SkeletalMeshComponent->SelectedBoneIndex = InParentIndex;
+            if (NodeOpen)
+            {
+                for (int childIndex : childrenIndices)
+                {
+                    CreateNode(childIndex);
+                }
+                ImGui::TreePop();
+            }
+        };
+
+        TArray<int> rootIndices = SkeletalMeshComponent->GetChildrenOfBone(-1);
+        for (int rootIndex : rootIndices)
+        {
+            CreateNode(rootIndex);
+        }
+        
+        if (SkeletalMeshComponent->SelectedBoneIndex > -1)
+        {
+            ImGui::Text("Bone Pose");
+            ImGui::SameLine();
+            if (ImGui::Button("Reset Pose"))
+            {
+                SkeletalMeshComponent->ResetPose();
+            }
+            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
+            
+            ImGui::Text("Reference Pose");
+            FReferenceSkeleton skeleton;
+            SkeletalMeshComponent->GetSkeletalMesh()->GetRefSkeleton(skeleton);
+            FTransform refTransform = skeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex];
+            FImGuiWidget::DrawVec3Control("refLocation", refTransform.Translation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
+            ImGui::Spacing();
+
+            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale3D, 0, 85);
+        }
+        //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
+
+        ImGui::Spacing();
+
+        ImGui::TreePop();
+    }
+    ImGui::PopStyleColor(); 
 }
 
 void PropertyEditorPanel::RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const
@@ -432,7 +626,6 @@ void PropertyEditorPanel::RenderForDirectionalLightComponent(UDirectionalLightCo
 
         FVector LightDirection = DirectionalLightComponent->GetDirection();
         FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
-
 
         // --- Cast Shadows 체크박스 추가 ---
         bool bCastShadows = DirectionalLightComponent->GetCastShadows(); // 현재 상태 가져오기
@@ -492,7 +685,7 @@ void PropertyEditorPanel::RenderForPointLightComponent(UPointLightComponent* Poi
         FShadowCubeMapArrayRHI* pointRHI = FEngineLoop::Renderer.ShadowManager->GetPointShadowCubeMapRHI();
         const char* faceNames[] = { "+X", "-X", "+Y", "-Y", "+Z", "-Z" };
         float imageSize = 128.0f;
-        int index =  PointlightComponent->GetPointLightInfo().ShadowMapArrayIndex;
+        int index = PointlightComponent->GetPointLightInfo().ShadowMapArrayIndex;
         // CubeMap이므로 6개의 ShadowMap을 그립니다.
         for (int i = 0; i < 6; ++i)
         {
@@ -500,7 +693,7 @@ void PropertyEditorPanel::RenderForPointLightComponent(UPointLightComponent* Poi
             if (faceSRV)
             {
                 ImGui::Image(reinterpret_cast<ImTextureID>(faceSRV), ImVec2(imageSize, imageSize));
-                ImGui::SameLine(); 
+                ImGui::SameLine();
                 ImGui::Text("%s", faceNames[i]);
             }
         }
@@ -714,7 +907,6 @@ void PropertyEditorPanel::RenderForExponentialHeightFogComponent(UHeightFogCompo
             ImGuiColorEditFlags_NoInputs |
             ImGuiColorEditFlags_Float))
         {
-
             R = LightColor[0];
             G = LightColor[1];
             B = LightColor[2];
@@ -849,7 +1041,7 @@ void PropertyEditorPanel::RenderForShapeComponent(UShapeComponent* ShapeComponen
             ImGui::TreePop();
         }
     }
-    
+
     ImGui::PopStyleColor();
 }
 
@@ -885,9 +1077,9 @@ void PropertyEditorPanel::RenderForSpringArmComponent(USpringArmComponent* Sprin
         if (ImGui::Checkbox("UsePawnControlRotation", &UsePawnControlRotation))
             SpringArmComponent->bUsePawnControlRotation = UsePawnControlRotation;
 
-		bool UseAbsolRot = SpringArmComponent->IsUsingAbsoluteRotation();
-		if (ImGui::Checkbox("UseAbsoluteRot", &UseAbsolRot))
-			SpringArmComponent->SetUsingAbsoluteRotation(UseAbsolRot);
+        bool UseAbsolRot = SpringArmComponent->IsUsingAbsoluteRotation();
+        if (ImGui::Checkbox("UseAbsoluteRot", &UseAbsolRot))
+            SpringArmComponent->SetUsingAbsoluteRotation(UseAbsolRot);
 
         bool InheritPitch = SpringArmComponent->bInheritPitch;
         if (ImGui::Checkbox("InheritPitch", &InheritPitch))
@@ -916,7 +1108,7 @@ void PropertyEditorPanel::RenderForSpringArmComponent(USpringArmComponent* Sprin
 
         // --- Lag speeds / limits ---
         ImGui::DragFloat("LocSpeed", &SpringArmComponent->CameraLagSpeed, 0.1f, 0.0f, 100.0f);
-        
+
         ImGui::DragFloat("RotSpeed", &SpringArmComponent->CameraRotationLagSpeed, 0.1f, 0.0f, 100.0f);
         //ImGui::NewLine();
         ImGui::DragFloat("LagMxStep", &SpringArmComponent->CameraLagMaxTimeStep, 0.005f, 0.0f, 1.0f);
@@ -1202,6 +1394,6 @@ void PropertyEditorPanel::OnResize(HWND hWnd)
 {
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
-    Width = ClientRect.right - ClientRect.left;
-    Height = ClientRect.bottom - ClientRect.top;
+    Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);
+    Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }

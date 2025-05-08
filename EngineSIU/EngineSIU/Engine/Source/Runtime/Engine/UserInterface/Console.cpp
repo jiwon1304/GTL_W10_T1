@@ -30,6 +30,10 @@ void FStatOverlay::ToggleStat(const std::string& Command)
         bShowLight = true;
         bShowRender = true;
     }
+    else if (Command == "stat profiler")
+    {
+        GEngineLoop.EngineProfiler.ToggleWindow();
+    }
     else if (Command == "stat all")
     {
         StatFlags = 0xFF;
@@ -108,7 +112,8 @@ void FEngineProfiler::Render(ID3D11DeviceContext* Context, UINT Width, UINT Heig
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
 
-    if (!ImGui::Begin("Engine Profiler", &bShowWindow))
+    ImGuiWindowFlags Flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+    if (!ImGui::Begin("Engine Profiler", &bShowWindow, Flags))
     {
         ImGui::End();
         return;
@@ -226,7 +231,7 @@ void FConsole::Draw() {
 
     // 콘솔 창의 크기와 위치 설정
     const float ExpandedHeight = DisplaySize.y * 0.4f; // 확장된 상태일 때 높이 (예: 화면의 40%)
-    constexpr float CollapsedHeight = 30.0f;               // 축소된 상태일 때 높이
+    constexpr float CollapsedHeight = 30.0f;           // 축소된 상태일 때 높이
     const float CurrentHeight = bExpand ? ExpandedHeight : CollapsedHeight;
 
     // 왼쪽 하단에 위치하도록 계산 (창의 좌측 하단이 화면의 좌측 하단에 위치)
@@ -360,6 +365,9 @@ void FConsole::ExecuteCommand(const std::string& Command)
         AddLog(ELogLevel::Display, " - help: Shows available commands");
         AddLog(ELogLevel::Display, " - stat fps: Toggle FPS display");
         AddLog(ELogLevel::Display, " - stat memory: Toggle Memory display");
+        AddLog(ELogLevel::Display, " - stat light: Toggle Light display");
+        AddLog(ELogLevel::Display, " - stat profiler: Toggle Profiler display");
+        AddLog(ELogLevel::Display, " - stat all: Show all stat overlays");
         AddLog(ELogLevel::Display, " - stat none: Hide all stat overlays");
     }
     else if (Command.starts_with("stat "))

@@ -2,14 +2,18 @@
 #pragma comment(lib, "user32")
 #pragma comment(lib, "d3d11")
 #pragma comment(lib, "d3dcompiler")
+#pragma comment(lib, "dxgi.lib")
+
 
 #define _TCHAR_DEFINED
 #include <d3d11.h>
+#include <dxgi.h>
 
 #include "EngineBaseTypes.h"
 
 #include "Core/HAL/PlatformType.h"
 #include "Core/Math/Vector4.h"
+#include "Container/Map.h"
 
 class FEditorViewportClient;
 
@@ -18,11 +22,12 @@ class FGraphicsDevice
 public:
     ID3D11Device* Device = nullptr;
     ID3D11DeviceContext* DeviceContext = nullptr;
+
+    // 멀티 윈도우 지원을 위한 맵
+    TMap<HWND, IDXGISwapChain*> SwapChains;
     
-    IDXGISwapChain* SwapChain = nullptr;
-    
-    ID3D11Texture2D* BackBufferTexture = nullptr;
-    ID3D11RenderTargetView* BackBufferRTV = nullptr;
+    TMap<HWND, ID3D11Texture2D*> BackBufferTextures;
+    TMap<HWND, ID3D11RenderTargetView*> BackBufferRTVs;
     
     ID3D11RasterizerState* RasterizerSolidBack = nullptr;
     ID3D11RasterizerState* RasterizerSolidFront = nullptr;
@@ -35,26 +40,27 @@ public:
     
     DXGI_SWAP_CHAIN_DESC SwapchainDesc;
     
-    UINT ScreenWidth = 0;
-    UINT ScreenHeight = 0;
+    TMap<HWND, UINT> ScreenWidths;
+    TMap<HWND, UINT> ScreenHeights;
 
-    D3D11_VIEWPORT Viewport;
+    TMap<HWND, D3D11_VIEWPORT> Viewports;
     
     FLOAT ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // 화면을 초기화(clear) 할 때 사용할 색상(RGBA)
 
-    void Initialize(HWND hWindow);
+    void Initialize(HWND hWnd);
+    void CreateAdditionalSwapChain(HWND hWnd);
     
     void ChangeRasterizer(EViewModeIndex ViewModeIndex);
-    void CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV);
+    //void CreateRTV(ID3D11Texture2D*& OutTexture, ID3D11RenderTargetView*& OutRTV);
     ID3D11Texture2D* CreateTexture2D(const D3D11_TEXTURE2D_DESC& Description, const void* InitialData);
     
     void Release();
     
-    void Prepare();
+    void Prepare(HWND hWnd);
 
-    void SwapBuffer() const;
+    void SwapBuffer(HWND hWnd) const;
     
-    void Resize(HWND hWindow);
+    void Resize(HWND hWnd);
     
     ID3D11RasterizerState* GetCurrentRasterizer() const { return CurrentRasterizer; }
 
@@ -64,14 +70,17 @@ public:
     */
     
 private:
-    void CreateDeviceAndSwapChain(HWND hWindow);
-    void CreateBackBuffer();
+    void CreateDeviceAndSwapChain(HWND hWnd, bool bIsInitialDevice);
+    void CreateBackBuffer(HWND hWnd);
     void CreateDepthStencilState();
     void CreateRasterizerState();
     void CreateAlphaBlendState();
     
     void ReleaseDeviceAndSwapChain();
-    void ReleaseFrameBuffer();
+    void ReleaseSwapChain(HWND hWnd);
+    void ReleaseAllSwapChains();
+    void ReleaseFrameBuffer(HWND hWnd);
+    void ReleaseAllFrameBuffers();
     void ReleaseRasterizerState();
     void ReleaseDepthStencilResources();
     

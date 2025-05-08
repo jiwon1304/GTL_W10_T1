@@ -5,14 +5,8 @@
 APointLight::APointLight()
 {
     PointLightComponent = AddComponent<UPointLightComponent>("PointLightComponent_0");
-    BillboardComponent = AddComponent<UBillboardComponent>("UBillboardComponent_0");
 
-    RootComponent = BillboardComponent;
-
-    BillboardComponent->SetTexture(L"Assets/Editor/Icon/S_LightPoint.PNG");
-    BillboardComponent->bIsEditorBillboard = true;
-
-    PointLightComponent->AttachToComponent(RootComponent);
+    RootComponent = PointLightComponent;
 }
 
 APointLight::~APointLight()

@@ -102,6 +102,13 @@ void FGPUTimingManager::StartTimestamp(const TStatId& StatId)
 
     const uint32 QueryIndex = CurrentFrameIndex * MAX_QUERIES_PER_FRAME + CurrentQueryIndexInFrame;
 
+    if (FrameQueries[QueryIndex].bQueryIssued)
+    {
+        // 이미 발행된 쿼리라면 경고를 출력하거나 무시
+        // LOG_WARN("StartTimestamp called on an already issued query.");
+        return;
+    }
+
     // Issue the end command for the *start* timestamp query
     Context->End(FrameQueries[QueryIndex].StartQuery.Get());
     FrameQueries[QueryIndex].StatId = StatId; // Associate StatId with this query slot

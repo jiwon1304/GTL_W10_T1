@@ -1651,6 +1651,14 @@
     <ClCompile Include="Engine\Source\Runtime\Windows\WindowsFileDialog.cpp">
       <Filter>Engine\Source\Runtime\Windows</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMeshRenderData.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkeletalMeshComponent.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\FFbxLoader.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Renderer\SkeletalMeshRenderPass.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleCollision.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkinnedMeshComponent.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\FbxObject.cpp" />
+    <ClCompile Include="Engine\Source\Developer\DrawDebug\DrawDebugHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineSIU.natvis" />
@@ -1672,6 +1680,7 @@
     <FxCompile Include="Shaders\PointLightCubemapGS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SkeletalMeshVertexShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\ThirdParty\DirectXTK\Include\DirectXTK\SimpleMath.inl" />
@@ -1681,6 +1690,14 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Math\NumericLimits.h">
       <Filter>Engine\Source\Runtime\Core\Math</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\JungleCollision.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Mesh\SkeletalMeshRenderData.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\SkeletalMeshComponent.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\SkinnedMeshComponent.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\FFbxLoader.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\FbxObject.h" />
+    <ClInclude Include="Engine\Source\Runtime\Renderer\SkeletalMeshRenderPass.h" />
+    <ClInclude Include="Engine\Source\Developer\DrawDebug\DrawDebugHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

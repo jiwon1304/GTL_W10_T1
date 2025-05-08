@@ -37,6 +37,15 @@ struct FStaticMaterial
     FName MaterialSlotName;
 };
 
+struct FSkeletalMaterial
+{
+    class UMaterial* Material;     // Material Resource
+    FName MaterialSlotName;        // Slot Name for the Material
+    //int32 SectionIndex;            // Index of the Mesh Section
+    //bool bRequiresSkinning;        // Whether Skinning is Required for this Material
+    //TArray<int32> InfluencedBones; // List of Bones Influencing this Material; 필요없을듯... Vertex별로 다 들어가니까
+};
+
 // OBJ File Raw Data
 struct FObjInfo
 {
@@ -64,6 +73,69 @@ struct FObjInfo
 
     // Material
     TArray<FMaterialSubset> MaterialSubsets;
+};
+
+// FBX File Raw Data
+struct FFbxInfo
+{
+    FWString ObjectName; // FBX File Name. Path + FileName.fbx
+    FWString FilePath;   // FBX File Paths
+    FString DisplayName; // Display Name
+
+    // Hierarchical Structure
+    struct FNode
+    {
+        FString NodeName;    // Node Name
+        FMatrix Transform;   // Local Transform Matrix
+        int32 ParentIndex;   // Parent Node Index (-1 if root)
+        TArray<int32> ChildIndices; // Indices of Child Nodes
+    };
+
+    TArray<FNode> Nodes; // Node hierarchy
+
+    // Mesh Data
+    struct FMesh
+    {
+        FString MeshName;                 // Mesh Name
+        TArray<FVector> Vertices;         // Vertex Positions
+        TArray<FVector> Normals;          // Vertex Normals
+        TArray<FVector2D> UVs;            // Vertex UVs
+        TArray<uint32> Indices;           // Triangle Indices
+        TArray<FMaterialSubset> MaterialSubsets; // Material Subsets
+    };
+
+    TArray<FMesh> Meshes; // List of Meshes
+
+    // Skeleton Data (for skeletal meshes)
+    struct FSkeletonBone
+    {
+        FString BoneName;           // Bone Name
+        int32 ParentIndex;          // Parent Bone Index (-1 if root)
+        FMatrix BindPoseMatrix;     // Bind Pose Matrix
+    };
+
+    TArray<FSkeletonBone> Skeleton; // List of Bones
+
+    // Animation Data
+    struct FAnimationKey
+    {
+        float Time;                 // Keyframe Time
+        FMatrix Transform;          // Transform Matrix
+    };
+
+    struct FAnimationTrack
+    {
+        FString BoneName;                   // Bone Name
+        TArray<FAnimationKey> Keyframes;    // Animation Keyframes
+    };
+
+    struct FAnimationClip
+    {
+        FString AnimationName;             // Animation Name
+        TArray<FAnimationTrack> Tracks;    // Animation Tracks
+    };
+
+    TArray<FAnimationClip> Animations; // List of Animation Clips
 };
 
 enum class EMaterialTextureFlags : uint16
@@ -101,7 +173,7 @@ struct FTextureInfo
     bool bIsSRGB;
 };
 
-struct FObjMaterialInfo
+struct FMaterialInfo
 {
     FString MaterialName;  // newmtl: Material Name.
 
@@ -115,16 +187,20 @@ struct FObjMaterialInfo
     FVector EmissiveColor = FVector::ZeroVector;                   // Ke: Emissive Color
 
     float SpecularExponent = 250.f;                                // Ns: Specular Power
-    float IOR = 1.5f;                                              // Ni: Index of Refraction
+    float IOR = 1.5f;                                              // Ni: Index of Refraction; OBJ only
     float Transparency = 0.f;                                      // d or Tr: Transparency of surface
     float BumpMultiplier = 1.f;                                    // -bm: Bump Multiplier
-    uint32 IlluminanceModel;                                       // illum: illumination Model between 0 and 10.
+    uint32 IlluminanceModel;                                       // illum: illumination Model between 0 and 10; OBJ only
 
-    float Metallic = 0.0f;                                         // Pm: Metallic
-    float Roughness = 0.5f;                                        // Pr: Roughness
-    
+    // OBJ only
+    float Metallic = 0.0f;                                 // Metallic
+    float Roughness = 0.5f;                                // Roughness
+    float AmbientOcclusion = 1.0f;                         // Ambient Occlusion Strength
+    float ClearCoat = 0.0f;                                // Clear Coat Layer Strength
+    float Sheen = 0.0f;                                    // Sheen Strength
+
     /* Texture */
-    TArray<FTextureInfo> TextureInfos;
+    TArray<FTextureInfo> TextureInfos;                     // Texture Information
 };
 
 struct FVertexTexture
@@ -384,7 +460,9 @@ struct FObjectConstantBuffer
     FVector4 UUIDColor;
     
     int bIsSelected;
-    FVector pad;
+    int bCPUSkinning;
+    float Padding0;
+    float Padding1;
 };
 
 struct FCameraConstantBuffer
@@ -461,6 +539,7 @@ struct FVertexInfo
 {
     uint32_t NumVertices;
     uint32_t Stride;
+    uint32_t Offset;
     ID3D11Buffer* VertexBuffer;
 };
 
@@ -510,5 +589,10 @@ struct FDiffuseMultiplier
 {
     float DiffuseMultiplier;
     FVector DiffuseOverrideColor;
+};
+
+struct FBoneMatrices
+{
+    FMatrix BoneMatrices[64];
 };
 #pragma endregion

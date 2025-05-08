@@ -4,21 +4,28 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/FObjLoader.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/FFbxLoader.h"
 
 AItemActor::AItemActor()
 {
+    MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
+    auto mesh = FFbxLoader::GetFbxObject("Contents/X Bot.fbx");
+    MeshComponent->SetSkeletalMesh(mesh);
 }
 
 void AItemActor::PostSpawnInitialize()
 {
     AActor::PostSpawnInitialize();
-
-    SphereComponent = AddComponent<USphereComponent>(FName("SphereComponent_0"));
-    SetRootComponent(SphereComponent);
-
-    MeshComponent = AddComponent<UStaticMeshComponent>(FName("MeshComponent_0"));
-    MeshComponent->SetStaticMesh(FObjManager::GetStaticMesh(L"Contents/Coin2/Coin2.obj"));
+    /*
+    MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
+    auto mesh = FFbxLoader::GetFbxObject("Contents/X Bot.fbx");
+    MeshComponent->SetSkeletalMesh(mesh);
+    // MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/55-rp_nathan_animated_003_walking_fbx/rp_nathan_animated_003_walking.fbx"));
+    //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/hand/girl.fbx"));
+    //MeshComponent->SetSkeletalMesh(FFbxManager::GetSkeletalMesh(L"Contents/suzanne.fbx"));
     MeshComponent->SetupAttachment(RootComponent);
+    */
 }
 
 void AItemActor::BeginPlay()

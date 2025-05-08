@@ -1,4 +1,4 @@
-﻿
+
 #pragma once
 #include "IRenderPass.h"
 #include "EngineBaseTypes.h"
@@ -22,6 +22,7 @@ public:
     virtual void PrepareRenderArr() override;
 
     virtual void Render(const std::shared_ptr<FEditorViewportClient>& Viewport) override;
+    void Render(HWND hWnd, const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     virtual void ClearRenderArr() override;
 
