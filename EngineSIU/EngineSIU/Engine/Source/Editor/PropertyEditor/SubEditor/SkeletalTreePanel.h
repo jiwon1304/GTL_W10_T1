@@ -2,6 +2,8 @@
 #include "Define.h"
 #include "UnrealEd/EditorPanel.h"
 
+class USkeletalMeshComponent;
+
 class SkeletalTreePanel : public UEditorPanel
 {
 public:
@@ -9,8 +11,13 @@ public:
     virtual void OnResize(HWND hWnd) override;
 
 private:
+    void RenderSkeletalTree(int InParentIndex, USkeletalMeshComponent* SkeletalMeshComponent, const TMap<int, FString>& BoneIndexToName);
     void CreateSkeletalTreeNode();
+    void CreateSkeletalDetail() const;
 
 private:
     float Width = 800, Height = 600;
+
+    USkeletalMeshComponent* SelectedSkeleton = nullptr;
+    int SelectedBoneIndex = -1;
 };

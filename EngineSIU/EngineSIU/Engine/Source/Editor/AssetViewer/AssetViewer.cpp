@@ -108,7 +108,7 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
     ResizeViewport();
 }
 
-void SAssetViewer::ResizeViewport()
+void SAssetViewer::ResizeViewport() const
 {
     if (ActiveViewportClient && ActiveViewportClient->GetViewport())
     {
@@ -117,7 +117,7 @@ void SAssetViewer::ResizeViewport()
     }
 }
 
-void SAssetViewer::SelectViewport(const FVector2D& Point)
+void SAssetViewer::SelectViewport(const FVector2D& Point) const
 {
     if (ActiveViewportClient && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
     {
@@ -344,31 +344,31 @@ void SAssetViewer::RegisterViewerInputDelegates()
 
         if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton) && !InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
         {
-            ECursorType CursorType = ECursorType::Arrow;
-            POINT Point;
-            GetCursorPos(&Point);
-            FVector2D MousePos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
-            //ScreenToClient(GEngineLoop.MainAppWnd, &Point);
-            //FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
-
-            // 모든 스플리터에 대해 Hover 검사
-            bool bPrimaryHovered = PrimaryVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
-            bool bCentralRightHovered = CenterAndRightVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
-            bool bRightSidebarHovered = RightSidebarHSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
-            if (bPrimaryHovered)
-            {
-                CursorType = ECursorType::ResizeLeftRight;
-            }
-            else if (bCentralRightHovered)
-            {
-                CursorType = ECursorType::ResizeLeftRight;
-            }
-            else if (bRightSidebarHovered)
-            {
-                CursorType = ECursorType::ResizeUpDown;
-            }
-
-            FWindowsCursor::SetMouseCursor(CursorType);
+            // ECursorType CursorType = ECursorType::Arrow;
+            // POINT Point;
+            // GetCursorPos(&Point);
+            // FVector2D MousePos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+            // //ScreenToClient(GEngineLoop.MainAppWnd, &Point);
+            // //FVector2D ClientPos = FVector2D{ static_cast<float>(Point.x), static_cast<float>(Point.y) };
+            //
+            // // 모든 스플리터에 대해 Hover 검사
+            // bool bPrimaryHovered = PrimaryVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            // bool bCentralRightHovered = CenterAndRightVSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            // bool bRightSidebarHovered = RightSidebarHSplitter->IsSplitterHovered({ MousePos.X, MousePos.Y });
+            // if (bPrimaryHovered)
+            // {
+            //     CursorType = ECursorType::ResizeLeftRight;
+            // }
+            // else if (bCentralRightHovered)
+            // {
+            //     CursorType = ECursorType::ResizeLeftRight;
+            // }
+            // else if (bRightSidebarHovered)
+            // {
+            //     CursorType = ECursorType::ResizeUpDown;
+            // }
+            //
+            // FWindowsCursor::SetMouseCursor(CursorType);
         }
     }));
 
