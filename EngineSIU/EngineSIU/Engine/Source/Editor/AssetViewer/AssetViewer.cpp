@@ -104,39 +104,16 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
 
     EditorWidth = InEditorWidth;
     EditorHeight = InEditorHeight;
-
-    // Primary 스플리터 부터 리사이즈 전파
-    if (PrimaryVSplitter)
-    {
-        PrimaryVSplitter->OnResize(InEditorWidth, InEditorHeight);
-
-        FRect CenterAndRightAreaRect = PrimaryVSplitter->SideRB->GetRect();
-        if (CenterAndRightVSplitter)
-        {
-            CenterAndRightVSplitter->SetRect(CenterAndRightAreaRect);
-
-            FRect RightSidebarAreaRect = CenterAndRightVSplitter->SideRB->GetRect();
-            if (RightSidebarHSplitter)
-            {
-                RightSidebarHSplitter->SetRect(RightSidebarAreaRect);
-            } 
-        }
-
-        ResizeViewport();
-    }
-
+    
+    ResizeViewport();
 }
 
 void SAssetViewer::ResizeViewport()
 {
-    if (CenterAndRightVSplitter)
+    if (ActiveViewportClient && ActiveViewportClient->GetViewport())
     {
-        FRect ViewportAreaRect = CenterAndRightVSplitter->SideLT->GetRect();
-        if (ActiveViewportClient && ActiveViewportClient->GetViewport())
-        {
-            const FRect FullRect(ViewportAreaRect.TopLeftX, ViewportAreaRect.TopLeftY + 72.f, ViewportAreaRect.Width, ViewportAreaRect.Height - 72.f - 32.f);
-            ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
-        }
+        const FRect FullRect(0, 0, EditorWidth, EditorHeight);
+        ActiveViewportClient->GetViewport()->ResizeViewport(FullRect);
     }
 }
 
