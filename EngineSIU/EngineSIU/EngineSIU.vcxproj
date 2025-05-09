@@ -378,6 +378,8 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_draw.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_impl_dx11.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_neo_internal.cpp" />
+    <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_neo_sequencer.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\tinyfiledialogs\include\tinyfiledialogs.cpp" />
@@ -725,6 +727,8 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_impl_dx11.h" />
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_impl_win32.h" />
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_internal.h" />
+    <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_neo_internal.h" />
+    <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imgui_neo_sequencer.h" />
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imstb_rectpack.h" />
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imstb_textedit.h" />
     <ClInclude Include="Engine\Source\ThirdParty\ImGui\include\ImGui\imstb_truetype.h" />
