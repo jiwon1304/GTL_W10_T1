@@ -15,7 +15,7 @@ class UnrealEd;
 class SSplitterV;
 class SSplitterH;
 class SLevelEditor;
-class SAssetViewer;
+class SlateViewer;
 class FEditorViewportClient;
 class FSlateAppMessageHandler;
 class UImGuiManager;
@@ -76,7 +76,7 @@ private:
 
     std::unique_ptr<FSlateAppMessageHandler> AppMessageHandler;
     SLevelEditor* LevelEditor;
-    SAssetViewer* AssetViewer;
+    SlateViewer* SkeletalMeshViewer;
     UnrealEd* UnrealEditor;
     FDXDBufferManager* BufferManager; //TODO: UEngine으로 옮겨야함.
 
@@ -86,7 +86,7 @@ private:
 
 public:
     SLevelEditor* GetLevelEditor() const { return LevelEditor; }
-    SAssetViewer* GetAssetViewer() const { return AssetViewer; }
+    SlateViewer* GetSkeletalMeshViewer() const { return SkeletalMeshViewer; }
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
 
     FSlateAppMessageHandler* GetAppMessageHandler() const { return AppMessageHandler.get(); }

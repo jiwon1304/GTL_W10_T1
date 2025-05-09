@@ -2,7 +2,7 @@
 #include "Engine/EditorEngine.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "EngineLoop.h"
-#include "AssetViewer/AssetViewer.h"
+#include "Viewer/SlateViewer.h"
 #include "tinyfiledialogs.h"
 #include "WindowsFileDialog.h"
 #include "Engine/AssetManager.h"
@@ -60,7 +60,7 @@ void SkeletalMeshControlPanel::Render()
             
             if (ImGui::BeginMenu("Display Mode"))
             {
-                auto ViewportClient = GEngineLoop.GetAssetViewer()->GetActiveViewportClient();
+                auto ViewportClient = GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient();
                 
                 const char* ViewModeNames[] = { 
                     "Lit_Gouraud", "Lit_Lambert", "Lit_Blinn-Phong", "Lit_PBR",
@@ -234,7 +234,7 @@ void SkeletalMeshControlPanel::CreateSkeletalMeshControls(const ImVec2 ButtonSiz
     // 카메라 리셋 버튼
     if (ImGui::Button("Reset Camera", ImVec2(100, ButtonSize.y)))
     {
-        auto ViewportClient = GEngineLoop.GetAssetViewer()->GetActiveViewportClient();
+        auto ViewportClient = GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient();
         if (ViewportClient)
         {
             // ResetCamera 메서드가 없으므로 카메라 위치를 직접 설정

@@ -1,4 +1,4 @@
-#include "AssetViewer.h"
+#include "SlateViewer.h"
 
 #include "UObject/Object.h"
 #include "EngineLoop.h" // Assuming Launch module, adjust if needed
@@ -11,17 +11,20 @@
 
 extern FEngineLoop GEngineLoop;
 
-SAssetViewer::SAssetViewer()
+SlateViewer::SlateViewer()
     : PrimaryVSplitter(nullptr)
     , CenterAndRightVSplitter(nullptr)
     , RightSidebarHSplitter(nullptr)
+    , Handle(nullptr)
     , EditorWidth(1800)
     , EditorHeight(1100)
 {
 }
 
-void SAssetViewer::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
+void SlateViewer::Initialize(HWND hWnd, const FString& ConfigPath, uint32 InEditorWidth, uint32 InEditorHeight)
 {
+    Handle = hWnd;
+    IniFilePath = ConfigPath;
     EditorWidth = InEditorWidth;
     EditorHeight = InEditorHeight;
 
@@ -57,7 +60,7 @@ void SAssetViewer::Initialize(uint32 InEditorWidth, uint32 InEditorHeight)
     RegisterViewerInputDelegates();
 }
 
-void SAssetViewer::Release()
+void SlateViewer::Release()
 {
     ActiveViewportClient.reset();
 
@@ -87,7 +90,7 @@ void SAssetViewer::Release()
     }
 }
 
-void SAssetViewer::Tick(float DeltaTime)
+void SlateViewer::Tick(float DeltaTime)
 {
     if (ActiveViewportClient && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
     {
@@ -95,7 +98,7 @@ void SAssetViewer::Tick(float DeltaTime)
     }
 }
 
-void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
+void SlateViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
 {
     if (InEditorWidth == EditorWidth && InEditorHeight == EditorHeight)
     {
@@ -108,7 +111,7 @@ void SAssetViewer::ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight)
     ResizeViewport();
 }
 
-void SAssetViewer::ResizeViewport() const
+void SlateViewer::ResizeViewport() const
 {
     if (ActiveViewportClient && ActiveViewportClient->GetViewport())
     {
@@ -117,7 +120,7 @@ void SAssetViewer::ResizeViewport() const
     }
 }
 
-void SAssetViewer::SelectViewport(const FVector2D& Point) const
+void SlateViewer::SelectViewport(const FVector2D& Point) const
 {
     if (ActiveViewportClient && CenterAndRightVSplitter && CenterAndRightVSplitter->SideLT)
     {
@@ -133,30 +136,30 @@ void SAssetViewer::SelectViewport(const FVector2D& Point) const
     }
 }
 
-void SAssetViewer::RegisterViewerInputDelegates()
+void SlateViewer::RegisterViewerInputDelegates()
 {
     FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
 
     // 기존 델리게이트 제거
-    for (const FDelegateHandle& Handle : InputDelegatesHandles)
+    for (const FDelegateHandle& DelegateHandle : InputDelegatesHandles)
     {
-        Handler->OnKeyCharDelegate.Remove(Handle);
-        Handler->OnKeyDownDelegate.Remove(Handle);
-        Handler->OnKeyUpDelegate.Remove(Handle);
-        Handler->OnMouseDownDelegate.Remove(Handle);
-        Handler->OnMouseUpDelegate.Remove(Handle);
-        Handler->OnMouseDoubleClickDelegate.Remove(Handle);
-        Handler->OnMouseWheelDelegate.Remove(Handle);
-        Handler->OnMouseMoveDelegate.Remove(Handle);
-        Handler->OnRawMouseInputDelegate.Remove(Handle);
-        Handler->OnRawKeyboardInputDelegate.Remove(Handle);
+        Handler->OnKeyCharDelegate.Remove(DelegateHandle);
+        Handler->OnKeyDownDelegate.Remove(DelegateHandle);
+        Handler->OnKeyUpDelegate.Remove(DelegateHandle);
+        Handler->OnMouseDownDelegate.Remove(DelegateHandle);
+        Handler->OnMouseUpDelegate.Remove(DelegateHandle);
+        Handler->OnMouseDoubleClickDelegate.Remove(DelegateHandle);
+        Handler->OnMouseWheelDelegate.Remove(DelegateHandle);
+        Handler->OnMouseMoveDelegate.Remove(DelegateHandle);
+        Handler->OnRawMouseInputDelegate.Remove(DelegateHandle);
+        Handler->OnRawKeyboardInputDelegate.Remove(DelegateHandle);
     }
     
     //InputDelegatesHandles.Empty();
 
     InputDelegatesHandles.Add(Handler->OnKeyDownDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -173,7 +176,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
     
     InputDelegatesHandles.Add(Handler->OnKeyUpDelegate.AddLambda([this](HWND hWnd, const FKeyEvent& InKeyEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -190,7 +193,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
     
     InputDelegatesHandles.Add(Handler->OnMouseDownDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -240,7 +243,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
     
     InputDelegatesHandles.Add(Handler->OnMouseUpDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -288,7 +291,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
 
     InputDelegatesHandles.Add(Handler->OnMouseMoveDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -374,7 +377,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
 
     InputDelegatesHandles.Add(Handler->OnRawMouseInputDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -407,7 +410,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
     
     InputDelegatesHandles.Add(Handler->OnMouseWheelDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
-        if (hWnd != GEngineLoop.SkeletalMeshViewerAppWnd)
+        if (hWnd != Handle)
         {
             return;
         }
@@ -439,7 +442,7 @@ void SAssetViewer::RegisterViewerInputDelegates()
     }));
 }
 
-void SAssetViewer::LoadConfig()
+void SlateViewer::LoadConfig()
 {
     TMap<FString, FString> Config = ReadIniFile(IniFilePath);
     if (Config.Num() == 0) return;
@@ -467,7 +470,7 @@ void SAssetViewer::LoadConfig()
     ResizeViewport();
 }
 
-void SAssetViewer::SaveConfig()
+void SlateViewer::SaveConfig()
 {
     TMap<FString, FString> Config;
     if (PrimaryVSplitter)
@@ -491,7 +494,7 @@ void SAssetViewer::SaveConfig()
     }
 }
 
-TMap<FString, FString> SAssetViewer::ReadIniFile(const FString& FilePath)
+TMap<FString, FString> SlateViewer::ReadIniFile(const FString& FilePath)
 {
     TMap<FString, FString> ConfigMap;
     std::ifstream IniFile(*FilePath);
@@ -518,7 +521,7 @@ TMap<FString, FString> SAssetViewer::ReadIniFile(const FString& FilePath)
     return ConfigMap;
 }
 
-void SAssetViewer::WriteIniFile(const FString& FilePath, const TMap<FString, FString>& Config)
+void SlateViewer::WriteIniFile(const FString& FilePath, const TMap<FString, FString>& Config)
 {
     std::ofstream IniFile(*FilePath);
     if (!IniFile.is_open())

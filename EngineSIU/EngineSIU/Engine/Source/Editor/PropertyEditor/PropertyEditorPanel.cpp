@@ -32,7 +32,7 @@
 #include "Components/Mesh/SkeletalMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "LevelEditor/SLevelEditor.h"
-#include "AssetViewer/AssetViewer.h"
+#include "Viewer/SlateViewer.h"
 #include "Slate/Widgets/Layout/SSplitter.h"
 #include "Components/Material/Material.h"
 #include "Contents/Actors/ItemActor.h"
@@ -70,7 +70,7 @@ void PropertyEditorPanel::Render()
     }
     else if (this->WindowType == WT_Sub)
     {
-        SAssetViewer* AssetViewer = GEngineLoop.GetAssetViewer();
+        SlateViewer* AssetViewer = GEngineLoop.GetSkeletalMeshViewer();
         if (AssetViewer && AssetViewer->CenterAndRightVSplitter && AssetViewer->CenterAndRightVSplitter->SideRB)
         {
             PropertyRect = AssetViewer->CenterAndRightVSplitter->SideRB->GetRect();

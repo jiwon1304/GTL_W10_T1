@@ -5,7 +5,7 @@
 #include "D3D11RHI/GraphicDevice.h"
 #include "Engine/EditorEngine.h"
 #include "LevelEditor/SLevelEditor.h"
-#include "AssetViewer/AssetViewer.h"
+#include "Viewer/SlateViewer.h"
 #include "PropertyEditor/ViewportTypePanel.h"
 #include "Slate/Widgets/Layout/SSplitter.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -32,7 +32,7 @@ FEngineLoop::FEngineLoop()
     , AnimationViewerUIManager(nullptr)
     , CurrentImGuiContext(nullptr)
     , LevelEditor(nullptr)
-    , AssetViewer(nullptr)
+    , SkeletalMeshViewer(nullptr)
     , UnrealEditor(nullptr)
     , BufferManager(nullptr)
 {
@@ -59,8 +59,9 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     BufferManager = new FDXDBufferManager();
     MainUIManager = new UImGuiManager;
     SkeletalMeshViewerUIManager = new UImGuiManager;
+    AnimationViewerUIManager = new UImGuiManager;
     LevelEditor = new SLevelEditor();
-    AssetViewer = new SAssetViewer();
+    SkeletalMeshViewer = new SlateViewer();
     UnrealEditor = new UnrealEd();
     AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
     GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
@@ -77,9 +78,10 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 
     MainUIManager->Initialize(MainAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
     SkeletalMeshViewerUIManager->Initialize(SkeletalMeshViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
+    AnimationViewerUIManager->Initialize(AnimationViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
 
     LevelEditor->Initialize(1400, 1000);
-    AssetViewer->Initialize(800, 600);
+    SkeletalMeshViewer->Initialize(SkeletalMeshViewerAppWnd, "SkeletalMeshViewer.ini", 800, 600);
     
     UnrealEditor->Initialize();
     
@@ -170,13 +172,13 @@ void FEngineLoop::Render(HWND Handle) const
             if (EditorWorld)
             {
                 GEngine->ActiveWorld = EditorWorld;
-                Renderer.Render(AssetViewer->GetActiveViewportClient());
-                auto Viewport = AssetViewer->GetActiveViewportClient();
+                Renderer.Render(SkeletalMeshViewer->GetActiveViewportClient());
+                auto Viewport = SkeletalMeshViewer->GetActiveViewportClient();
                 auto Location = Viewport->GetCameraLocation();
 
                 UE_LOG(ELogLevel::Display, TEXT("%f %f %f"), Location.X, Location.Y, Location.Z);
             }
-            Renderer.RenderViewport(Handle, AssetViewer->GetActiveViewportClient());
+            Renderer.RenderViewport(Handle, SkeletalMeshViewer->GetActiveViewportClient());
         }
 
         GEngine->ActiveWorld = CurrentWorld;
@@ -190,6 +192,14 @@ void FEngineLoop::Render(HWND Handle) const
             SkeletalMeshViewerUIManager->BeginFrame();
             UnrealEditor->RenderSubWindowPanel();
             SkeletalMeshViewerUIManager->EndFrame();
+        }
+
+        // Animation Mesh Viewer
+        if (AnimationViewerUIManager && AnimationViewerUIManager->GetContext() && Handle == AnimationViewerAppWnd)
+        {
+            AnimationViewerUIManager->BeginFrame();
+            UnrealEditor->RenderSubWindowPanel();
+            AnimationViewerUIManager->EndFrame();
         }
     }
     
@@ -239,7 +249,7 @@ void FEngineLoop::Tick()
         const float DeltaTime = static_cast<float>(ElapsedTime / 1000.f);
         GEngine->Tick(DeltaTime);
         LevelEditor->Tick(DeltaTime);
-        AssetViewer->Tick(DeltaTime);
+        SkeletalMeshViewer->Tick(DeltaTime);
         // @todo SkeletalMeshViewer->Tick(DeltaTime);
 
         /* Render Viewports */
@@ -286,11 +296,11 @@ void FEngineLoop::GetClientSize(const HWND hWnd, uint32& OutWidth, uint32& OutHe
 void FEngineLoop::Exit()
 {
     /** SkeletalMesh Viewer Section */
-    if (AssetViewer)
+    if (SkeletalMeshViewer)
     {
-        AssetViewer->Release();
-        delete AssetViewer;
-        AssetViewer = nullptr;
+        SkeletalMeshViewer->Release();
+        delete SkeletalMeshViewer;
+        SkeletalMeshViewer = nullptr;
     }
 
     if (SkeletalMeshViewerAppWnd && IsWindow(SkeletalMeshViewerAppWnd))
@@ -304,6 +314,20 @@ void FEngineLoop::Exit()
         SkeletalMeshViewerUIManager->Shutdown();
         delete SkeletalMeshViewerUIManager;
         SkeletalMeshViewerUIManager = nullptr;
+    }
+
+    /** Animation Viewer Section */
+    if (AnimationViewerAppWnd && IsWindow(AnimationViewerAppWnd))
+    {
+        DestroyWindow(AnimationViewerAppWnd);
+        AnimationViewerAppWnd = nullptr;
+    }
+
+    if (AnimationViewerUIManager)
+    {
+        AnimationViewerUIManager->Shutdown();
+        delete AnimationViewerUIManager;
+        AnimationViewerUIManager = nullptr;
     }
 
     /** Main Window Section */
@@ -393,7 +417,7 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
                 {
                     LevelEditor->SaveConfig();
                 }
-                if (auto AssetViewer = GEngineLoop.GetAssetViewer())
+                if (auto AssetViewer = GEngineLoop.GetSkeletalMeshViewer())
                 {
                     AssetViewer->SaveConfig();
                 }
@@ -476,7 +500,7 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
             {
                 if (wParam != SIZE_MINIMIZED)
                 {
-                    if (auto AssetViewer = GEngineLoop.GetAssetViewer())
+                    if (auto AssetViewer = GEngineLoop.GetSkeletalMeshViewer())
                     {
                         GraphicDevice.Resize(hWnd);
                         
@@ -552,7 +576,7 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
             GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
             
             // AssetViewer 리사이즈
-            if (auto AssetViewer = GEngineLoop.GetAssetViewer())
+            if (auto AssetViewer = GEngineLoop.GetSkeletalMeshViewer())
             {
                 AssetViewer->ResizeEditor(ClientWidth, ClientHeight);
                 if (AssetViewer->GetActiveViewportClient())
@@ -580,9 +604,9 @@ LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM 
         // 윈도우가 비활성화될 때 키 상태 초기화
         if (wParam == WA_INACTIVE)
         {
-            if (GEngineLoop.GetAssetViewer() && GEngineLoop.GetAssetViewer()->GetActiveViewportClient())
+            if (GEngineLoop.GetSkeletalMeshViewer() && GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient())
             {
-                GEngineLoop.GetAssetViewer()->GetActiveViewportClient()->ResetKeyState();
+                GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient()->ResetKeyState();
             }
         }
         // 활성화 상태일 때만 컨텍스트 업데이트 (WA_ACTIVE=1, WA_CLICKACTIVE=2)

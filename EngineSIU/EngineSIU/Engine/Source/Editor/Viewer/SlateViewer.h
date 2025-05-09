@@ -10,12 +10,12 @@ class UWorld; // May not be needed directly, but SLevelEditor has it
 class FEditorViewportClient;
 class FDelegateHandle; // For input delegates
 
-class SAssetViewer
+class SlateViewer
 {
 public:
-    SAssetViewer();
+    SlateViewer();
 
-    void Initialize(uint32 InEditorWidth, uint32 InEditorHeight);
+    void Initialize(HWND hWnd, const FString& ConfigPath, uint32 InEditorWidth, uint32 InEditorHeight);
     void Tick(float DeltaTime);
     void Release();
 
@@ -54,6 +54,9 @@ private:
     // Viewport Client for the main model rendering area
     std::shared_ptr<FEditorViewportClient> ActiveViewportClient;
 
+    // Window Handle
+    HWND Handle;
+    
     // Input State
     /** 우클릭 시 캡처된 마우스 커서의 초기 위치 (스크린 좌표계) */
     FVector2D MousePinPosition;
@@ -68,7 +71,7 @@ private:
     TArray<FDelegateHandle> InputDelegatesHandles;
 
     // Configuration
-    const FString IniFilePath = "assetviewer.ini";
+    FString IniFilePath;
 
     // Helper functions
     // void CalculateViewportRects(...); // Replaced by direct FRect access from splitters
