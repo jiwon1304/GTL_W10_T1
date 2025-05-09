@@ -25,7 +25,7 @@ public:
 
     inline static FOnLoadFBXCompleted OnLoadFBXCompleted;
 private:
-    static USkeletalMesh* GetFbxObject(const FString& filename);
+    static USkeletalMesh* ParseSkeletalMesh(const FString& filename);
     static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
     static FbxIOSettings* GetFbxIOSettings();
     static FbxCluster* FindClusterForBone(FbxNode* boneNode);
@@ -53,7 +53,6 @@ private:
     );
     static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
     static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
-    inline static TMap<FString, USkeletalMesh*> SkeletalMeshMap;
     //inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
 
     // 비동기용 로드 상태
@@ -71,4 +70,10 @@ private:
     };
     inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
     inline static TMap<FString, MeshEntry> MeshMap;
+};
+
+struct FFbxManager
+{
+    static bool SaveFBXToBinary(const FWString& FilePath, int64_t LastModifiedTime, const FFbxSkeletalMesh& FBXObject);
+    static bool LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifiedTime, FFbxSkeletalMesh& OutFBXObject);
 };

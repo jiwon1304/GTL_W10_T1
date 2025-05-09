@@ -54,6 +54,9 @@ private:
     static bool LoadWorldFromData(const NS_SceneManagerData::FSceneData& sceneData, UWorld* targetWorld);
 
 private:
+    static void LoadMeshesFromData(const NS_SceneManagerData::FSceneData& sceneData);
+
+
     // TODO: IFileManager::Get().CreateFileReader() & Writer() 만들면 여기에 추가
     // static void DeserializeFromBinary(const void* Data, int64 Size, NS_SceneManagerData::FSceneData& OutSceneData);
     // or 중간 구조체 사용 안할경우

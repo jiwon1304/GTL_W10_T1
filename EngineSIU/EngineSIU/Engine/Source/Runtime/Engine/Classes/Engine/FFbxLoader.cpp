@@ -1,7 +1,10 @@
 #include "FFbxLoader.h"
 
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include "FbxObject.h"
+#include "Serializer.h"
 #include "UObject/ObjectFactory.h"
 #include "Components/Material/Material.h"
 #include "Engine/Asset/SkeletalMeshAsset.h"
@@ -38,7 +41,7 @@ void FFbxLoader::LoadFBX(const FString& filename)
     }
 
     std::thread loader([filename]() {
-        USkeletalMesh* mesh = GetFbxObject(filename);
+        USkeletalMesh* mesh = ParseSkeletalMesh(filename);
         std::lock_guard<std::mutex> lock(MapMutex);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
@@ -107,7 +110,8 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
     }
     USkeletalMesh* mesh = nullptr;
     {
-        mesh = GetFbxObject(filename);
+        // 메인쓰레드에서 실행
+        mesh = ParseSkeletalMesh(filename);
         std::lock_guard<std::mutex> lock(MapMutex);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
@@ -121,6 +125,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
     return mesh;
 }
 
+// .fbx 파일을 파싱합니다.
 FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", *FBXFilePath);
@@ -182,23 +187,50 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     return result;
 }
 
-USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
+// Skeletal Mesh를 파싱합니다.
+// 등록되지 않은 .bin 또는 .fbx 파일을 파싱합니다.
+USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
 {
-    // 미리 저장해놓은게 있으면 반환
-    if (SkeletalMeshMap.Contains(filename))
-        return SkeletalMeshMap[filename];
+    FWString BinaryPath = (filename + ".bin").ToWideString();
 
-    FFbxSkeletalMesh* fbxObject = nullptr;
+    // Last Modified Time
+    auto FileTime = std::filesystem::last_write_time(filename.ToWideString());
+    int64_t lastModifiedTime = std::chrono::system_clock::to_time_t(
+    std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+    FileTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()));
+    
+    // fbx 파일에서 바로 추출한 데이터. 엔진에서 사용할 수 있게 USkeletalMesh로 변환해야함.
+    FFbxSkeletalMesh* fbxObject = new FFbxSkeletalMesh();
+    bool bCreateNewMesh = true;
+    
+    // bin 파일이 존재하면 로드
+    if (std::ifstream(BinaryPath).good())
     {
-        // SDK는 멀티스레드 지원 안함.
-        std::lock_guard<std::mutex> lock(SDKMutex);
-        // 없으면 파싱
-        fbxObject = ParseFBX(filename);
-        if (!fbxObject) // 파싱 실패
-            return nullptr;
+        // bin
+        if (FFbxManager::LoadFBXFromBinary(BinaryPath, lastModifiedTime, *fbxObject))
+        {
+            bCreateNewMesh = false;
+        }
     }
 
+    // bin 파일 없음. fbx 파싱 필요
+    if (bCreateNewMesh)
+    {
+        std::lock_guard<std::mutex> lock(SDKMutex);
+        fbxObject = ParseFBX(filename);
+        if (fbxObject)
+        {
+            FFbxManager::SaveFBXToBinary(BinaryPath, lastModifiedTime, *fbxObject);
+        }
+    }
+    
+    if (!fbxObject) // 파싱 실패
+    {
+        delete fbxObject;
+        return nullptr;
+    }
 
+    // .bin 또는 .fbx 파일에서 파싱한 FFbxSkeletalMesh를 USkeletalMesh로 변환
     // SkeletalMesh로 변환
     USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
 
@@ -263,9 +295,6 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
 
     TArray<UMaterial*> Materials = fbxObject->material;
 
-    //// 추가된 요소의 포인터 얻기
-    //FSkeletalMeshRenderData* pRenderData = &RenderDatas[RenderDatas.Num()-1];
-
     TArray<FMatrix> InverseBindPoseMatrices;
     InverseBindPoseMatrices.SetNum(fbxObject->skeleton.joints.Num());
     for (int i = 0; i < fbxObject->skeleton.joints.Num(); ++i)
@@ -278,7 +307,6 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
         // GPU Skinning: 최대 bone 개수 128개를 넘어가면 CPU로 전환
         newSkeletalMesh->bCPUSkinned = true;
     }
-    //SkeletalMeshMap.Add(filename, newSkeletalMesh);
     delete fbxObject;
     return newSkeletalMesh;
 }
@@ -938,4 +966,396 @@ void FFbxLoader::CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Ver
     PivotVertex.tangent.Y = Tangent.Y;
     PivotVertex.tangent.Z = Tangent.Z;
     PivotVertex.tangent.W = Sign;
+}
+
+// .bin 파일로 저장합니다.
+bool FFbxManager::SaveFBXToBinary(const FWString& FilePath, int64_t LastModifiedTime, const FFbxSkeletalMesh& FBXObject)
+{
+    /** File Open */
+    std::ofstream File(FilePath, std::ios::binary);
+
+    if (!File.is_open())
+    {
+        assert("CAN'T SAVE FBX FILE TO BINARY");
+        return false;
+    }
+
+    /** Modified */
+    File.write(reinterpret_cast<const char*>(&LastModifiedTime), sizeof(&LastModifiedTime));
+
+    /** FBX Name */
+    Serializer::WriteFString(File, FBXObject.name);
+
+    /** FBX Mesh */
+    uint32 MeshCount = FBXObject.mesh.Num();
+    File.write(reinterpret_cast<const char*>(&MeshCount), sizeof(MeshCount));
+    for (const FFbxMeshData& MeshData : FBXObject.mesh)
+    {
+        // Mesh Vertices
+        uint32 VertexCount = MeshData.vertices.Num();
+        File.write(reinterpret_cast<const char*>(&VertexCount), sizeof(VertexCount));
+        if (VertexCount > 0)
+        {
+            File.write(reinterpret_cast<const char*>(MeshData.vertices.GetData()), sizeof(FFbxVertex) * VertexCount);
+        }
+
+        // Mesh Indices
+        uint32 IndexCount = MeshData.indices.Num();
+        File.write(reinterpret_cast<const char*>(&IndexCount), sizeof(IndexCount));
+        if (IndexCount > 0)
+        {
+            File.write(reinterpret_cast<const char*>(MeshData.indices.GetData()), sizeof(uint32) * IndexCount);
+        }
+
+        // Subset
+        uint32 SubIndexCount = MeshData.subsetIndex.Num();
+        File.write(reinterpret_cast<const char*>(&SubIndexCount), sizeof(SubIndexCount));
+        if (SubIndexCount > 0)
+        {
+            File.write(reinterpret_cast<const char*>(MeshData.subsetIndex.GetData()), sizeof(uint32) * SubIndexCount);
+        }
+
+        // Name
+        Serializer::WriteFString(File, MeshData.name);
+    }
+    
+    /** FBX Skeleton */
+    uint32 JointCount = FBXObject.skeleton.joints.Num();
+    File.write(reinterpret_cast<const char*>(&JointCount), sizeof(JointCount));
+    for (const FFbxJoint& Joint : FBXObject.skeleton.joints)
+    {
+        // Joint Name
+        Serializer::WriteFString(File, Joint.name);
+
+        // Parent index
+        File.write(reinterpret_cast<const char*>(&Joint.parentIndex), sizeof(Joint.parentIndex));
+
+        // Local bind pose
+        File.write(reinterpret_cast<const char*>(&Joint.localBindPose), sizeof(Joint.localBindPose));
+
+        // Inverse bind pose
+        File.write(reinterpret_cast<const char*>(&Joint.inverseBindPose), sizeof(Joint.inverseBindPose));
+
+        // Position
+        File.write(reinterpret_cast<const char*>(&Joint.position), sizeof(Joint.position));
+
+        // Rotation
+        File.write(reinterpret_cast<const char*>(&Joint.rotation), sizeof(Joint.rotation));
+
+        // Scale
+        File.write(reinterpret_cast<const char*>(&Joint.scale), sizeof(Joint.scale));
+    }
+
+    /** FBX UMaterial */
+    uint32 MaterialCount = FBXObject.material.Num();
+    File.write(reinterpret_cast<const char*>(&MaterialCount), sizeof(MaterialCount));
+    for (UMaterial* const Material : FBXObject.material)
+    {
+        bool bIsValidMaterial = (Material != nullptr);
+        File.write(reinterpret_cast<const char*>(&bIsValidMaterial), sizeof(bIsValidMaterial));
+        
+        if (bIsValidMaterial)
+        {
+            const FMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
+
+            // MaterialInfo.MaterialName (FString)
+            Serializer::WriteFString(File, MaterialInfo.MaterialName);
+            
+            // MaterialInfo.TextureFlag (uint32)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.TextureFlag), sizeof(MaterialInfo.TextureFlag));
+            
+            // MaterialInfo.bTransparent (bool)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.bTransparent), sizeof(MaterialInfo.bTransparent));
+            
+            // MaterialInfo.DiffuseColor (FVector)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.DiffuseColor), sizeof(MaterialInfo.DiffuseColor));
+            
+            // MaterialInfo.SpecularColor (FVector)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.SpecularColor), sizeof(MaterialInfo.SpecularColor));
+            
+            // MaterialInfo.AmbientColor (FVector)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.AmbientColor), sizeof(MaterialInfo.AmbientColor));
+            
+            // MaterialInfo.EmissiveColor (FVector)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.EmissiveColor), sizeof(MaterialInfo.EmissiveColor));
+            
+            // MaterialInfo.SpecularExponent (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.SpecularExponent), sizeof(MaterialInfo.SpecularExponent));
+            
+            // MaterialInfo.IOR (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.IOR), sizeof(MaterialInfo.IOR));
+            
+            // MaterialInfo.Transparency (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.Transparency), sizeof(MaterialInfo.Transparency));
+            
+            // MaterialInfo.BumpMultiplier (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.BumpMultiplier), sizeof(MaterialInfo.BumpMultiplier));
+            
+            // MaterialInfo.IlluminanceModel (uint32)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.IlluminanceModel), sizeof(MaterialInfo.IlluminanceModel));
+            
+            // MaterialInfo.Metallic (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.Metallic), sizeof(MaterialInfo.Metallic));
+            
+            // MaterialInfo.Roughness (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.Roughness), sizeof(MaterialInfo.Roughness));
+            
+            // MaterialInfo.AmbientOcclusion (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.AmbientOcclusion), sizeof(MaterialInfo.AmbientOcclusion));
+            
+            // MaterialInfo.ClearCoat (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.ClearCoat), sizeof(MaterialInfo.ClearCoat));
+            
+            // MaterialInfo.Sheen (float)
+            File.write(reinterpret_cast<const char*>(&MaterialInfo.Sheen), sizeof(MaterialInfo.Sheen));
+
+            // MaterialInfo.TextureInfos (TArray<FTextureInfo>)
+            uint32 TextureInfoCount = MaterialInfo.TextureInfos.Num();
+            File.write(reinterpret_cast<const char*>(&TextureInfoCount), sizeof(TextureInfoCount));
+            for (const FTextureInfo& texInfo : MaterialInfo.TextureInfos)
+            {
+                Serializer::WriteFString(File, texInfo.TextureName);
+                 Serializer::WriteFWString(File, texInfo.TexturePath);
+                File.write(reinterpret_cast<const char*>(&texInfo.bIsSRGB), sizeof(texInfo.bIsSRGB));
+            }
+        }
+    }
+
+    /** FBX Material Subset */
+    uint32 SubsetCount = FBXObject.materialSubsets.Num();
+    File.write(reinterpret_cast<const char*>(&SubsetCount), sizeof(SubsetCount));
+    for (const FMaterialSubset& Subset : FBXObject.materialSubsets)
+    {
+        File.write(reinterpret_cast<const char*>(&Subset.IndexStart), sizeof(Subset.IndexStart));
+        File.write(reinterpret_cast<const char*>(&Subset.IndexCount), sizeof(Subset.IndexCount));
+        File.write(reinterpret_cast<const char*>(&Subset.MaterialIndex), sizeof(Subset.MaterialIndex));
+        Serializer::WriteFString(File, Subset.MaterialName);
+    }
+    
+    /** FBX AABB */
+    File.write(reinterpret_cast<const char*>(&FBXObject.AABBmin), sizeof(FVector));
+    File.write(reinterpret_cast<const char*>(&FBXObject.AABBmax), sizeof(FVector));
+    
+    File.close();
+    return true;
+}
+
+// .bin 파일을 파싱합니다.
+bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifiedTime, FFbxSkeletalMesh& OutFBXObject)
+{
+    UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", WStringToString(FilePath).c_str());
+    std::ifstream File(FilePath, std::ios::binary);
+    if (!File.is_open())
+    {
+        assert("CAN'T OPEN FBX BINARY FILE");
+        return false;
+    }
+
+    /** Modified Check */
+    int64_t FileLastModifiedTime;
+    File.read(reinterpret_cast<char*>(&FileLastModifiedTime), sizeof(FileLastModifiedTime));
+
+    // File is changed.
+    if (LastModifiedTime != FileLastModifiedTime)
+    {
+        return false;
+    }
+
+    TArray<TPair<FWString, bool>> Textures;
+
+    /** FBX Name */
+    Serializer::ReadFString(File, OutFBXObject.name);
+    
+    /** FBX Mesh */
+    uint32 MeshCount;
+    File.read(reinterpret_cast<char*>(&MeshCount), sizeof(MeshCount));
+    OutFBXObject.mesh.Reserve(MeshCount); // 미리 메모리 할당
+    for (uint32 i = 0; i < MeshCount; ++i)
+    {
+        FFbxMeshData MeshData;
+
+        // Mesh Vertices
+        uint32 VertexCount;
+        File.read(reinterpret_cast<char*>(&VertexCount), sizeof(VertexCount));
+        if (VertexCount > 0)
+        {
+            MeshData.vertices.SetNum(VertexCount); // 크기 설정
+            File.read(reinterpret_cast<char*>(MeshData.vertices.GetData()), sizeof(FFbxVertex) * VertexCount);
+        }
+
+        // Mesh Indices
+        uint32 IndexCount;
+        File.read(reinterpret_cast<char*>(&IndexCount), sizeof(IndexCount));
+        if (IndexCount > 0)
+        {
+            MeshData.indices.SetNum(IndexCount); // 크기 설정
+            File.read(reinterpret_cast<char*>(MeshData.indices.GetData()), sizeof(uint32) * IndexCount);
+        }
+        
+        // Subset
+        uint32 SubIndexCount;
+        File.read(reinterpret_cast<char*>(&SubIndexCount), sizeof(SubIndexCount));
+        if (SubIndexCount > 0)
+        {
+            MeshData.subsetIndex.SetNum(SubIndexCount); // 크기 설정
+            File.read(reinterpret_cast<char*>(MeshData.subsetIndex.GetData()), sizeof(uint32) * SubIndexCount);
+        }
+
+        // Name
+        Serializer::ReadFString(File, MeshData.name);
+        OutFBXObject.mesh.Add(std::move(MeshData));
+    }
+
+    /** FBX Skeleton */
+    uint32 JointCount;
+    File.read(reinterpret_cast<char*>(&JointCount), sizeof(JointCount));
+    OutFBXObject.skeleton.joints.Reserve(JointCount); // 미리 메모리 할당
+    for (uint32 i = 0; i < JointCount; ++i)
+    {
+        FFbxJoint Joint;
+
+        // Joint Name
+        Serializer::ReadFString(File, Joint.name);
+
+        // Parent index
+        File.read(reinterpret_cast<char*>(&Joint.parentIndex), sizeof(Joint.parentIndex));
+
+        // Local bind pose
+        File.read(reinterpret_cast<char*>(&Joint.localBindPose), sizeof(Joint.localBindPose));
+
+        // Inverse bind pose
+        File.read(reinterpret_cast<char*>(&Joint.inverseBindPose), sizeof(Joint.inverseBindPose));
+
+        // Position
+        File.read(reinterpret_cast<char*>(&Joint.position), sizeof(Joint.position));
+
+        // Rotation
+        File.read(reinterpret_cast<char*>(&Joint.rotation), sizeof(Joint.rotation));
+
+        // Scale
+        File.read(reinterpret_cast<char*>(&Joint.scale), sizeof(Joint.scale));
+        
+        OutFBXObject.skeleton.joints.Add(std::move(Joint));
+    }
+    
+    /** FBX UMaterial */
+    uint32 MaterialCount;
+    File.read(reinterpret_cast<char*>(&MaterialCount), sizeof(MaterialCount));
+    OutFBXObject.material.Reserve(MaterialCount); // 미리 메모리 할당
+    for (uint32 i = 0; i < MaterialCount; ++i)
+    {
+        bool bIsValidMaterial;
+        File.read(reinterpret_cast<char*>(&bIsValidMaterial), sizeof(bIsValidMaterial));
+        
+        if (bIsValidMaterial)
+        {
+            UMaterial* NewMaterial = new UMaterial(); // UMaterial 객체 생성
+            FMaterialInfo MaterialInfo;
+
+            // MaterialInfo.MaterialName (FString)
+            Serializer::ReadFString(File, MaterialInfo.MaterialName);
+            
+            // MaterialInfo.TextureFlag (uint32)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.TextureFlag), sizeof(MaterialInfo.TextureFlag));
+            
+            // MaterialInfo.bTransparent (bool)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.bTransparent), sizeof(MaterialInfo.bTransparent));
+            
+            // MaterialInfo.DiffuseColor (FVector)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.DiffuseColor), sizeof(MaterialInfo.DiffuseColor));
+            
+            // MaterialInfo.SpecularColor (FVector)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.SpecularColor), sizeof(MaterialInfo.SpecularColor));
+            
+            // MaterialInfo.AmbientColor (FVector)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.AmbientColor), sizeof(MaterialInfo.AmbientColor));
+            
+            // MaterialInfo.EmissiveColor (FVector)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.EmissiveColor), sizeof(MaterialInfo.EmissiveColor));
+            
+            // MaterialInfo.SpecularExponent (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.SpecularExponent), sizeof(MaterialInfo.SpecularExponent));
+            
+            // MaterialInfo.IOR (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.IOR), sizeof(MaterialInfo.IOR));
+            
+            // MaterialInfo.Transparency (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.Transparency), sizeof(MaterialInfo.Transparency));
+            
+            // MaterialInfo.BumpMultiplier (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.BumpMultiplier), sizeof(MaterialInfo.BumpMultiplier));
+            
+            // MaterialInfo.IlluminanceModel (uint32)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.IlluminanceModel), sizeof(MaterialInfo.IlluminanceModel));
+            
+            // MaterialInfo.Metallic (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.Metallic), sizeof(MaterialInfo.Metallic));
+            
+            // MaterialInfo.Roughness (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.Roughness), sizeof(MaterialInfo.Roughness));
+            
+            // MaterialInfo.AmbientOcclusion (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.AmbientOcclusion), sizeof(MaterialInfo.AmbientOcclusion));
+            
+            // MaterialInfo.ClearCoat (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.ClearCoat), sizeof(MaterialInfo.ClearCoat));
+            
+            // MaterialInfo.Sheen (float)
+            File.read(reinterpret_cast<char*>(&MaterialInfo.Sheen), sizeof(MaterialInfo.Sheen));
+
+            // MaterialInfo.TextureInfos (TArray<FTextureInfo>)
+            uint32 TextureInfoCount;
+            File.read(reinterpret_cast<char*>(&TextureInfoCount), sizeof(TextureInfoCount));
+            MaterialInfo.TextureInfos.Reserve(TextureInfoCount); // 미리 메모리 할당
+            for (uint32 j = 0; j < TextureInfoCount; ++j)
+            {
+                FTextureInfo TexInfo;
+                Serializer::ReadFString(File, TexInfo.TextureName);
+                Serializer::ReadFWString(File, TexInfo.TexturePath);
+                File.read(reinterpret_cast<char*>(&TexInfo.bIsSRGB), sizeof(TexInfo.bIsSRGB));
+                Textures.AddUnique({TexInfo.TexturePath, TexInfo.bIsSRGB});
+                MaterialInfo.TextureInfos.Add(std::move(TexInfo));
+            }
+            NewMaterial->SetMaterialInfo(MaterialInfo);
+            OutFBXObject.material.Add(NewMaterial);
+        }
+        else
+        {
+            OutFBXObject.material.Add(nullptr);
+        }
+    }
+
+    /** FBX Material Subset */
+    uint32 SubsetCount;
+    File.read(reinterpret_cast<char*>(&SubsetCount), sizeof(SubsetCount));
+    OutFBXObject.materialSubsets.Reserve(SubsetCount); // 미리 메모리 할당
+    for (uint32 i = 0; i < SubsetCount; ++i)
+    {
+        FMaterialSubset Subset;
+        File.read(reinterpret_cast<char*>(&Subset.IndexStart), sizeof(Subset.IndexStart));
+        File.read(reinterpret_cast<char*>(&Subset.IndexCount), sizeof(Subset.IndexCount));
+        File.read(reinterpret_cast<char*>(&Subset.MaterialIndex), sizeof(Subset.MaterialIndex));
+        Serializer::ReadFString(File, Subset.MaterialName);
+        OutFBXObject.materialSubsets.Add(std::move(Subset));
+    }
+    
+    /** FBX AABB */
+    File.read(reinterpret_cast<char*>(&OutFBXObject.AABBmin), sizeof(FVector));
+    File.read(reinterpret_cast<char*>(&OutFBXObject.AABBmax), sizeof(FVector));
+    
+    File.close();
+
+    // Texture load
+    if (Textures.Num() > 0)
+    {
+        for (const TPair<FWString, bool>& Texture : Textures)
+        {
+            if (FEngineLoop::ResourceManager.GetTexture(Texture.Key) == nullptr)
+            {
+                FEngineLoop::ResourceManager.LoadTextureFromFile(FEngineLoop::GraphicDevice.Device, Texture.Key.c_str(), Texture.Value);
+            }
+        }
+    }
+    
+    return true;
 }
