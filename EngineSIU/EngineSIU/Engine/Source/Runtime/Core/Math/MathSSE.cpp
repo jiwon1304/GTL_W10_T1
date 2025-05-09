@@ -1,5 +1,6 @@
 #include "MathSSE.h"
 
+#ifdef __SSE_EXPERIMENTAL__
 // General한 방법으로, Transform에는 사용하지 말것.
 // SRT만을 사용한 경우에는 InverseTransformNoScale / InverseTransform 사용하기.
 // Transform의 경우에는 determinant가 작아서 FMatrix::Inverse와 결과가 다르게 나옴.
@@ -135,3 +136,4 @@ void SSE::InverseTransform(FMatrix* OutMat, const FMatrix* InMat)
     OutMatrixPtr[3] = _mm_add_ps(OutMatrixPtr[3], _mm_mul_ps(OutMatrixPtr[2], VecSwizzle1(InMatrixPtr[3], 2)));
     OutMatrixPtr[3] = _mm_sub_ps(_mm_setr_ps(0.f, 0.f, 0.f, 1.f), OutMatrixPtr[3]);
 }
+#endif // __SSE_EXPERIMENTAL__
