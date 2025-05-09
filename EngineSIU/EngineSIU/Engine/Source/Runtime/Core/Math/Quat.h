@@ -66,6 +66,9 @@ public:
     // 쿼터니언 정규화 (단위 쿼터니언으로 만듬)
     void Normalize(float Tolerance = SMALL_NUMBER);
 
+    bool ContainsNaN() const;
+
+
     /** 정규화된 쿼터니언을 가져옵니다. */
     FORCEINLINE FQuat GetNormalized(float Tolerance = SMALL_NUMBER) const
     {

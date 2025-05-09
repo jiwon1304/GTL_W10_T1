@@ -1707,6 +1707,7 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\Asset\SkeletalMeshAsset.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\DebugRenderPass.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Transform.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

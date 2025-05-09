@@ -1,4 +1,4 @@
-﻿#include "Vector.h"
+#include "Vector.h"
 
 #include "Vector4.h"
 #include "Misc/Parse.h"
@@ -43,6 +43,14 @@ FVector::FVector(const FVector4& InVector4)
 {
 }
 
+
+bool FVector::ContainsNaN() const
+{
+    // NaN 체크
+    return (!FMath::IsFinite(X) ||
+            !FMath::IsFinite(Y) || 
+            !FMath::IsFinite(Z));
+}
 
 FString FVector::ToString() const
 {

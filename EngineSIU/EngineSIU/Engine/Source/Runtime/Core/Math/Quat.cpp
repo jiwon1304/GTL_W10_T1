@@ -176,6 +176,15 @@ void FQuat::Normalize(float Tolerance)
     }
 }
 
+bool FQuat::ContainsNaN() const
+{
+    return (!FMath::IsFinite(X) ||
+        !FMath::IsFinite(Y) ||
+        !FMath::IsFinite(Z) ||
+        !FMath::IsFinite(W)
+        );
+}
+
 void FQuat::ToAxisAndAngle(FVector& Axis, float& Angle) const
 {
     Angle = (float)GetAngle();  // 각도 추출
