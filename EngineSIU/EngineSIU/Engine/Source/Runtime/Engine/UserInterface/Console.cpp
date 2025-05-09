@@ -191,8 +191,10 @@ void FConsole::AddLog(ELogLevel Level, const ANSICHAR* Fmt, ...)
 
     char Buf[1024];
     vsnprintf_s(Buf, sizeof(Buf), _TRUNCATE, Fmt, Args);
-
-    Items.Emplace(Level, std::string(Buf));
+    {
+        std::lock_guard<std::mutex> Lock(LogEntryMutex);
+        Items.Emplace(Level, std::string(Buf));
+    }
     va_end(Args);
 
     ScrollToBottom = true;
@@ -206,16 +208,21 @@ void FConsole::AddLog(ELogLevel Level, const WIDECHAR* Fmt, ...)
 
     wchar_t Buf[1024];
     _vsnwprintf_s(Buf, sizeof(Buf), _TRUNCATE, Fmt, Args);
-
-    Items.Emplace(Level, FString(Buf).ToAnsiString());
-    va_end(Args);
+    {
+        std::lock_guard<std::mutex> Lock(LogEntryMutex);
+        Items.Emplace(Level, FString(Buf).ToAnsiString());
+        va_end(Args);
+    }
 
     ScrollToBottom = true;
 }
 
 void FConsole::AddLog(ELogLevel Level, const FString& Message)
 {
-    Items.Emplace(Level, Message);
+    {
+        std::lock_guard<std::mutex> Lock(LogEntryMutex);
+        Items.Emplace(Level, Message);
+    }
     ScrollToBottom = true;
 }
 
@@ -282,7 +289,13 @@ void FConsole::Draw() {
 
     // 로그 출력 (필터 적용)
     ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetTextLineHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar);
-    for (const auto& [Level, Message] : Items)
+
+    TArray<LogEntry> ItemsDup;
+    {
+        std::lock_guard<std::mutex> Lock(LogEntryMutex);
+        ItemsDup = Items;
+    }
+    for (const auto& [Level, Message] : ItemsDup)
     {
         if (!Filter.PassFilter(*Message))
         {

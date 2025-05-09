@@ -1,5 +1,6 @@
 #pragma once
 #include <format>
+#include <mutex>
 #include "Container/Array.h"
 #include "D3D11RHI/GraphicDevice.h"
 #include "HAL/PlatformType.h"
@@ -135,4 +136,6 @@ private:
     bool bExpand = true;
     UINT Width;
     UINT Height;
+
+    std::mutex LogEntryMutex;
 };

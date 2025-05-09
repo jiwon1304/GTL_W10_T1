@@ -23,8 +23,12 @@ void FFbxLoader::Init()
     }
 }
 
+// FBX 파일을 로드합니다.
+// 비동기적으로 실행되며, 실행이 끝나면 로그와 함께 UAssetManager에 해당 등록됩니다.
+// 현재는 UAssetManager에서 Contents 폴더의 모든 파일에 대해서 프로그램 시작 시 호출됩니다.
 void FFbxLoader::LoadFBX(const FString& filename)
 {
+    UE_LOG(ELogLevel::Display, "Loading FBX : %s", *filename);
     {
         std::lock_guard<std::mutex> lock(MapMutex);
         if (MeshMap.Contains(filename)) return;
@@ -48,6 +52,8 @@ void FFbxLoader::LoadFBX(const FString& filename)
     loader.detach();
 }
 
+// 이전에 LoadFBX로 호출된 파일이라면 로드된 에셋을 반환합니다.
+// 만약 그런적이 없다면 메인 쓰레드에서 로드합니다.
 USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
 {
     while (true)
@@ -76,7 +82,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
         }
 
         // Sleep 없이 무한 루프 → CPU 낭비 방지
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     // 로드를 시작한 적이 없으면 메인쓰레드에서 로드
@@ -117,6 +123,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
 
 FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
+    UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", *FBXFilePath);
     // .fbx 파일을 로드/언로드 시에만 mutex를 사용
     FbxScene* scene = nullptr;
     FbxGeometryConverter* converter;

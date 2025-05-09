@@ -10,7 +10,7 @@ inline UAssetManager::UAssetManager() {
     FFbxLoader::Init();
     FFbxLoader::OnLoadFBXCompleted.BindLambda(
         [this](const FString& filename) {
-            UpdateLoadInfo(filename);
+            OnLoaded(filename);
         }
     );
 }
@@ -151,7 +151,7 @@ void UAssetManager::RegisterAsset(std::wstring filePath) const
     AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 }
 
-void UAssetManager::UpdateLoadInfo(const FString& filename)
+void UAssetManager::OnLoaded(const FString& filename)
 {
     FName AssetName = FName(filename);
     for (auto& asset : AssetRegistry->PathNameToAssetInfo)
@@ -159,6 +159,7 @@ void UAssetManager::UpdateLoadInfo(const FString& filename)
         if (asset.Value.GetFullPath() == filename)
         {
             asset.Value.IsLoaded = true;
+            UE_LOG(ELogLevel::Display, "Asset Loaded : %s", *filename);
             return;
         }
     }

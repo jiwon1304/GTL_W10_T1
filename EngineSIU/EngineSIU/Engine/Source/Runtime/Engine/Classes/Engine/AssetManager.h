@@ -56,5 +56,5 @@ public:
 
 private:
 
-    void UpdateLoadInfo(const FString& filename);
+    void OnLoaded(const FString& filename);
 };
