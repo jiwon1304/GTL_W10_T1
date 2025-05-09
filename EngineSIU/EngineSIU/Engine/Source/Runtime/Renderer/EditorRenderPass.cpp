@@ -961,8 +961,8 @@ void FEditorRenderPass::RenderSkinnedMeshs()
         }
         FReferenceSkeleton Skeleton;
         Comp->GetSkeletalMesh()->GetRefSkeleton(Skeleton);
-        PyramidsPerComp.SetNum(Skeleton.RawRefBonePose.Num());
-        SpheresPerComp.SetNum(Skeleton.RawRefBonePose.Num());
+        PyramidsPerComp.Reserve(Skeleton.RawRefBonePose.Num());
+        SpheresPerComp.Reserve(Skeleton.RawRefBonePose.Num());
         
         TArray<FMatrix> CurrentPoseMatrices;
         Comp->GetCurrentPoseMatrices(CurrentPoseMatrices);
@@ -984,8 +984,9 @@ void FEditorRenderPass::RenderSkinnedMeshs()
             if (ParentIndex >= 0) // If the joint has a parent
             {
                 PyramidBuffer.Position = CurrentPoseMatrices[ParentIndex].GetTranslationVector();
-                PyramidBuffer.Direction = (CurrentPoseMatrices[i].GetTranslationVector() - CurrentPoseMatrices[ParentIndex].GetTranslationVector()).GetSafeNormal();
-                PyramidBuffer.Height = (CurrentPoseMatrices[i].GetTranslationVector() - CurrentPoseMatrices[ParentIndex].GetTranslationVector()).Size();
+                FVector Disp = CurrentPoseMatrices[i].GetTranslationVector() - CurrentPoseMatrices[ParentIndex].GetTranslationVector();
+                PyramidBuffer.Direction = Disp.GetSafeNormal();
+                PyramidBuffer.Height = Disp.Size();
                 PyramidsPerComp.Add(PyramidBuffer);
             }
         }
@@ -1003,8 +1004,6 @@ void FEditorRenderPass::RenderSkinnedMeshs()
             Spheres.Add(Sphere);
         }
     }
-
-
 
     ShaderManager->SetVertexShaderAndInputLayout(SphereKeyW, Graphics->DeviceContext);
     ShaderManager->SetPixelShader(SphereKeyW, Graphics->DeviceContext);
