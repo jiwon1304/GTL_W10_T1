@@ -219,14 +219,6 @@ void SkeletalMeshControlPanel::CreateSkeletalMenuButton(const ImVec2 ButtonSize,
         UE_LOG(ELogLevel::Display, TEXT("Save Skeletal Mesh to: %s"), *FString(FileName));
         // 저장 코드 구현
     }
-    
-    ImGui::Separator();
-    
-    if (ImGui::MenuItem("Close"))
-    {
-        // SkeletalMeshViewer 창을 숨김
-        GEngineLoop.Hide(GEngineLoop.SkeletalMeshViewerAppWnd);
-    }
 }
 
 void SkeletalMeshControlPanel::CreateSkeletalMeshControls(const ImVec2 ButtonSize)

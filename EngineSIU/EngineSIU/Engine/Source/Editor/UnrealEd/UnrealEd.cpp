@@ -18,9 +18,6 @@ void UnrealEd::Initialize()
     auto PropertyPanel = std::make_shared<PropertyEditorPanel>();
     AddEditorPanel("PropertyPanel", PropertyPanel);
 
-    auto SubWIndowPropertyPanel = std::make_shared<PropertyEditorPanel>();
-    AddEditorPanel("PropertyPanel", SubWIndowPropertyPanel, true);
-
     auto SubWindowSkeletalTreePanel = std::make_shared<SkeletalTreePanel>();
     AddEditorPanel("SubWindowSkeletalTreePanel", SubWindowSkeletalTreePanel, true);
     
