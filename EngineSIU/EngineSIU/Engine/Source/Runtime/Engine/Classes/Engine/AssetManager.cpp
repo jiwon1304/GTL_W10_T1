@@ -89,7 +89,6 @@ void UAssetManager::LoadEntireAssets()
     {
         if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
         {
-            continue;
             FAssetInfo NewAssetInfo;
             NewAssetInfo.AssetName = FName(Entry.path().filename().string());
             NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
