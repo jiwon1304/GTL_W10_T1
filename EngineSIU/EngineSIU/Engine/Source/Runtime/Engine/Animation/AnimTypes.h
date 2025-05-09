@@ -4,24 +4,23 @@
 #include "Math/Vector.h"
 #include "UObject/ObjectMacros.h"
 
+struct FAnimNotifyEvent
+{
+    float TriggerTime;
+    float Duration;
+    FName NotifyName;
+};
 
 /**
-* Raw keyframe data for one track.Each array will contain either NumFrames elements or 1 element.
-* One element is used as a simple compression scheme where if all keys are the same, they'll be
-* reduced to 1 key that is constant over the entire sequence.
+* 하나의 트랙에 대한 원시 키프레임 데이터입니다. 각 배열은 NumFrames 개의 요소 또는 1개의 요소를 포함합니다.
+* 모든 키가 동일한 경우, 간단한 압축 방식으로 모든 키를 하나의 키로 줄여 전체 시퀀스에서 일정하게 유지됩니다.
 */
 struct FRawAnimSequenceTrack
 {
-    /** Position keys. */
     TArray<FVector> PosKeys;
-
-    /** Rotation keys. */
     TArray<FQuat> RotKeys;
-
-    /** Scale keys. */
     TArray<FVector> ScaleKeys;
 
-    // Serializer.
     friend FArchive& operator<<(FArchive& Ar, FRawAnimSequenceTrack& T)
     {
         Ar << T.PosKeys;

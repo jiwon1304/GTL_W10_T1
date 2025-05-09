@@ -1708,6 +1708,9 @@
     <ClInclude Include="Engine\Source\Runtime\Renderer\DebugRenderPass.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Transform.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequenceBase.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequence.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
