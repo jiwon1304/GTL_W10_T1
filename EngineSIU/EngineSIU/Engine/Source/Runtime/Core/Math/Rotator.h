@@ -39,6 +39,7 @@ struct FRotator
     FRotator& operator-=(const FRotator& Other);
 
     FRotator operator*(float Scalar) const;
+    FRotator operator*(const FRotator& Other) const;
     FRotator& operator*=(float Scalar);
 
     FRotator operator/(const FRotator& Other) const;
@@ -73,6 +74,8 @@ struct FRotator
 
     static float NormalizeAxis(float Angle);
     static FRotator MakeLookAtRotation(const FVector& From, const FVector& To);
+
+    FRotator GetInverse() const;
 };
 
 inline FArchive& operator<<(FArchive& Ar, FRotator& R)

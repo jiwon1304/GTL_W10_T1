@@ -209,6 +209,7 @@ public:
     float SizeSquared() const { return SquaredLength(); }
 
     bool Normalize(float Tolerance = KINDA_SMALL_NUMBER);
+    bool ContainsNaN() const;
 
     FVector GetUnsafeNormal() const;
     FVector GetSafeNormal(float Tolerance = KINDA_SMALL_NUMBER) const;

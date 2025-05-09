@@ -44,6 +44,14 @@ FRotator FRotator::operator*(float Scalar) const
     return FRotator(Pitch * Scalar, Yaw * Scalar, Roll * Scalar);
 }
 
+FRotator FRotator::operator*(const FRotator& Other) const
+{
+    FQuat A = Quaternion();
+    FQuat B = Other.Quaternion();
+    FQuat Combined = A * B;
+    return FromQuaternion(Combined);
+}
+
 FRotator& FRotator::operator*=(float Scalar)
 {
     Pitch *= Scalar; Yaw *= Scalar; Roll *= Scalar;
@@ -148,6 +156,23 @@ FRotator FRotator::MakeLookAtRotation(const FVector& From, const FVector& To)
     float Pitch = std::atan2(Dir.Z, DistanceXY) * 180.0f / PI;
     float Roll = 0.0f;
     return FRotator(Pitch, Yaw, Roll);
+}
+
+FRotator FRotator::GetInverse() const
+{
+    // 1) 현재 Rotator → 쿼터니언  
+    const FQuat Q = Quaternion();
+
+    // 2) 쿼터니언 역연산  
+    const FQuat InvQ = Q.GetInverse();
+
+    // 3) 역쿼터니언 → Rotator  
+    FRotator InvRot = InvQ.Rotator();
+
+    // 4) 각도 범위 정리(Optional)  
+    InvRot.Normalize();
+
+    return InvRot;
 }
 
 float FRotator::ClampAxis(float Angle)

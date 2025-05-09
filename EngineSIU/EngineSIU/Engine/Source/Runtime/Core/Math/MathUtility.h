@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <cmath>
 #include <concepts>
 #include <numbers>
@@ -50,6 +50,10 @@ concept TCustomLerpable = TCustomLerp<T>::Value;
 
 struct FMath
 {
+
+    static FORCEINLINE bool IsFinite(float A) { return _finite(A) != 0; }
+    static FORCEINLINE bool IsFinite(double A) { return _finite(A) != 0; }
+
     /** A와 B중에 더 작은 값을 반환합니다. */
     template <typename T>
     [[nodiscard]] static FORCEINLINE constexpr T Min(const T A, const T B)
