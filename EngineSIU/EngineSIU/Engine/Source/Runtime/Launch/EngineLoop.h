@@ -63,7 +63,7 @@ public:
     void Show(HWND HWnd);
     void Hide(HWND hWnd);
 
-    bool IsVisible(const HWND hWnd) { return IsWindowVisible(hWnd); }
+    bool IsVisible(const HWND hWnd) const { return IsWindowVisible(hWnd); }
 
     FGPUTimingManager GPUTimingManager;
     FEngineProfiler EngineProfiler;
@@ -77,6 +77,7 @@ private:
     std::unique_ptr<FSlateAppMessageHandler> AppMessageHandler;
     SLevelEditor* LevelEditor;
     SlateViewer* SkeletalMeshViewer;
+    SlateViewer* AnimationViewer;
     UnrealEd* UnrealEditor;
     FDXDBufferManager* BufferManager; //TODO: UEngine으로 옮겨야함.
 
@@ -87,6 +88,7 @@ private:
 public:
     SLevelEditor* GetLevelEditor() const { return LevelEditor; }
     SlateViewer* GetSkeletalMeshViewer() const { return SkeletalMeshViewer; }
+    SlateViewer* GetAnimationViewer() const { return AnimationViewer; }
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
 
     FSlateAppMessageHandler* GetAppMessageHandler() const { return AppMessageHandler.get(); }

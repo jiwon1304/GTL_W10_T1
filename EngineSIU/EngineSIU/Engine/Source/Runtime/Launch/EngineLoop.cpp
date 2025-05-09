@@ -33,6 +33,7 @@ FEngineLoop::FEngineLoop()
     , CurrentImGuiContext(nullptr)
     , LevelEditor(nullptr)
     , SkeletalMeshViewer(nullptr)
+    , AnimationViewer(nullptr)
     , UnrealEditor(nullptr)
     , BufferManager(nullptr)
 {
@@ -62,6 +63,7 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     AnimationViewerUIManager = new UImGuiManager;
     LevelEditor = new SLevelEditor();
     SkeletalMeshViewer = new SlateViewer();
+    AnimationViewer = new SlateViewer();
     UnrealEditor = new UnrealEd();
     AppMessageHandler = std::make_unique<FSlateAppMessageHandler>();
     GEngine = FObjectFactory::ConstructObject<UEditorEngine>(nullptr);
@@ -82,6 +84,7 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 
     LevelEditor->Initialize(1400, 1000);
     SkeletalMeshViewer->Initialize(SkeletalMeshViewerAppWnd, "SkeletalMeshViewer.ini", 800, 600);
+    AnimationViewer->Initialize(AnimationViewerAppWnd, "AnimationViewer.ini", 800, 600);
     
     UnrealEditor->Initialize();
     
@@ -250,11 +253,13 @@ void FEngineLoop::Tick()
         GEngine->Tick(DeltaTime);
         LevelEditor->Tick(DeltaTime);
         SkeletalMeshViewer->Tick(DeltaTime);
+        AnimationViewer->Tick(DeltaTime);
         // @todo SkeletalMeshViewer->Tick(DeltaTime);
 
         /* Render Viewports */
         Render();
         Render(SkeletalMeshViewerAppWnd);
+        Render(AnimationViewerAppWnd);
 
         if (CurrentImGuiContext != nullptr)
         {
@@ -317,6 +322,13 @@ void FEngineLoop::Exit()
     }
 
     /** Animation Viewer Section */
+    if (AnimationViewer)
+    {
+        AnimationViewer->Release();
+        delete AnimationViewer;
+        AnimationViewer = nullptr;
+    }
+    
     if (AnimationViewerAppWnd && IsWindow(AnimationViewerAppWnd))
     {
         DestroyWindow(AnimationViewerAppWnd);
