@@ -252,14 +252,6 @@ bool SceneManager::LoadWorldFromData(const FSceneData& sceneData, UWorld* target
         
         AActor* SpawnedActor = targetWorld->SpawnActor(classAActor, FName(actorData.ActorID));
 
-        // if (actorData.ActorClass == AActor::StaticClass()->GetName())
-        // {
-        //     SpawnedActor = targetWorld->SpawnActor<AActor>();
-        // }
-        // if (actorData.ActorClass == AStaticMeshActor::StaticClass()->GetName())
-        // {
-        //     SpawnedActor = targetWorld->SpawnActor<AStaticMeshActor>();
-        // }
         // // 또는 특정 경로에서 클래스 로드: UClass* ActorClass = LoadClass<AActor>(nullptr, *actorData.ActorClass);
         if (SpawnedActor == nullptr)
         {
@@ -272,11 +264,6 @@ bool SceneManager::LoadWorldFromData(const FSceneData& sceneData, UWorld* target
         // 액터 클래스가 AActor의 자식인지 확인
 
         // 1.2. 액터 스폰 (기본 위치/회전 사용, 나중에 루트 컴포넌트가 설정)
-        //FActorSpawnParameters SpawnParams;
-        //SpawnParams.Name = FName(*actorData.ActorID); // 저장된 ID를 이름으로 사용 시도 (Unique해야 함)
-        //SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested; // 이름 충돌 시 엔진이 처리하도록 할 수도 있음
-        //AActor* SpawnedActor = targetWorld->SpawnActor<AActor>(ActorClass, FVector::ZeroVector);
-
         if (SpawnedActor == nullptr)
         {
             UE_LOG(ELogLevel::Error, TEXT("LoadSceneFromData: Failed to spawn Actor '%s' of class '%s'."),
@@ -315,35 +302,7 @@ bool SceneManager::LoadWorldFromData(const FSceneData& sceneData, UWorld* target
             if (TargetComponent == nullptr)
             {
                 TargetComponent = SpawnedActor->AddComponent(ComponentClass, FName(componentData.ComponentID), false);
-                
-                // if (!actorData.RootComponentID.IsEmpty())
-                // {
-                //     if (componentData.ComponentID != actorData.RootComponentID)
-                //     {
-                //         // 임시로 RootComponent 가 아니면 떼어줌
-                //         USceneComponent* SceneComp = Cast<USceneComponent>(TargetComponent);
-                //         if (SceneComp)
-                //         {
-                //             SpawnedActor->SetRootComponent(nullptr);
-                //         }
-                //     }
-                // }
-                
-                // if (componentData.ComponentClass == UStaticMesh::StaticClass()->GetName())
-                // {
-                //     TargetComponent = SpawnedActor->AddComponent<UStaticMeshComponent>();
-                // }
-                // else if (componentData.ComponentClass == UCubeComp::StaticClass()->GetName())
-                // {
-                //     TargetComponent = SpawnedActor->AddComponent<UCubeComp>();
-                // }
-                // else
-                // {
-                //     TargetComponent = SpawnedActor->AddComponent<UActorComponent>();
-                // }
-                
-                // !!! 중요: 컴포넌트 등록 !!!
-                //NewComponent->RegisterComponent();
+
             }
             
             if (TargetComponent == nullptr)

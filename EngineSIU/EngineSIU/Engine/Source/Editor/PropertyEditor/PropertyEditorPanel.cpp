@@ -457,13 +457,24 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
         {
             for (const auto& Asset : Assets)
             {
-                if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                if (Asset.Value.AssetType == EAssetType::SkeletalMesh)
                 {
-                    FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetFbxObject(MeshName.ToWideString());
-                    if (SkeletalMesh)
+                    if (Asset.Value.IsLoaded)
                     {
-                        SkeletalComp->SetSkeletalMesh(SkeletalMesh);
+                        if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                        {
+                            //FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
+                            FString MeshName = Asset.Value.GetFullPath();
+                            USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
+                            if (SkeletalMesh)
+                            {
+                                SkeletalComp->SetSkeletalMesh(SkeletalMesh);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        FString Path = Asset.Value.GetFullPath();
                     }
                 }
             }
@@ -503,7 +514,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
                         if (Actor && Actor->IsA<AItemActor>())
                         {
                             USkeletalMeshComponent* PreviewSkeletalMeshComponent = Cast<AItemActor>(Actor)->GetComponentByClass<USkeletalMeshComponent>();
-                            SkeletalComp->overrideSkinningTransform = (PreviewSkeletalMeshComponent->overrideSkinningTransform);
+                            SkeletalComp->CurrentPose = (PreviewSkeletalMeshComponent->CurrentPose);
                         }
                     }
                 }
@@ -563,7 +574,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             {
                 SkeletalMeshComponent->ResetPose();
             }
-            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
+            FTransform& boneTransform = SkeletalMeshComponent->CurrentPose[SkeletalMeshComponent->SelectedBoneIndex];
             FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 
@@ -1315,6 +1326,7 @@ void PropertyEditorPanel::RenderCreateMaterialView()
     const FVector MatSpecularColor = tempMaterialInfo.SpecularColor;
     const FVector MatAmbientColor = tempMaterialInfo.AmbientColor;
     const FVector MatEmissiveColor = tempMaterialInfo.EmissiveColor;
+    const float MatEmissiveIntensity = tempMaterialInfo.EmissiveIntensity;
 
     const float DiffuseR = MatDiffuseColor.X;
     const float DiffuseG = MatDiffuseColor.Y;
@@ -1373,6 +1385,7 @@ void PropertyEditorPanel::RenderCreateMaterialView()
     {
         const FVector NewColor = { EmissiveColorPick[0], EmissiveColorPick[1], EmissiveColorPick[2] };
         tempMaterialInfo.EmissiveColor = NewColor;
+        tempMaterialInfo.EmissiveIntensity = 1.f;
     }
     ImGui::Unindent();
 

@@ -975,7 +975,7 @@ void FEditorRenderPass::RenderSkinnedMeshs()
         PyramidBuffer.Color = FLinearColor::Red;
         PyramidBuffer.BaseSize = 1;
 
-        for (int i = 0; i < Skeleton.RawRefBoneInfo.Num(); ++i)
+        for (int i = 0; i < CurrentPoseMatrices.Num(); ++i)
         {
             SphereBuffer.Position = CurrentPoseMatrices[i].GetTranslationVector();
             SpheresPerComp.Add(SphereBuffer);

@@ -45,21 +45,9 @@ FStaticMeshRenderPass::~FStaticMeshRenderPass()
 void FStaticMeshRenderPass::CreateShader()
 {
     // Begin Debug Shaders
-    HRESULT hr = ShaderManager->AddPixelShader(L"StaticMeshPixelShaderDepth", L"Shaders/StaticMeshPixelShaderDepth.hlsl", "mainPS");
-    if (FAILED(hr))
-    {
-        return;
-    }
-    hr = ShaderManager->AddPixelShader(L"StaticMeshPixelShaderWorldNormal", L"Shaders/StaticMeshPixelShaderWorldNormal.hlsl", "mainPS");
-    if (FAILED(hr))
-    {
-        return;
-    }
-    hr = ShaderManager->AddPixelShader(L"StaticMeshPixelShaderWorldTangent", L"Shaders/StaticMeshPixelShaderWorldTangent.hlsl", "mainPS");
-    if (FAILED(hr))
-    {
-        return;
-    }
+    ShaderManager->AddPixelShaderAsync(L"StaticMeshPixelShaderDepth", L"Shaders/StaticMeshPixelShaderDepth.hlsl", "mainPS", nullptr);
+    ShaderManager->AddPixelShaderAsync(L"StaticMeshPixelShaderWorldNormal", L"Shaders/StaticMeshPixelShaderWorldNormal.hlsl", "mainPS", nullptr);
+    ShaderManager->AddPixelShaderAsync(L"StaticMeshPixelShaderWorldTangent", L"Shaders/StaticMeshPixelShaderWorldTangent.hlsl", "mainPS", nullptr);
     // End Debug Shaders
 
 #pragma region UberShader
@@ -68,44 +56,28 @@ void FStaticMeshRenderPass::CreateShader()
         { GOURAUD, "1" },
         { nullptr, nullptr }
     };
-    hr = ShaderManager->AddPixelShader(L"GOURAUD_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesGouraud);
-    if (FAILED(hr))
-    {
-        return;
-    }
-    
+    ShaderManager->AddPixelShaderAsync(L"GOURAUD_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesGouraud);
+
     D3D_SHADER_MACRO DefinesLambert[] =
     {
         { LAMBERT, "1" },
         { nullptr, nullptr }
     };
-    hr = ShaderManager->AddPixelShader(L"LAMBERT_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesLambert);
-    if (FAILED(hr))
-    {
-        return;
-    }
-    
+    ShaderManager->AddPixelShaderAsync(L"LAMBERT_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesLambert);
+
     D3D_SHADER_MACRO DefinesBlinnPhong[] =
     {
         { PHONG, "1" },
         { nullptr, nullptr }
     };
-    hr = ShaderManager->AddPixelShader(L"PHONG_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesBlinnPhong);
-    if (FAILED(hr))
-    {
-        return;
-    }
-    
+    ShaderManager->AddPixelShaderAsync(L"PHONG_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesBlinnPhong);
+
     D3D_SHADER_MACRO DefinesPBR[] =
     {
         { PBR, "1" },
         { nullptr, nullptr }
     };
-    hr = ShaderManager->AddPixelShader(L"PBR_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesPBR);
-    if (FAILED(hr))
-    {
-        return;
-    }
+    ShaderManager->AddPixelShaderAsync(L"PBR_StaticMeshPixelShader", L"Shaders/StaticMeshPixelShader.hlsl", "mainPS", DefinesPBR);
 #pragma endregion UberShader
 }
 

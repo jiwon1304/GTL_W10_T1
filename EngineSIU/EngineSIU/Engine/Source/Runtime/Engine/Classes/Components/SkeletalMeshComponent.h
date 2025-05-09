@@ -22,8 +22,10 @@ public:
     const TMap<int, FString> GetBoneIndexToName();
     void ResetPose();
     
+    virtual int CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const override;
+
     int SelectedBoneIndex = -1;
-    TArray<FTransform> overrideSkinningTransform;
+    TArray<FTransform> CurrentPose;
     
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;

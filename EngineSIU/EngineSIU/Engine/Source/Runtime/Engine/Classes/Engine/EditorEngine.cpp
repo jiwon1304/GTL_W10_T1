@@ -44,7 +44,7 @@ void UEditorEngine::Init()
         AssetManager->InitAssetManager();
     }
     LoadLevel("Saved/AutoSaves.scene");
-
+    AssetManager->LoadEntireAssets();
     StartPreviewWorld(nullptr);
 }
 

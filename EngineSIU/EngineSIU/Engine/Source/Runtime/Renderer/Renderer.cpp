@@ -281,7 +281,7 @@ void FRenderer::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     }
 
     // Added Compute Shader Pass
-    if (TileLightCullingPass)
+    if (TileLightCullingPass && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
     {
         QUICK_SCOPE_CYCLE_COUNTER(TileLightCulling_CPU)
         QUICK_GPU_SCOPE_CYCLE_COUNTER(TileLightCulling_GPU, *GPUTimingManager)
