@@ -143,7 +143,7 @@ void SkeletalTreePanel::CreateSkeletalDetail() const
 
         ImGui::Text("Bone Pose");
             
-        FTransform& boneTransform = SelectedSkeleton->overrideSkinningTransform[SelectedSkeleton->SelectedBoneIndex];
+        FTransform& boneTransform = SelectedSkeleton->CurrentPose[SelectedSkeleton->SelectedBoneIndex];
         FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
         ImGui::Spacing();
 
