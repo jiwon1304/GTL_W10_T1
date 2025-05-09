@@ -355,3 +355,16 @@ FRotator FQuat::Rotator() const
 
     return RotatorFromQuat;
 }
+
+FQuat FQuat::GetInverse() const
+{
+    if (IsNormalized())
+    {
+        return FQuat(-X, -Y, -Z, W);
+    }
+    else
+    {
+        FQuat NormalizedQuat = GetNormalized();
+        return FQuat(-NormalizedQuat.X, -NormalizedQuat.Y, -NormalizedQuat.Z, NormalizedQuat.W);
+    }
+}

@@ -144,7 +144,7 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
         refSkeleton.RawRefBoneInfo[i].ParentIndex = fbxObject->skeleton.joints[i].parentIndex;
         refSkeleton.RawRefBonePose[i].Translation = fbxObject->skeleton.joints[i].position;
         refSkeleton.RawRefBonePose[i].Rotation = fbxObject->skeleton.joints[i].rotation;
-        refSkeleton.RawRefBonePose[i].Scale3D = fbxObject->skeleton.joints[i].scale;
+        refSkeleton.RawRefBonePose[i].Scale = fbxObject->skeleton.joints[i].scale;
         refSkeleton.RawNameToIndexMap.Add(fbxObject->skeleton.joints[i].name, i);
     }
 
@@ -368,12 +368,11 @@ void FFbxLoader::LoadFbxSkeleton(
         for (int j = 0; j < 4; ++j)
             Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
-    FTransform Transform;
-    Transform.SetFromMatrix(Mat);
+    FTransform Transform(Mat);
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;
-    joint.scale = Transform.Scale3D;
+    joint.scale = Transform.Scale;
 
     int thisIndex = fbxObject->skeleton.joints.Num();
     fbxObject->skeleton.joints.Add(joint);

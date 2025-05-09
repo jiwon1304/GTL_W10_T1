@@ -141,6 +141,8 @@ public:
 
     // 쿼터니언을 FRotator (오일러 각, 도 단위)로 변환
     FRotator Rotator() const;
+
+    FQuat GetInverse() const;
 };
 
 inline FArchive& operator<<(FArchive& Ar, FQuat& Q)

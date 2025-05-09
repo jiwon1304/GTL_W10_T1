@@ -93,7 +93,7 @@ void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) c
     {
         const FTransform& RefPose = BonePose[JointIndex];
         FMatrix BoneToModel = FMatrix::Identity;
-        FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale3D.X, RefPose.Scale3D.Y, RefPose.Scale3D.Z) *
+        FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale.X, RefPose.Scale.Y, RefPose.Scale.Z) *
             RefPose.Rotation.ToMatrix() *
             FMatrix::CreateTranslationMatrix(RefPose.Translation);
 
@@ -142,7 +142,7 @@ void USkeletalMeshComponent::GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices
     {
         const FTransform& RefPose = BonePose[JointIndex];
         FMatrix BoneToModel = FMatrix::Identity;
-        FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale3D.X, RefPose.Scale3D.Y, RefPose.Scale3D.Z) *
+        FMatrix LocalPose = FMatrix::CreateScaleMatrix(RefPose.Scale.X, RefPose.Scale.Y, RefPose.Scale.Z) *
             RefPose.Rotation.ToMatrix() *
             FMatrix::CreateTranslationMatrix(RefPose.Translation);
 
