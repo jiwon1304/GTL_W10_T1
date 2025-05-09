@@ -3,7 +3,6 @@
 #include "Engine/EditorEngine.h"
 #include "UObject/Object.h"
 #include "Widgets/Layout/SSplitter.h"
-#include "AssetViewer/AssetViewer.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Contents/Actors/ItemActor.h"
@@ -13,44 +12,28 @@
 
 void SkeletalTreePanel::Render()
 {
-    UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
-    if (!Engine)
-    {
-        return;
-    }
+    ImVec2 WinSize = ImVec2(Width, Height);
+    
+    /* TreeViewer */
+    ImGui::SetNextWindowPos(ImVec2(WinSize.x * 0.75f + 2.0f, 2));
+    ImGui::SetNextWindowSize(ImVec2(WinSize.x * 0.25f - 5.0f, WinSize.y * 0.7f - 5.0f));
 
-    /* Pre Setup */
-    // Splitter 기반 영역 계산
-    SAssetViewer* AssetViewer = GEngineLoop.GetAssetViewer();
-    FRect SkeletalTreeRect{ 0,0,0,0 };
-    if (AssetViewer && AssetViewer->PrimaryVSplitter && AssetViewer->RightSidebarHSplitter->SideLT)
-    {
-        SkeletalTreeRect = AssetViewer->PrimaryVSplitter->SideLT->GetRect();
-    }
-
-    float PanelPosX = SkeletalTreeRect.TopLeftX;
-    float PanelPosY = SkeletalTreeRect.TopLeftY + 72.f;
-    float PanelWidth = SkeletalTreeRect.Width;
-    float PanelHeight = SkeletalTreeRect.Height - 72.f -32.f;
-
-    ImVec2 MinSize(50, 50);
-    ImVec2 MaxSize(FLT_MAX, FLT_MAX);
-
-    /* Min, Max Size */
-    ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
-
-    /* Panel Position */
-    ImGui::SetNextWindowPos(ImVec2(PanelPosX, PanelPosY), ImGuiCond_Always);
-
-    /* Panel Size */
-    ImGui::SetNextWindowSize(ImVec2(PanelWidth, PanelHeight), ImGuiCond_Always);
-
-    /* Panel Flags */
-    ImGuiWindowFlags PanelFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+    /* Flags */
+    ImGuiWindowFlags PanelFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_HorizontalScrollbar;
 
     ImGui::Begin("Skeletal Tree", nullptr, PanelFlags);
 
     CreateSkeletalTreeNode();
+
+    ImGui::End();
+
+    /** Detail */
+    ImGui::SetNextWindowPos(ImVec2(WinSize.x * 0.75f + 2.0f, WinSize.y * 0.7f + 2.0f));
+    ImGui::SetNextWindowSize(ImVec2(WinSize.x * 0.25f - 5.0f, WinSize.y * 0.3f - 5.0f));
+
+    ImGui::Begin("Detail", nullptr, PanelFlags);
+
+    CreateSkeletalDetail();
 
     ImGui::End();
 }
@@ -63,11 +46,60 @@ void SkeletalTreePanel::OnResize(HWND hWnd)
     Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }
 
+void SkeletalTreePanel::RenderSkeletalTree(int InParentIndex, USkeletalMeshComponent* SkeletalMeshComponent, const TMap<int, FString>& BoneIndexToName)
+{
+    TArray<int> childrenIndices = SkeletalMeshComponent->GetChildrenOfBone(InParentIndex);
+
+    ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow;
+    if (childrenIndices.Num() == 0)
+    {
+        Flags |= ImGuiTreeNodeFlags_Leaf;
+    }
+    if (SkeletalMeshComponent->SelectedBoneIndex == InParentIndex)
+    {
+        Flags |= ImGuiTreeNodeFlags_Selected;
+    }
+
+    ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+    
+    // boneIndexToName 맵에서 안전하게 이름 가져오기
+    const FString* BoneNamePtr = BoneIndexToName.Find(InParentIndex);
+    FString BoneName = BoneNamePtr ? *BoneNamePtr : FString::Printf(TEXT("Bone %d"), InParentIndex);
+
+    // TreeNodeEx를 호출하기 전에 클릭 이벤트를 처리합니다.
+    // TreeNodeEx가 클릭 이벤트를 소비하여 토글하는 것을 방지할 수 있습니다.
+    bool bIsNodeClicked = false;
+    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) // 아이템이 클릭되었고, 토글(열기/닫기)되지 않은 경우
+    {
+        bIsNodeClicked = true;
+    }
+    
+    bool NodeOpen = ImGui::TreeNodeEx(GetData(BoneName), Flags);
+
+    if (bIsNodeClicked)
+    {
+        SkeletalMeshComponent->SelectedBoneIndex = InParentIndex;
+        SelectedSkeleton = SkeletalMeshComponent;
+        SelectedBoneIndex = InParentIndex;
+    }
+
+    if (NodeOpen)
+    {
+        for (int childIndex : childrenIndices)
+        {
+            RenderSkeletalTree(childIndex, SkeletalMeshComponent, BoneIndexToName);
+        }
+        ImGui::TreePop();
+    }
+}
+
 void SkeletalTreePanel::CreateSkeletalTreeNode()
 {
     UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
     if (!Engine)
     {
+        SelectedSkeleton = nullptr;
+        SelectedBoneIndex = -1;
         return;
     }
 
@@ -84,80 +116,55 @@ void SkeletalTreePanel::CreateSkeletalTreeNode()
 
     if (!SkeletalMeshComponent)
     {
+        SelectedSkeleton = nullptr;
+        SelectedBoneIndex = -1;
         return;
     }
-
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-    if (ImGui::TreeNodeEx("ModifyBone", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    
+    const TMap<int, FString> boneIndexToNameMap = SkeletalMeshComponent->GetBoneIndexToName();
+    
+    TArray<int> rootIndices = SkeletalMeshComponent->GetChildrenOfBone(-1); // 루트 본은 부모 인덱스가 -1인 경우가 일반적입니다.
+    for (int rootIndex : rootIndices)
     {
-        ImGui::Text("Bone");
+        RenderSkeletalTree(rootIndex, SkeletalMeshComponent, boneIndexToNameMap);
+    }
+}
 
-        const TMap<int, FString> boneIndexToName = SkeletalMeshComponent->GetBoneIndexToName();
-        std::function<void(int)> CreateNode = [&CreateNode, &SkeletalMeshComponent, &boneIndexToName](int InParentIndex)
-            {
-                TArray<int> childrenIndices = SkeletalMeshComponent->GetChildrenOfBone(InParentIndex);
-
-                ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_None;
-                if (childrenIndices.Num() == 0)
-                    Flags |= ImGuiTreeNodeFlags_Leaf;
-                if (SkeletalMeshComponent->SelectedBoneIndex == InParentIndex)
-                    Flags |= ImGuiTreeNodeFlags_Selected;
-
-                ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-                bool NodeOpen = ImGui::TreeNodeEx(GetData(boneIndexToName[InParentIndex]), Flags);
-
-                if (ImGui::IsItemClicked())
-                    SkeletalMeshComponent->SelectedBoneIndex = InParentIndex;
-                if (NodeOpen)
-                {
-                    for (int childIndex : childrenIndices)
-                    {
-                        CreateNode(childIndex);
-                    }
-                    ImGui::TreePop();
-                }
-            };
-
-        TArray<int> rootIndices = SkeletalMeshComponent->GetChildrenOfBone(-1);
-        for (int rootIndex : rootIndices)
+void SkeletalTreePanel::CreateSkeletalDetail() const
+{
+    if (SelectedBoneIndex > -1 && SelectedSkeleton->SelectedBoneIndex > -1)
+    {
+        if (ImGui::Button("Reset Pose"))
         {
-            CreateNode(rootIndex);
+            SelectedSkeleton->ResetPose();
         }
-
-        if (SkeletalMeshComponent->SelectedBoneIndex > -1)
-        {
-            ImGui::Text("Bone Pose");
-            ImGui::SameLine();
-            if (ImGui::Button("Reset Pose"))
-            {
-                SkeletalMeshComponent->ResetPose();
-            }
-            FTransform& boneTransform = SkeletalMeshComponent->overrideSkinningTransform[SkeletalMeshComponent->SelectedBoneIndex];
-            FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
-            ImGui::Spacing();
-
-            FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
-            ImGui::Spacing();
-
-            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale, 0, 85);
-
-            ImGui::Text("Reference Pose");
-            FReferenceSkeleton skeleton;
-            SkeletalMeshComponent->GetSkeletalMesh()->GetRefSkeleton(skeleton);
-            FTransform refTransform = skeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex];
-            FImGuiWidget::DrawVec3Control("refLocation", refTransform.Translation, 0, 85);
-            ImGui::Spacing();
-
-            FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
-            ImGui::Spacing();
-
-            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale, 0, 85);
-        }
-        //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
-
+        
         ImGui::Spacing();
 
-        ImGui::TreePop();
+        ImGui::Text("Bone Pose");
+            
+        FTransform& boneTransform = SelectedSkeleton->CurrentPose[SelectedSkeleton->SelectedBoneIndex];
+        FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
+        ImGui::Spacing();
+
+        FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
+        ImGui::Spacing();
+
+        FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale, 0, 85);
+
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        ImGui::Text("Reference Pose");
+        
+        FReferenceSkeleton skeleton;
+        SelectedSkeleton->GetSkeletalMesh()->GetRefSkeleton(skeleton);
+        FTransform refTransform = skeleton.RawRefBonePose[SelectedSkeleton->SelectedBoneIndex];
+        FImGuiWidget::DrawVec3Control("RefLocation", refTransform.Translation, 0, 85);
+        ImGui::Spacing();
+
+        FImGuiWidget::DrawRot3Control("RefRotation", refTransform.Rotation, 0, 85);
+        ImGui::Spacing();
+
+        FImGuiWidget::DrawVec3Control("RefScale", refTransform.Scale, 0, 85);
     }
-    ImGui::PopStyleColor();
 }

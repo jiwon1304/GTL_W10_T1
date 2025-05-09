@@ -20,10 +20,10 @@ public:
     void Release();
 
     void ResizeEditor(uint32 InEditorWidth, uint32 InEditorHeight);
-    void SelectViewport(const FVector2D& Point);
+    void SelectViewport(const FVector2D& Point) const;
 
     // 단일 뷰포트로 가정
-    void ResizeViewport();
+    void ResizeViewport() const;
 
     void RegisterViewerInputDelegates();
 

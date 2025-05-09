@@ -65,15 +65,11 @@ void FGizmoRenderPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsD
 
 void FGizmoRenderPass::CreateShader()
 {
-    VertexShader = ShaderManager->GetVertexShaderByKey(L"StaticMeshVertexShader");
-    InputLayout = ShaderManager->GetInputLayoutByKey(L"StaticMeshVertexShader");
-
     HRESULT hr = ShaderManager->AddPixelShader(L"GizmoPixelShader", L"Shaders/GizmoPixelShader.hlsl", "mainPS");
     if (FAILED(hr))
     {
         return;
     }
-    PixelShader = ShaderManager->GetPixelShaderByKey(L"GizmoPixelShader");
 }
 
 void FGizmoRenderPass::UpdateShader()

@@ -15,7 +15,7 @@ cbuffer MaterialConstants : register(b1)
 
 cbuffer BoneMatrices : register(b11)
 {
-    row_major matrix BoneMatrixArray[64]; // Maximum of 128 bones, adjust as needed
+    row_major matrix BoneMatrixArray[128]; // Maximum of 128 bones, adjust as needed
 }
 
 struct VS_INPUT_SkeletalMesh
@@ -51,9 +51,8 @@ PS_INPUT_SkeletalMesh mainVS(VS_INPUT_SkeletalMesh Input, uint id: SV_VertexID)
     float4 SkinnedPosition = float4(0.0, 0.0, 0.0, 0.0);
     float3 SkinnedNormal = float3(0.0, 0.0, 0.0);
     float4 SkinnedTangent = float4(0.0, 0.0, 0.0, 0.0);
-    if (!bCPUSkinning)
+    if (bCPUSkinning == 0)
     {
-    
         for (int i = 0; i < 4; i++)
         {
             if (Input.BoneWeights0[i] > 0.0f)

@@ -89,6 +89,7 @@ float4 mainPS(PS_INPUT_StaticMesh Input) : SV_Target
 
     // Emissive Color
     float3 EmissiveColor = Material.EmissiveColor;
+    float EmissiveFactor = Material.EmissiveFactor;
     if (Material.TextureFlag & TEXTURE_FLAG_EMISSIVE)
     {
         EmissiveColor = MaterialTextures[TEXTURE_SLOT_EMISSIVE].Sample(MaterialSamplers[TEXTURE_SLOT_EMISSIVE], Input.UV).rgb;
@@ -127,11 +128,11 @@ float4 mainPS(PS_INPUT_StaticMesh Input) : SV_Target
         LitColor = Input.Color.rgb;
 #elif defined(LIGHTING_MODEL_PBR)
         LitColor = Lighting(Input.WorldPosition, WorldNormal, ViewWorldLocation, DiffuseColor, Metallic, Roughness);
+        return float4(LitColor, 1);
 #else
         LitColor = Lighting(Input.WorldPosition, WorldNormal, ViewWorldLocation, DiffuseColor, SpecularColor, Shininess, FlatTileIndex);
-        //return float4(ViewWorldLocation, 1);
 #endif
-        LitColor += EmissiveColor * 5.f; // 5는 임의의 값
+        LitColor += EmissiveColor * EmissiveFactor; // 5는 임의의 값
         FinalColor = float4(LitColor, 1);
     }
     else

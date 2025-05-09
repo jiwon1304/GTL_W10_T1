@@ -111,7 +111,8 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
     // 키 이벤트 처리 - GetKeyState API 대신 bRightMouseDown 멤버 변수 사용
     if (bRightMouseDown)
     {
-        // 마우스 우클릭 상태에서만 카메라 이동키 처리
+        // 마우스 우클릭 상태에서만 카메라 이동 시작
+        // input 풀리는건 밖에서 처리
         switch (InKeyEvent.GetCharacter())
         {
         case 'A':
@@ -202,6 +203,10 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
             {
                 EdPlayer->SetMode(CM_TRANSLATION);
             }
+            else if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::W);
+            }
             break;
         }
         case 'E':
@@ -210,6 +215,10 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
             {
                 EdPlayer->SetMode(CM_ROTATION);
             }
+            else if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::E);
+            }
             break;
         }
         case 'R':
@@ -217,6 +226,38 @@ void FEditorViewportClient::InputKey(const FKeyEvent& InKeyEvent)
             if (InKeyEvent.GetInputEvent() == IE_Pressed)
             {
                 EdPlayer->SetMode(CM_SCALE);
+            }
+            break;
+        }
+        case 'A':
+        {
+            if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::A);
+            }
+            break;
+        }
+        case 'D':
+        {
+            if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::D);
+            }
+            break;
+        }
+        case 'S':
+        {
+            if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::S);
+            }
+            break;
+        }
+        case 'Q':
+        {
+            if (InKeyEvent.GetInputEvent() == IE_Released)
+            {
+                PressedKeys.Remove(EKeys::Q);
             }
             break;
         }

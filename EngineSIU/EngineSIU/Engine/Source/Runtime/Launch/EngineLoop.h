@@ -28,20 +28,19 @@ public:
     int32 PreInit();
     int32 Init(HINSTANCE hInstance);
     void Render() const;
-    void WndMessageProc(HWND hWnd);
+    void Render(HWND Handle) const;
     void Tick();
     void Exit();
 
     void GetClientSize(HWND hWnd, uint32& OutWidth, uint32& OutHeight) const;
 
 private:
-    void WindowInit(HINSTANCE hInstance);
-    void SubWindowInit(HINSTANCE hInstance);
+    HWND CreateNewWindow(HINSTANCE hInstance, const WCHAR* WindowClass, const WCHAR* WindowName, int Width, int Height, HWND Parent = nullptr) const;
+    
     static LRESULT CALLBACK AppWndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SubAppWndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
-    void UpdateUI();
-    void UpdateSubWindowUI();
+    void UpdateUI(HWND hWnd, bool bSubWindow = false) const;
 
 public:
     static FGraphicsDevice GraphicDevice;
@@ -52,9 +51,13 @@ public:
     static uint32 TotalAllocationCount;
 
     HWND MainAppWnd;
+    
     // @todo SubWindow를 여러개 만들 수 있도록 수정
     // Skeletal Mesh Viewer
     HWND SkeletalMeshViewerAppWnd;
+
+    /** Animation Viewer Handle */
+    HWND AnimationViewerAppWnd;
 
     void ToggleWindow(HWND hWnd);
     void Show(HWND HWnd);
@@ -68,6 +71,7 @@ public:
 private:
     UImGuiManager* MainUIManager;
     UImGuiManager* SkeletalMeshViewerUIManager;
+    UImGuiManager* AnimationViewerUIManager;
     ImGuiContext* CurrentImGuiContext;
 
     std::unique_ptr<FSlateAppMessageHandler> AppMessageHandler;
@@ -86,7 +90,5 @@ public:
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
 
     FSlateAppMessageHandler* GetAppMessageHandler() const { return AppMessageHandler.get(); }
-
-    void TempRenderDebugImGui();
-    void TempRenderDebugSubImGui();
+    
 };

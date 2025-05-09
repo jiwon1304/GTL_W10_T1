@@ -46,10 +46,6 @@ void FFogRenderPass::CreateShader()
     {
         return;
     }
-    
-    // 생성된 셰이더와 입력 레이아웃 획득
-    VertexShader = ShaderManager->GetVertexShaderByKey(L"FogVertexShader");
-    PixelShader = ShaderManager->GetPixelShaderByKey(L"FogPixelShader");
 }
 
 void FFogRenderPass::UpdateShader()

@@ -17,7 +17,7 @@ public:
     void SetDiffuse(const FVector& DiffuseIn) { materialInfo.DiffuseColor = DiffuseIn; }
     void SetSpecular(const FVector& SpecularIn) { materialInfo.SpecularColor = SpecularIn; }
     void SetAmbient(const FVector& AmbientIn) { materialInfo.AmbientColor = AmbientIn; }
-    void SetEmissive(const FVector& EmissiveIn) { materialInfo.EmissiveColor = EmissiveIn; }
+    void SetEmissive(const FVector& EmissiveIn, float IntensityIn = 1.f) { materialInfo.EmissiveColor = EmissiveIn; materialInfo.EmissiveIntensity = IntensityIn; }
 
     // 스칼라 속성 설정자
     void SetSpecularPower(float SpecularPowerIn) { materialInfo.SpecularExponent = SpecularPowerIn; }

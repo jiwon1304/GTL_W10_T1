@@ -185,6 +185,7 @@ struct FMaterialInfo
     FVector SpecularColor = FVector(0.5f, 0.5f, 0.5f);     // Ks: Specular Color
     FVector AmbientColor = FVector(0.01f, 0.01f, 0.01f);   // Ka: Ambient Color
     FVector EmissiveColor = FVector::ZeroVector;                   // Ke: Emissive Color
+    float EmissiveIntensity = 1.f;                                   // Emissive Intensity. OBJ는 없음
 
     float SpecularExponent = 250.f;                                // Ns: Specular Power
     float IOR = 1.5f;                                              // Ni: Index of Refraction; OBJ only
@@ -422,11 +423,12 @@ struct FMaterialConstants
     float Shininess;
 
     FVector EmissiveColor;
-    float Transparency;
+    float EmissiveIntensity = 1;
 
+    float Transparency;
     float Metallic;
     float Roughness;
-    FVector2D MaterialPadding;
+    float MaterialPadding;
 };
 
 struct FPointLightGSBuffer
@@ -593,6 +595,6 @@ struct FDiffuseMultiplier
 
 struct FBoneMatrices
 {
-    FMatrix BoneMatrices[64];
+    FMatrix BoneMatrices[128];
 };
 #pragma endregion
