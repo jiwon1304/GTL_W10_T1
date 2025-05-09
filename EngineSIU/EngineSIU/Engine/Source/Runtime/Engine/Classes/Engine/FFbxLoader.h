@@ -48,3 +48,9 @@ private:
     //inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
     static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
 };
+
+struct FFbxManager
+{
+    static bool SaveFBXToBinary(const FWString& FilePath, int64_t LastModifiedTime, const FFbxSkeletalMesh& FBXObject);
+    static bool LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifiedTime, FFbxSkeletalMesh& OutFBXObject);
+};
