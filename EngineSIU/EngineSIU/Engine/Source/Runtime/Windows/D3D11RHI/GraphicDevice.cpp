@@ -334,11 +334,6 @@ void FGraphicsDevice::SwapBuffer(HWND hWnd) const
     {
         (*ppSwapChain)->Present(0, 0);
     }
-    else
-    {
-        MessageBox(hWnd, L"SwapChain not found!", L"Error", MB_ICONERROR | MB_OK);
-        return;
-    }
 }
 
 void FGraphicsDevice::Resize(HWND hWnd)
@@ -376,7 +371,7 @@ void FGraphicsDevice::Resize(HWND hWnd)
         return;
     }
 
-    if (!SwapChains.IsEmpty() && SwapChains.begin()->Key == hWnd)
+    if (SpecificSwapChain)
     {
         // 기존 정보 삭제
         ScreenWidths.Remove(hWnd);
