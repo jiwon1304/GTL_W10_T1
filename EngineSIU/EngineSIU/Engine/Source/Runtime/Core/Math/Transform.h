@@ -7,7 +7,7 @@ struct FTransform
 public:
     FVector Translation;
     FRotator Rotation;
-    FVector Scale;
+    FVector Scale3D;
 
 public:
     static const FTransform Identity;
@@ -15,13 +15,13 @@ public:
     FTransform()
         : Translation(FVector::ZeroVector)
         , Rotation(FQuat(0, 0, 0, 1))
-        , Scale(FVector::OneVector)
+        , Scale3D(FVector::OneVector)
     {
     }
 
     FTransform(const FVector InTranslation, const FRotator& InRotation, const FVector InScale)
         : Translation(InTranslation)
-        , Scale(InScale)
+        , Scale3D(InScale)
     {
         Rotation = InRotation;
     }
@@ -29,7 +29,7 @@ public:
     FTransform(const FVector InTranslation, const FQuat InQuat, const FVector InScale)
         : Translation(InTranslation)
         , Rotation(InQuat)
-        , Scale(InScale)
+        , Scale3D(InScale)
     {
     }
 
@@ -37,7 +37,7 @@ public:
 
     FORCEINLINE bool Equal(const FTransform& Other) const
     {
-        return Translation == Other.Translation && Rotation == Other.Rotation && Scale == Other.Scale;
+        return Translation == Other.Translation && Rotation == Other.Rotation && Scale3D == Other.Scale3D;
     }
 
     // 뷰 행렬을 구하는 함수 (왼손 좌표계, LookAtLH 방식)
@@ -74,23 +74,23 @@ public:
     }
 
     // 객체의 스케일을 설정하는 함수 (벡터로 설정)
-    FORCEINLINE void SetScale(const FVector InScale)
+    FORCEINLINE void SetScale3D(const FVector InScale)
     {
-        Scale = InScale;
+        Scale3D = InScale;
     }
 
     // 객체의 스케일에 값을 더하는 함수 (각 축별로 증가)
     FORCEINLINE void AddScale(const FVector InScale)
     {
-        Scale.X += InScale.X;
-        Scale.Y += InScale.Y;
-        Scale.Z += InScale.Z;
+        Scale3D.X += InScale.X;
+        Scale3D.Y += InScale.Y;
+        Scale3D.Z += InScale.Z;
     }
 
     // 객체의 스케일을 설정하는 함수 (x, y, z 값을 각각 인자로 받음)
     FORCEINLINE void SetScale(float x, float y, float z)
     {
-        Scale = { x, y, z };
+        Scale3D = { x, y, z };
     }
 
     // 객체의 현재 위치를 반환하는 함수
@@ -106,9 +106,9 @@ public:
     }
 
     // 객체의 현재 스케일을 반환하는 함수
-    FVector GetScale() const
+    FVector GetScale3D() const
     {
-        return Scale;
+        return Scale3D;
     }
 
     // 스케일 행렬을 반환하는 함수 (객체의 스케일 값으로 구성된 행렬)

@@ -150,7 +150,7 @@ void SkeletalTreePanel::CreateSkeletalDetail() const
         FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
         ImGui::Spacing();
 
-        FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale, 0, 85);
+        FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
 
         ImGui::Dummy(ImVec2(0, 10));
         
@@ -165,6 +165,6 @@ void SkeletalTreePanel::CreateSkeletalDetail() const
         FImGuiWidget::DrawRot3Control("RefRotation", refTransform.Rotation, 0, 85);
         ImGui::Spacing();
 
-        FImGuiWidget::DrawVec3Control("RefScale", refTransform.Scale, 0, 85);
+        FImGuiWidget::DrawVec3Control("RefScale", refTransform.Scale3D, 0, 85);
     }
 }

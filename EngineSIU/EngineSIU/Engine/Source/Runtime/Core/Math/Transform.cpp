@@ -11,13 +11,13 @@ FTransform::FTransform(const FMatrix& InMatrix)
 
     // Extract rotation and scale from the matrix
     FMatrix RotationMatrix = InMatrix;
-    Scale = RotationMatrix.ExtractScaling(SMALL_NUMBER);
+    Scale3D = RotationMatrix.ExtractScaling(SMALL_NUMBER);
 
     // If there is negative scaling, handle it
     if (InMatrix.Determinant() < 0.0f)
     {
         // Reflect matrix to ensure proper handedness
-        Scale *= -1.0f;
+        Scale3D *= -1.0f;
         RotationMatrix.SetAxis(0, -RotationMatrix.GetScaledAxis(0));
     }
 
@@ -31,12 +31,12 @@ FMatrix FTransform::GetViewMatrix() const
 
 FMatrix FTransform::GetScaleMatrix() const
 {
-    return FMatrix::GetScaleMatrix(Scale);
+    return FMatrix::GetScaleMatrix(Scale3D);
 }
 
 FMatrix FTransform::GetMatrix() const
 {
-    return FMatrix::GetScaleMatrix(Scale)
+    return FMatrix::GetScaleMatrix(Scale3D)
         * FMatrix::GetRotationMatrix(Rotation)
         * FMatrix::GetTranslationMatrix(Translation);
 }
@@ -142,13 +142,13 @@ void FTransform::SetFromMatrix(const FMatrix& InMatrix)
 
     // 행렬에서 스케일 추출
     FVector scale = matrix.ExtractScaling();
-    Scale = scale;
+    Scale3D = scale;
 
     // 행렬식이 음수면 스케일 부호를 보정
     if (matrix.Determinant() < 0)
     {
         scale *= -1;
-        Scale = Scale * FVector(-1.f, 1.f, 1.f);
+        Scale3D = Scale3D * FVector(-1.f, 1.f, 1.f);
     }
 
     // 회전 부분을 쿼터니언으로 변환
@@ -166,7 +166,7 @@ FVector4 FTransform::TransformVector4(const FVector4& Vector) const
     const FVector vec3 = FVector(Vector.X, Vector.Y, Vector.Z);
 
     // 스케일 적용
-    const FVector scaledVec3 = vec3 * Scale;
+    const FVector scaledVec3 = vec3 * Scale3D;
 
     // 회전 적용
     const FVector rotatedVec3 = Rotation.RotateVector(scaledVec3);
@@ -184,7 +184,7 @@ FVector4 FTransform::TransformVector4(const FVector4& Vector) const
 
 FVector FTransform::TransformPosition(const FVector& Vector) const
 {
-    const FVector Scaled = Vector * Scale;
+    const FVector Scaled = Vector * Scale3D;
     const FVector Rotated = Rotation.RotateVector(Scaled);
     return Rotated + Translation;
 }
@@ -192,14 +192,14 @@ FVector FTransform::TransformPosition(const FVector& Vector) const
 
 FVector FTransform::TransformVector(const FVector& Vector) const
 {
-    const FVector scaledVec3 = Vector * Scale;
+    const FVector scaledVec3 = Vector * Scale3D;
     const FVector rotatedVec3 = Rotation.RotateVector(scaledVec3);
     return rotatedVec3;
 }
 
 FTransform FTransform::Inverse() const
 {
-    const FVector4 InverseScale = FVector4(1.f / Scale.X, 1.f / Scale.Y, 1.f / Scale.Z, 0.f);
+    const FVector4 InverseScale = FVector4(1.f / Scale3D.X, 1.f / Scale3D.Y, 1.f / Scale3D.Z, 0.f);
     const FRotator InverseRotation = Rotation.GetInverse();
 
     const FVector ScaledTranslation = FVector(InverseScale.X * Translation.X, InverseScale.Y * Translation.Y, InverseScale.Z * Translation.Z);
@@ -210,9 +210,9 @@ FTransform FTransform::Inverse() const
 
 FTransform FTransform::operator*(const FTransform& Other) const
 {
-    FVector ResultScale = Scale * Other.GetScale();
+    FVector ResultScale = Scale3D * Other.GetScale3D();
     FRotator ResultRotation = Rotation * Other.GetRotation();
-    FVector ScaledPosition = Rotation.ToMatrix().TransformPosition(Other.GetTranslation() * Scale);
+    FVector ScaledPosition = Rotation.ToMatrix().TransformPosition(Other.GetTranslation() * Scale3D);
     FVector ResultPosition = Translation + ScaledPosition;
 
     return FTransform{ ResultPosition, ResultRotation, ResultScale };

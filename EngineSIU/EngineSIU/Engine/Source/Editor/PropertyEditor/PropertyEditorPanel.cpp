@@ -581,7 +581,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale, 0, 85);
+            FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
 
             ImGui::Text("Reference Pose");
             FReferenceSkeleton skeleton;
@@ -593,7 +593,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale, 0, 85);
+            FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale3D, 0, 85);
         }
         //FVector& SelectedLocation = SkeletalMeshComponent->GetSkeletalMesh()->RefSkeleton.RawRefBonePose[SkeletalMeshComponent->SelectedBoneIndex].Translation;
 
