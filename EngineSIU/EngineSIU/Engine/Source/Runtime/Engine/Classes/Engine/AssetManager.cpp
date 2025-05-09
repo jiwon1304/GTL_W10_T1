@@ -42,13 +42,6 @@ UAssetManager* UAssetManager::GetIfInitialized()
 void UAssetManager::InitAssetManager()
 {
     AssetRegistry = std::make_unique<FAssetRegistry>();
-
-    // 디버그 시 로딩을 빠르게 하기 위해서 일부만 로드
-#ifdef _DEBUG
-    LoadEntireAssets();
-#else
-//    FFbxLoader::LoadFBX("Contents/dragon/Dragon 2.5_fbx.fbx");
-#endif // DEBUG
 }
 
 const TMap<FName, FAssetInfo>& UAssetManager::GetAssetRegistry()
