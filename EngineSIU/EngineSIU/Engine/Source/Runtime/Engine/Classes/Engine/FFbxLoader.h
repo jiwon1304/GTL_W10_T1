@@ -7,6 +7,8 @@
 #include "Container/String.h"
 #include "Asset/SkeletalMeshAsset.h"
 #include <mutex>
+
+#include "Animation/AnimSequence.h"
 #include "Delegates/DelegateCombination.h"
 
 
@@ -26,10 +28,10 @@ public:
     inline static FOnLoadFBXCompleted OnLoadFBXCompleted;
 private:
     static USkeletalMesh* ParseSkeletalMesh(const FString& filename);
-    static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
+    static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath, USkeletalMesh* Mesh);
     static FbxIOSettings* GetFbxIOSettings();
     static FbxCluster* FindClusterForBone(FbxNode* boneNode);
-    static FFbxSkeletalMesh* LoadFBXObject(FbxScene* InFbxInfo);
+    static FFbxSkeletalMesh* LoadFBXObject(FbxScene* InFbxScene, USkeletalMesh* Mesh);
     static void LoadFbxSkeleton(
         FFbxSkeletalMesh* fbxObject,
         FbxNode* node,
@@ -47,12 +49,23 @@ private:
         TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& boneWeight
     );
+    static void LoadAnimationInfo(
+        FbxScene* Scene, USkeletalMesh* SkeletalMesh, TArray<UAnimSequence*>& OutSequences
+    );
+    static void LoadAnimationData(
+        FbxScene* Scene, FbxNode* RootNode, USkeletalMesh* SkeletalMesh, UAnimSequence* Sequence
+    );
+
+    static void DumpAnimationDebug(const FString& FBXFilePath, const USkeletalMesh* SkeletalMesh, const TArray<UAnimSequence*>& AnimSequences);
+
+    static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
     static void LoadFBXMaterials(
         FFbxSkeletalMesh* fbxObject,
         FbxNode* node
     );
-    static bool CreateTextureFromFile(const FWString& Filename, bool bIsSRGB);
     static void CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Vertex1, const FFbxVertex& Vertex2);
+    static FbxNode* FindBoneNode(FbxNode* Root, const FString& BoneName);
+    static FTransform FTransformFromFbxMatrix(const FbxAMatrix& Matrix);
     //inline static TArray<FSkeletalMeshRenderData> RenderDatas; // 일단 Loader에서 가지고 있게 함
 
     // 비동기용 로드 상태

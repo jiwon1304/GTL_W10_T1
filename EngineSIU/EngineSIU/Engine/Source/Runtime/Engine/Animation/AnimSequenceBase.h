@@ -1,6 +1,7 @@
 #pragma once
 #include "UObject/Object.h"
 #include "UObject/ObjectMacros.h"
+#include "Animation/AnimTypes.h"
 
 class UAnimSequenceBase : public UObject
 {
@@ -8,7 +9,7 @@ class UAnimSequenceBase : public UObject
 
 public:
     UAnimSequenceBase() = default;
-    virtual UObject* Duplicate(UObject* InOuter) override;
+    //virtual UObject* Duplicate(UObject* InOuter) override;
     // TODO : Add Animation Data
     // TODO : Add Animation Notify
     // TODO : Add Animation Curves

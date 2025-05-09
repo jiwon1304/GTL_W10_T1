@@ -5,6 +5,9 @@
 #include <sstream>
 #include "FbxObject.h"
 #include "Serializer.h"
+#include "Animation/AnimSequence.h"
+#include "Animation/AnimTypes.h"
+#include "Animation/AnimData/AnimDataModel.h"
 #include "UObject/ObjectFactory.h"
 #include "Components/Material/Material.h"
 #include "Engine/Asset/SkeletalMeshAsset.h"
@@ -12,6 +15,7 @@
 #include "Container/StringConv.h"
 #include "Engine/AssetManager.h"
 
+#define DEBUG_DUMP_ANIMATION
 struct BoneWeights
 {
     int jointIndex;
@@ -126,7 +130,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
 }
 
 // .fbx 파일을 파싱합니다.
-FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
+FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath, USkeletalMesh* Mesh)
 {
     UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", *FBXFilePath);
     // .fbx 파일을 로드/언로드 시에만 mutex를 사용
@@ -181,7 +185,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 
     FFbxSkeletalMesh* result;
 
-    result = LoadFBXObject(scene);
+    result = LoadFBXObject(scene, Mesh);
     scene->Destroy();
     result->name = FBXFilePath;
     return result;
@@ -217,7 +221,7 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     if (bCreateNewMesh)
     {
         std::lock_guard<std::mutex> lock(SDKMutex);
-        fbxObject = ParseFBX(filename);
+        fbxObject = ParseFBX(filename, nullptr);
         if (fbxObject)
         {
             FFbxManager::SaveFBXToBinary(BinaryPath, lastModifiedTime, *fbxObject);
@@ -310,7 +314,7 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     return newSkeletalMesh;
 }
 
-FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
+FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxScene, USkeletalMesh* Mesh)
 {
     FFbxSkeletalMesh* result = new FFbxSkeletalMesh();
 
@@ -343,7 +347,7 @@ FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
         }
     };
     
-    Traverse(InFbxInfo->GetRootNode());
+    Traverse(InFbxScene->GetRootNode());
 
     // parse bones
     for (auto& node : skeletons)
@@ -367,6 +371,20 @@ FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxInfo)
         LoadFBXMesh(result, node, boneNameToIndex, weightMaps[i]);
         LoadFBXMaterials(result, node);
     }
+
+    // 애니메이션 정보 로드
+    TArray<UAnimSequence*> AnimSequences;
+    LoadAnimationInfo(InFbxScene, Mesh, AnimSequences);
+
+    // 키프레임 데이터 로드
+    for (UAnimSequence* Sequence : AnimSequences)
+    {
+        LoadAnimationData(InFbxScene, InFbxScene->GetRootNode(), Mesh, Sequence);
+    }
+
+#ifdef DEBUG_DUMP_ANIMATION
+    DumpAnimationDebug(result->name, Mesh, AnimSequences);
+#endif
 
     return result;
 }
@@ -406,6 +424,10 @@ FbxCluster* FFbxLoader::FindClusterForBone(FbxNode* boneNode)
     }
     return nullptr;
 }
+
+
+
+
 
 void FFbxLoader::LoadFbxSkeleton(
     FFbxSkeletalMesh* fbxObject,
@@ -555,6 +577,155 @@ void FFbxLoader::LoadSkinWeights(
             
         }
     } 
+}
+
+void FFbxLoader::LoadAnimationInfo(FbxScene* Scene, USkeletalMesh* SkeletalMesh, TArray<UAnimSequence*>& OutSequences)
+{
+    FbxArray<FbxString*> animNames;
+    Scene->FillAnimStackNameArray(animNames);
+
+    for (int i = 0; i < animNames.Size(); ++i)
+    {
+        FbxAnimStack* animStack = Scene->FindMember<FbxAnimStack>(animNames[i]->Buffer());
+        if (!animStack) { continue; }
+
+        FbxTakeInfo* takeInfo = Scene->GetTakeInfo(animStack->GetName());
+        if (!takeInfo) { continue; }
+
+        UAnimSequence* Sequence = FObjectFactory::ConstructObject<UAnimSequence>(nullptr);
+        UAnimDataModel* DataModel = FObjectFactory::ConstructObject<UAnimDataModel>(Sequence);
+        Sequence->DataModel = DataModel;
+
+        const float Duration = (float)takeInfo->mLocalTimeSpan.GetDuration().GetSecondDouble();
+        const FFrameRate FrameRate((int32)FbxTime::GetFrameRate(Scene->GetGlobalSettings().GetTimeMode()), 1);
+
+
+        DataModel->PlayLength = Duration;
+        DataModel->FrameRate = FrameRate;
+        DataModel->NumberOfFrames = FMath::RoundToInt(Duration * FrameRate.Numerator / (float)FrameRate.Denominator);
+        DataModel->NumberOfKeys = DataModel->NumberOfFrames;
+
+        OutSequences.Add(Sequence);
+    }
+
+    for (int i = 0; i < animNames.Size(); ++i)
+        delete animNames[i];
+    animNames.Clear();
+
+    UE_LOG(ELogLevel::Display, "Loaded %d animation sequence(s).", OutSequences.Num());
+    for (UAnimSequence* Seq : OutSequences)
+    {
+        UE_LOG(ELogLevel::Display, "  → Sequence: %s, Duration: %.2f, Frames: %d",
+            *Seq->GetName(),
+            Seq->DataModel->PlayLength,
+            Seq->DataModel->NumberOfFrames);
+    }
+}
+
+
+void FFbxLoader::LoadAnimationData(FbxScene* Scene, FbxNode* RootNode, USkeletalMesh* SkeletalMesh, UAnimSequence* Sequence)
+{
+     if (!Sequence || !Sequence->DataModel || !SkeletalMesh)
+        return;
+
+    FbxAnimStack* AnimStack = Scene->FindMember<FbxAnimStack>(*Sequence->GetName());
+    if (!AnimStack)
+    {
+        UE_LOG(ELogLevel::Warning, "AnimStack not found for sequence: %s", *Sequence->GetName());
+        return;
+    }
+
+    Scene->SetCurrentAnimationStack(AnimStack);
+    FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>();
+    if (!AnimLayer) return;
+
+    const int32 FrameCount = Sequence->DataModel->NumberOfFrames;
+    const float DeltaTime = Sequence->DataModel->PlayLength / FrameCount;
+
+    TArray<FBoneAnimationTrack>& Tracks = Sequence->DataModel->BoneAnimationTracks;
+    FReferenceSkeleton RefSkeleton;
+    SkeletalMesh->GetRefSkeleton(RefSkeleton);
+
+    Tracks.SetNum(RefSkeleton.RawRefBoneInfo.Num());
+
+    for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.RawRefBoneInfo.Num(); ++BoneIndex)
+    {
+        const FName& BoneName = RefSkeleton.RawRefBoneInfo[BoneIndex].Name;
+        FbxNode* BoneNode = FindBoneNode(RootNode, BoneName.ToString());
+        if (!BoneNode)
+        {
+            UE_LOG(ELogLevel::Warning, "BoneNode not found in FBX for bone: %s", *BoneName.ToString());
+            continue;
+        }
+
+        FBoneAnimationTrack Track;
+        Track.BoneTreeIndex = BoneIndex;
+        Track.Name = BoneName;
+
+        FRawAnimSequenceTrack& Raw = Track.InternalTrackData;
+        Raw.PosKeys.SetNum(FrameCount);
+        Raw.RotKeys.SetNum(FrameCount);
+        Raw.ScaleKeys.SetNum(FrameCount);
+
+        for (int32 FrameIdx = 0; FrameIdx < FrameCount; ++FrameIdx)
+        {
+            FbxTime Time;
+            Time.SetSecondDouble(FrameIdx * DeltaTime);
+
+            FbxAMatrix LocalMatrix = BoneNode->EvaluateLocalTransform(Time);
+            FTransform Transform = FTransformFromFbxMatrix(LocalMatrix);
+
+            Raw.PosKeys[FrameIdx] = Transform.Translation;
+            Raw.RotKeys[FrameIdx] = Transform.Rotation.Quaternion();
+            Raw.ScaleKeys[FrameIdx] = Transform.Scale3D;
+        }
+
+        Tracks[BoneIndex] = std::move(Track);
+    }
+}
+
+void FFbxLoader::DumpAnimationDebug(const FString& FBXFilePath, const USkeletalMesh* SkeletalMesh, const TArray<UAnimSequence*>& AnimSequences)
+{
+    FString DebugFilename = FBXFilePath + "_debug.txt";
+    std::ofstream File(*DebugFilename);
+
+    if (!File.is_open())
+    {
+        UE_LOG(ELogLevel::Error, "Cannot open debug file: %s", *DebugFilename);
+        return;
+    }
+
+    for (const UAnimSequence* Seq : AnimSequences)
+    {
+        File << "[Sequence] " << (*Seq->GetName()) << "\n";
+        File << "Duration: " << Seq->DataModel->PlayLength << " seconds\n";
+        File << "FrameRate: " << Seq->DataModel->FrameRate.Numerator << "\n";
+        File << "Frames: " << Seq->DataModel->NumberOfFrames << "\n\n";
+
+        const TArray<FBoneAnimationTrack>& Tracks = Seq->DataModel->BoneAnimationTracks;
+
+        for (const FBoneAnimationTrack& Track : Tracks)
+        {
+            File << "Bone [" << (*Track.Name.ToString()) << "] Index: " << Track.BoneTreeIndex << "\n";
+            const FRawAnimSequenceTrack& Raw = Track.InternalTrackData;
+
+            for (int32 i = 0; i < Raw.PosKeys.Num(); ++i)
+            {
+                const FVector& T = Raw.PosKeys[i];
+                const FQuat& R = Raw.RotKeys[i];
+                const FVector& S = Raw.ScaleKeys[i];
+
+                File << "  Frame " << i << ":\n";
+                File << "    Pos: (" << T.X << ", " << T.Y << ", " << T.Z << ")\n";
+                File << "    Rot: (" << R.X << ", " << R.Y << ", " << R.Z << ", " << R.W << ")\n";
+                File << "    Scale: (" << S.X << ", " << S.Y << ", " << S.Z << ")\n";
+            }
+
+            File << "\n";
+        }
+    }
+
+    File.close();
 }
 
 void FFbxLoader::LoadFBXMesh(
@@ -761,6 +932,7 @@ void FFbxLoader::LoadFBXMesh(
 
     fbxObject->mesh.Add(meshData);
 }
+
 
 void FFbxLoader::LoadFBXMaterials(
     FFbxSkeletalMesh* fbxObject,
@@ -1356,4 +1528,31 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
     }
     
     return true;
+}
+
+
+FbxNode* FFbxLoader::FindBoneNode(FbxNode* Root, const FString& BoneName)
+{
+    if (!Root) return nullptr;
+    if (BoneName.Equals(Root->GetName(), ESearchCase::IgnoreCase)) return Root;
+
+    for (int32 i = 0; i < Root->GetChildCount(); ++i)
+    {
+        if (FbxNode* Found = FindBoneNode(Root->GetChild(i), BoneName))
+            return Found;
+    }
+    return nullptr;
+}
+
+FTransform FFbxLoader::FTransformFromFbxMatrix(const FbxAMatrix& Matrix)
+{
+    FbxVector4 T = Matrix.GetT();
+    FbxQuaternion Q = Matrix.GetQ();
+    FbxVector4 S = Matrix.GetS();
+
+    FVector Translation((float)T[0], (float)T[1], (float)T[2]);
+    FVector Scale((float)S[0], (float)S[1], (float)S[2]);
+    FQuat Rotation((float)Q[0], (float)Q[1], (float)Q[2], (float)Q[3]);
+
+    return FTransform(Translation, Rotation, Scale);
 }

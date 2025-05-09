@@ -2,6 +2,7 @@
 #include "MeshComponent.h"
 #include "Engine/Asset/SkeletalMeshAsset.h"
 
+class UAnimInstance;
 class USkeletalMesh;
 
 class USkeletalMeshComponent: public UMeshComponent
@@ -29,4 +30,5 @@ public:
     
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
+    UAnimInstance* AnimInstance = nullptr;
 };

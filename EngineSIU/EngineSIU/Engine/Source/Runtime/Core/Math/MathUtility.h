@@ -351,6 +351,23 @@ struct FMath
         );
     }
 
+    static constexpr FORCEINLINE int32 TruncToInt32(float F)
+    {
+        return (int32)F;
+    }
+    static FORCEINLINE int32 FloorToInt32(double F)
+    {
+        int32 I = TruncToInt32(F);
+        I -= ((double)I > F);
+        return I;
+    }
+    static FORCEINLINE int32 RoundToInt32(float F)
+    {
+        return FloorToInt32(F + 0.5f);
+    }
+    static FORCEINLINE int32 RoundToInt(float F) { return RoundToInt32(F); }
+
+
     // Special-case interpolation
     /** Current와 Target 법선 벡터를 일정 각도 단계로 보간합니다. */
     [[nodiscard]] static FVector VInterpNormalRotationTo(const FVector& Current, const FVector& Target, float DeltaTime, float RotationSpeedDegrees);
@@ -531,6 +548,7 @@ struct FMath
 
     [[nodiscard]] static FORCEINLINE float RoundToFloat(float F) { return FloorToFloat(F + 0.5f); }
     [[nodiscard]] static FORCEINLINE double RoundToDouble(double F) { return FloorToDouble(F + 0.5); }
+
 
     [[nodiscard]] static FORCEINLINE float CeilToFloat(float F) { return SSE::CeilToFloat(F); }
     [[nodiscard]] static FORCEINLINE double CeilToDouble(double F) { return SSE::CeilToDouble(F); }
