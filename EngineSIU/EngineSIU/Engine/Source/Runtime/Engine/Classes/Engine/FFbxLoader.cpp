@@ -231,7 +231,6 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     }
 
     // .bin 또는 .fbx 파일에서 파싱한 FFbxSkeletalMesh를 USkeletalMesh로 변환
-    // SkeletalMesh로 변환
     USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
 
     FSkeletalMeshRenderData renderData;
