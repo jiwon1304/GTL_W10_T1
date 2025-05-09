@@ -1054,6 +1054,8 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
         return false;
     }
 
+    TArray<TPair<FWString, bool>> Textures;
+
     /** FBX Name */
     Serializer::ReadFString(File, OutFBXObject.name);
     
@@ -1204,6 +1206,7 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
                 Serializer::ReadFString(File, TexInfo.TextureName);
                 Serializer::ReadFWString(File, TexInfo.TexturePath);
                 File.read(reinterpret_cast<char*>(&TexInfo.bIsSRGB), sizeof(TexInfo.bIsSRGB));
+                Textures.AddUnique({TexInfo.TexturePath, TexInfo.bIsSRGB});
                 MaterialInfo.TextureInfos.Add(std::move(TexInfo));
             }
             NewMaterial->SetMaterialInfo(MaterialInfo);
@@ -1234,5 +1237,18 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
     File.read(reinterpret_cast<char*>(&OutFBXObject.AABBmax), sizeof(FVector));
     
     File.close();
+
+    // Texture load
+    if (Textures.Num() > 0)
+    {
+        for (const TPair<FWString, bool>& Texture : Textures)
+        {
+            if (FEngineLoop::ResourceManager.GetTexture(Texture.Key) == nullptr)
+            {
+                FEngineLoop::ResourceManager.LoadTextureFromFile(FEngineLoop::GraphicDevice.Device, Texture.Key.c_str(), Texture.Value);
+            }
+        }
+    }
+    
     return true;
 }
