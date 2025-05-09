@@ -457,13 +457,24 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
         {
             for (const auto& Asset : Assets)
             {
-                if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                if (Asset.Value.AssetType == EAssetType::SkeletalMesh)
                 {
-                    FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                    USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
-                    if (SkeletalMesh)
+                    if (Asset.Value.IsLoaded)
                     {
-                        SkeletalComp->SetSkeletalMesh(SkeletalMesh);
+                        if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                        {
+                            //FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
+                            FString MeshName = Asset.Value.GetFullPath();
+                            USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
+                            if (SkeletalMesh)
+                            {
+                                SkeletalComp->SetSkeletalMesh(SkeletalMesh);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        FString Path = Asset.Value.GetFullPath();
                     }
                 }
             }

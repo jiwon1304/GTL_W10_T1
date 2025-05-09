@@ -7,10 +7,14 @@
 #include "Container/String.h"
 #include "Asset/SkeletalMeshAsset.h"
 #include <mutex>
+#include "Delegates/DelegateCombination.h"
+
 
 struct FFbxSkeletalMesh;
 struct BoneWeights;
 class USkeletalMesh;
+
+DECLARE_DELEGATE_OneParam(FOnLoadFBXCompleted, const FString& /*filename*/);
 
 struct FFbxLoader
 {
@@ -18,6 +22,8 @@ public:
     static void Init();
     static void LoadFBX(const FString& filename);
     static USkeletalMesh* GetSkeletalMesh(const FString& filename);
+
+    inline static FOnLoadFBXCompleted OnLoadFBXCompleted;
 private:
     static USkeletalMesh* GetFbxObject(const FString& filename);
     static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
@@ -63,6 +69,6 @@ private:
         LoadState State;
         USkeletalMesh* Mesh;
     };
-    inline static std::mutex MapMutex;
+    inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
     inline static TMap<FString, MeshEntry> MeshMap;
 };

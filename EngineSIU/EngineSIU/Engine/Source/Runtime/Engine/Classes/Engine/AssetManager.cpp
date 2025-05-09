@@ -8,6 +8,11 @@
 
 inline UAssetManager::UAssetManager() {
     FFbxLoader::Init();
+    FFbxLoader::OnLoadFBXCompleted.BindLambda(
+        [this](const FString& filename) {
+            UpdateLoadInfo(filename);
+        }
+    );
 }
 
 bool UAssetManager::IsInitialized()
@@ -40,9 +45,9 @@ void UAssetManager::InitAssetManager()
 
     // 디버그 시 로딩을 빠르게 하기 위해서 일부만 로드
 #ifdef _DEBUG
-    FFbxLoader::LoadFBX("Contents/dragon/Dragon 2.5_fbx.fbx");
+    LoadEntireAssets();
 #else
-    LoadObjFiles();
+//    FFbxLoader::LoadFBX("Contents/dragon/Dragon 2.5_fbx.fbx");
 #endif // DEBUG
 }
 
@@ -81,7 +86,7 @@ bool UAssetManager::AddAsset(std::wstring filePath) const
     return true;
 }
 
-void UAssetManager::LoadObjFiles()
+void UAssetManager::LoadEntireAssets()
 {
     const std::string BasePathName = "Contents/";
 
@@ -91,12 +96,12 @@ void UAssetManager::LoadObjFiles()
     {
         if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
         {
+            continue;
             FAssetInfo NewAssetInfo;
             NewAssetInfo.AssetName = FName(Entry.path().filename().string());
             NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
             NewAssetInfo.AssetType = EAssetType::StaticMesh; // obj 파일은 무조건 StaticMesh
             NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
-            
             AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
             
             FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
@@ -111,10 +116,50 @@ void UAssetManager::LoadObjFiles()
             NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
             NewAssetInfo.AssetType = EAssetType::SkeletalMesh;
             NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
+            NewAssetInfo.IsLoaded = false; // fbx는 비동기로 로드하므로 나중에 변경
             AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 
             FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
             FFbxLoader::LoadFBX(MeshName);
+        }
+    }
+}
+
+// 파일 로드의 호출이 UAssetManager 외부에서 발생하였을 때 등록하는 함수입니다.
+void UAssetManager::RegisterAsset(std::wstring filePath) const
+{
+    std::filesystem::path path(filePath);
+    EAssetType assetType;
+    if (path.extension() == ".fbx")
+    {
+        assetType = EAssetType::SkeletalMesh;
+    }
+    else if (path.extension() == ".obj")
+    {
+        assetType = EAssetType::StaticMesh;
+    }
+    else
+    {
+        return;
+    }
+
+    FAssetInfo NewAssetInfo;
+    NewAssetInfo.AssetName = FName(path.filename().string());
+    NewAssetInfo.PackagePath = FName(path.parent_path().string());
+    NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(path));
+    NewAssetInfo.AssetType = assetType;
+    AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
+}
+
+void UAssetManager::UpdateLoadInfo(const FString& filename)
+{
+    FName AssetName = FName(filename);
+    for (auto& asset : AssetRegistry->PathNameToAssetInfo)
+    {
+        if (asset.Value.GetFullPath() == filename)
+        {
+            asset.Value.IsLoaded = true;
+            return;
         }
     }
 }

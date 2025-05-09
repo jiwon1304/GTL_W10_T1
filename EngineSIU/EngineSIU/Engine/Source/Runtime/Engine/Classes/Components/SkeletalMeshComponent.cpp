@@ -271,6 +271,11 @@ int USkeletalMeshComponent::CheckRayIntersection(const FVector& InRayOrigin, con
 
     int IntersectionNum = 0;
 
+    if (!SkeletalMesh)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("SkeletalMesh is not bound"));
+        return 0;
+    }
     const FSkeletalMeshRenderData& RenderData = SkeletalMesh->GetRenderData();
 
     for (int i = 0; i < RenderData.RenderSections.Num(); ++i)

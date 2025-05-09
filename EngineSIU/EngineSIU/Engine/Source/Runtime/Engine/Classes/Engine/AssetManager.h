@@ -16,6 +16,7 @@ struct FAssetInfo
     FName PackagePath;    // Asset의 패키지 경로
     EAssetType AssetType; // Asset의 타입
     uint32 Size;          // Asset의 크기 (바이트 단위)
+    bool IsLoaded = true;
 
     FString GetFullPath() const { return PackagePath.ToString() / AssetName.ToString(); }
 };
@@ -35,7 +36,6 @@ private:
 public:
     UAssetManager();
 
-
     static bool IsInitialized();
 
     /** UAssetManager를 가져옵니다. */
@@ -49,6 +49,12 @@ public:
     const TMap<FName, FAssetInfo>& GetAssetRegistry();
     bool AddAsset(std::wstring filePath) const;
 
+    //void LoadAssetsOnScene();
+    void LoadEntireAssets();
+
+    void RegisterAsset(std::wstring filePath) const;
+
 private:
-    void LoadObjFiles();
+
+    void UpdateLoadInfo(const FString& filename);
 };

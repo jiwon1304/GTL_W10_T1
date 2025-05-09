@@ -7,6 +7,7 @@
 #include "Engine/Asset/SkeletalMeshAsset.h"
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Container/StringConv.h"
+#include "Engine/AssetManager.h"
 
 struct BoneWeights
 {
@@ -42,6 +43,7 @@ void FFbxLoader::LoadFBX(const FString& filename)
         {
             MeshMap[filename] = { LoadState::Failed, nullptr };
         }
+        OnLoadFBXCompleted.Execute(filename);
         });
     loader.detach();
 }
@@ -53,6 +55,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
         {
             std::lock_guard<std::mutex> lock(MapMutex);
 
+            // 로드를 시도했으면 기다림
             if (MeshMap.Contains(filename))
             {
                 const MeshEntry& entry = MeshMap[filename];
@@ -76,6 +79,26 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
+    // 로드를 시작한 적이 없으면 메인쓰레드에서 로드
+    // 이 경우 AssetManager에서 로드한 적이 없는거이므로
+    // AssetManager에 추가
+
+    TMap<FName, FAssetInfo> AssetRegistry = UAssetManager::Get().GetAssetRegistry();
+    bool bRegistered = false;
+    for (const auto& Asset : AssetRegistry)
+    {
+        if (Asset.Value.GetFullPath() == filename)
+        {
+            bRegistered = true;
+            break;
+        }
+
+    }
+    // 만약 등록되지 않았으면 등록하고 로드
+    if (!bRegistered)
+    {
+        UAssetManager::Get().RegisterAsset(StringToWString(*filename));
+    }
     USkeletalMesh* mesh = nullptr;
     {
         mesh = GetFbxObject(filename);
@@ -88,15 +111,19 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
             MeshMap[filename] = { LoadState::Failed, nullptr };
         }
     }
-
+    
     return mesh;
 }
 
 FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
-    FbxScene* scene = FbxScene::Create(FFbxLoader::Manager, "");
+    // .fbx 파일을 로드/언로드 시에만 mutex를 사용
+    FbxScene* scene = nullptr;
+    FbxGeometryConverter* converter;
+
+    scene = FbxScene::Create(FFbxLoader::Manager, "");
     FbxImporter* importer = FbxImporter::Create(Manager, "");
-    
+
     if (!importer->Initialize(GetData(FBXFilePath), -1, GetFbxIOSettings()))
     {
         importer->Destroy();
@@ -119,7 +146,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     importer->Destroy();
     if (!bIsImported)
     {
-        return nullptr;   
+        return nullptr;
     }
 
     // convert scene
@@ -136,10 +163,13 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
         FbxSystemUnit::cm.ConvertScene(scene);
     }
     
-    FbxGeometryConverter converter(Manager);
-    converter.Triangulate(scene, true);
+    converter = new FbxGeometryConverter(Manager);
+    converter->Triangulate(scene, true);
+    delete converter;
 
-    FFbxSkeletalMesh* result = LoadFBXObject(scene);
+    FFbxSkeletalMesh* result;
+
+    result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
     return result;
@@ -238,10 +268,11 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
     if (InverseBindPoseMatrices.Num() > 128)
     {
-        // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
+        // GPU Skinning: 최대 bone 개수 128개를 넘어가면 CPU로 전환
         newSkeletalMesh->bCPUSkinned = true;
     }
     //SkeletalMeshMap.Add(filename, newSkeletalMesh);
+    delete fbxObject;
     return newSkeletalMesh;
 }
 
