@@ -496,14 +496,13 @@ void FFbxLoader::LoadFbxSkeleton(
         joint.inverseBindPose = FMatrix::Inverse(joint.inverseBindPose);
     }
 
-    //FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
-    //FMatrix Mat;
-    //for (int i = 0; i < 4; ++i)
-    //    for (int j = 0; j < 4; ++j)
-    //        Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
+    FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
+    FMatrix Mat;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
     
-    FTransform Transform;
-    Transform.SetFromMatrix(joint.localBindPose);
+    FTransform Transform(Mat);
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;

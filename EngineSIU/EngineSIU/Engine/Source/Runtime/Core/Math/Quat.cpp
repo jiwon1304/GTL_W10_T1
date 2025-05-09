@@ -176,6 +176,15 @@ void FQuat::Normalize(float Tolerance)
     }
 }
 
+bool FQuat::ContainsNaN() const
+{
+    return (!FMath::IsFinite(X) ||
+        !FMath::IsFinite(Y) ||
+        !FMath::IsFinite(Z) ||
+        !FMath::IsFinite(W)
+        );
+}
+
 void FQuat::ToAxisAndAngle(FVector& Axis, float& Angle) const
 {
     Angle = (float)GetAngle();  // 각도 추출
@@ -354,4 +363,17 @@ FRotator FQuat::Rotator() const
     FRotator RotatorFromQuat = FRotator(Pitch, Yaw, Roll);
 
     return RotatorFromQuat;
+}
+
+FQuat FQuat::GetInverse() const
+{
+    if (IsNormalized())
+    {
+        return FQuat(-X, -Y, -Z, W);
+    }
+    else
+    {
+        FQuat NormalizedQuat = GetNormalized();
+        return FQuat(-NormalizedQuat.X, -NormalizedQuat.Y, -NormalizedQuat.Z, NormalizedQuat.W);
+    }
 }

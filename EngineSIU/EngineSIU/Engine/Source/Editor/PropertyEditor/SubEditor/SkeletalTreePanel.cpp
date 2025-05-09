@@ -138,7 +138,7 @@ void SkeletalTreePanel::CreateSkeletalDetail() const
         {
             SelectedSkeleton->ResetPose();
         }
-        ImGui::Separator();
+        
         ImGui::Spacing();
 
         ImGui::Text("Bone Pose");
