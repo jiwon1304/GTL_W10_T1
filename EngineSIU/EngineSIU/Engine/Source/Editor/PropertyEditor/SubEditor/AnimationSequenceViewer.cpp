@@ -57,15 +57,12 @@ void AnimationSequenceViewer::OnResize(HWND hWnd)
     Height = static_cast<FLOAT>(ClientRect.bottom - ClientRect.top);
 }
 
-void AnimationSequenceViewer::RenderAnimationSequence(float Width, float Height) const
+void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHeight)
 {
-    static float_t currentFrame = 0.0f;
-    static float_t startFrame = 0.0f;
-    static float_t endFrame = 64.0f;
     static bool transformOpen = false;
     std::vector<ImGui::FrameIndexType> keys = {0.0f, 10.2f, 24.3f};
 
-    if (ImGui::BeginNeoSequencer("Sequencer", &currentFrame, &startFrame, &endFrame, {Width, Height},
+    if (ImGui::BeginNeoSequencer("Sequencer", &CurrentFrameSeconds, &StartFrameSeconds, &EndFrameSeconds, {InWidth, InHeight},
                                  ImGuiNeoSequencerFlags_EnableSelection |
                                  ImGuiNeoSequencerFlags_AllowLengthChanging |
                                  ImGuiNeoSequencerFlags_Selection_EnableDeletion))
@@ -94,13 +91,13 @@ void AnimationSequenceViewer::RenderAnimationSequence(float Width, float Height)
     }
 }
 
-void AnimationSequenceViewer::RenderPlayController(float Width, float Height) const
+void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight)
 {
     const ImGuiIO& IO = ImGui::GetIO();
     ImFont* IconFont = IO.Fonts->Fonts.size() == 1 ? IO.FontDefault : IO.Fonts->Fonts[FEATHER_FONT];
     constexpr ImVec2 IconSize = ImVec2(32, 32);
     
-    ImGui::BeginChild("PlayController", ImVec2(Width, Height), ImGuiChildFlags_AutoResizeX, ImGuiWindowFlags_NoMove);
+    ImGui::BeginChild("PlayController", ImVec2(InWidth, InHeight), ImGuiChildFlags_AutoResizeX, ImGuiWindowFlags_NoMove);
     ImGui::PushFont(IconFont);
 
     if (ImGui::Button("\ue9d2", IconSize)) // Rewind
@@ -109,28 +106,36 @@ void AnimationSequenceViewer::RenderPlayController(float Width, float Height) co
     }
     
     ImGui::SameLine();
-    
-    if (ImGui::Button("\ue9a8", IconSize)) // Play & Stop
+
+    const char* PlayIcon = bIsPlaying ? "\ue99c" : "\ue9a8";
+    if (ImGui::Button(PlayIcon, IconSize)) // Play & Stop
     {
-        
+        bIsPlaying = !bIsPlaying;
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("\ue96a", IconSize)) // Fast-forward
     {
-        
+        if (!bIsRepeating)
+        {
+            bIsPlaying = false; // Stop Play
+        }
     }
 
     ImGui::SameLine();
-
-    static bool bRepeat = false;
-    RepeatButton(&bRepeat);
+    
+    RepeatButton(&bIsRepeating);
     
     ImGui::PopFont();
 
     ImGui::SameLine();
 
+    static int KeyValue = 0;
+    ImGui::SliderInt("AnimationKeySlider", &KeyValue, 0, 100);
+
+    ImGui::SameLine();
+    
     ImGui::Text("Ani Percentage: %.2lf%% CurrentTime: %.3lf/%.3lf (second(s)) CurrentFrame: %.2lf/ %dFrame", 0.1f, 0.1f, 0.1f, 0.1f, 1);
     
     ImGui::EndChild();
