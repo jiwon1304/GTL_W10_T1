@@ -664,7 +664,10 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             FImGuiWidget::DrawVec3Control("Location", boneTransform.Translation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawRot3Control("Rotation", boneTransform.Rotation, 0, 85);
+            
+            FRotator SkelRotator = boneTransform.Rotation.Rotator();
+            FImGuiWidget::DrawRot3Control("Rotation", SkelRotator, 0, 85);
+            boneTransform.Rotation = FQuat(SkelRotator);
             ImGui::Spacing();
 
             FImGuiWidget::DrawVec3Control("Scale", boneTransform.Scale3D, 0, 85);
@@ -676,7 +679,9 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
             FImGuiWidget::DrawVec3Control("refLocation", refTransform.Translation, 0, 85);
             ImGui::Spacing();
 
-            FImGuiWidget::DrawRot3Control("refRotation", refTransform.Rotation, 0, 85);
+            FRotator refSkelRotator = refTransform.Rotation.Rotator();
+            FImGuiWidget::DrawRot3Control("refRotation", refSkelRotator, 0, 85);
+            refTransform.Rotation = FQuat(refSkelRotator);
             ImGui::Spacing();
 
             FImGuiWidget::DrawVec3Control("refScale", refTransform.Scale3D, 0, 85);

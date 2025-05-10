@@ -727,7 +727,7 @@ void FFbxLoader::LoadAnimationData(FbxScene* Scene, FbxNode* RootNode, USkeletal
             FTransform Transform = FTransformFromFbxMatrix(LocalMatrix);
 
             Raw.PosKeys[FrameIdx] = Transform.Translation;
-            Raw.RotKeys[FrameIdx] = Transform.Rotation.Quaternion();
+            Raw.RotKeys[FrameIdx] = Transform.Rotation;
             Raw.ScaleKeys[FrameIdx] = Transform.Scale3D;
         }
 

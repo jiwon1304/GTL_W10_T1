@@ -159,7 +159,7 @@ FTransform UAnimDataModel::InterpolateTransform(const FTransform& Start, const F
     // 위치는 선형 보간 (Lerp)
     Result.SetTranslation(FMath::Lerp(Start.GetTranslation(), End.GetTranslation(), Alpha));
     // 회전은 구면 선형 보간 (Slerp)
-    Result.SetRotation(FQuat::Slerp(Start.GetRotation().Quaternion(), End.GetRotation().Quaternion(), Alpha));
+    Result.SetRotation(FQuat::Slerp(Start.GetRotation(), End.GetRotation(), Alpha));
     // 스케일도 선형 보간 (Lerp)
     Result.SetScale3D(FMath::Lerp(Start.GetScale3D(), End.GetScale3D(), Alpha));
 

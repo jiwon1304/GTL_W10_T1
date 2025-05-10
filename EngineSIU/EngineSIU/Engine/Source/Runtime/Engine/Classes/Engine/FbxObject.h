@@ -41,7 +41,7 @@ struct FFbxJoint
     FMatrix localBindPose;
     FMatrix inverseBindPose;
     FVector position;
-    FRotator rotation;
+    FQuat rotation;
     FVector scale;
 };
 

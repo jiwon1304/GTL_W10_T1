@@ -3,6 +3,7 @@
 
 #include "JungleMath.h"
 
+const FTransform FTransform::Identity = FTransform(FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
 FTransform::FTransform(const FMatrix& InMatrix)
 {
@@ -21,7 +22,7 @@ FTransform::FTransform(const FMatrix& InMatrix)
         RotationMatrix.SetAxis(0, -RotationMatrix.GetScaledAxis(0));
     }
 
-    Rotation = RotationMatrix.Rotator();
+    Rotation = RotationMatrix.ToQuat();
 }
 
 FMatrix FTransform::GetViewMatrix() const
@@ -101,7 +102,7 @@ void FTransform::RotateYaw(const float AngleDegrees)
     FQuat DeltaQuat(FVector(0, 0, 1) * SinH, CosH);
     DeltaQuat.Normalize();
 
-    Rotation = ((DeltaQuat)*Rotation.Quaternion()).Rotator();
+    Rotation = ((DeltaQuat)*Rotation);
 }
 
 void FTransform::RotatePitch(const float AngleDegrees)
@@ -113,7 +114,7 @@ void FTransform::RotatePitch(const float AngleDegrees)
     FQuat DeltaQuat(FVector(0, 1, 0) * SinH, CosH);
     DeltaQuat.Normalize();
 
-    Rotation = ((DeltaQuat)*Rotation.Quaternion()).Rotator();
+    Rotation = (DeltaQuat)*Rotation;
 }
 
 void FTransform::RotateRoll(const float AngleDegrees)
@@ -125,7 +126,7 @@ void FTransform::RotateRoll(const float AngleDegrees)
     FQuat DeltaQuat(FVector(1, 0, 0) * SinH, CosH);
     DeltaQuat.Normalize();
 
-    Rotation = ((DeltaQuat)*Rotation.Quaternion()).Rotator();
+    Rotation = (DeltaQuat)*Rotation;
 }
 
 
@@ -153,7 +154,7 @@ void FTransform::SetFromMatrix(const FMatrix& InMatrix)
 
     // 회전 부분을 쿼터니언으로 변환
     const FQuat quat = FQuat(matrix);
-    Rotation = quat.Rotator();
+    Rotation = quat;
 
     // Translation(이동) 추출
     const FVector translation = matrix.GetTranslationVector();
@@ -200,7 +201,7 @@ FVector FTransform::TransformVector(const FVector& Vector) const
 FTransform FTransform::Inverse() const
 {
     const FVector4 InverseScale = FVector4(1.f / Scale3D.X, 1.f / Scale3D.Y, 1.f / Scale3D.Z, 0.f);
-    const FRotator InverseRotation = Rotation.GetInverse();
+    const FQuat InverseRotation = Rotation.GetInverse();
 
     const FVector ScaledTranslation = FVector(InverseScale.X * Translation.X, InverseScale.Y * Translation.Y, InverseScale.Z * Translation.Z);
     const FVector RotatedTranslation = InverseRotation.RotateVector(-ScaledTranslation);
@@ -211,7 +212,7 @@ FTransform FTransform::Inverse() const
 FTransform FTransform::operator*(const FTransform& Other) const
 {
     FVector ResultScale = Scale3D * Other.GetScale3D();
-    FRotator ResultRotation = Rotation * Other.GetRotation();
+    FQuat ResultRotation = Rotation * Other.GetRotation();
     FVector ScaledPosition = Rotation.ToMatrix().TransformPosition(Other.GetTranslation() * Scale3D);
     FVector ResultPosition = Translation + ScaledPosition;
 
