@@ -88,6 +88,9 @@ public:
         LoadState State;
         UAnimSequence* Sequence;
     };
+    static const FbxAxisSystem UnrealTargetAxisSystem;
+    inline static const FQuat FinalBoneCorrectionQuat = FQuat(FVector(0, 0, 1), FMath::DegreesToRadians(-90.0f));
+
 private:
     inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
 

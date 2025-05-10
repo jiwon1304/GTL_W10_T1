@@ -16,6 +16,12 @@
 #include "Engine/AssetManager.h"
 
 #define DEBUG_DUMP_ANIMATION
+
+const FbxAxisSystem FFbxLoader::UnrealTargetAxisSystem(
+    FbxAxisSystem::eZAxis,
+    FbxAxisSystem::eParityEven,
+    FbxAxisSystem::eRightHanded);
+
 struct BoneWeights
 {
     int jointIndex;
@@ -164,13 +170,21 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath, USkeletalMesh
     {
         return nullptr;
     }
+    // ✨ --- 좌표계 및 단위 변환 시작 ---
+    FbxGlobalSettings& settings = scene->GetGlobalSettings();
+    FbxAxisSystem currentAxisSystem = settings.GetAxisSystem();
+    int sign = 0;
+    UE_LOG(ELogLevel::Display, "Original FBX Axis System: Up(%d), Front(%d), Coord(%d)",
+        currentAxisSystem.GetUpVector(sign),
+        currentAxisSystem.GetFrontVector(sign), // GetFrontVector는 Parity를 반환
+        currentAxisSystem.GetCoorSystem());
 
     // convert scene
     FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
-    FbxAxisSystem targetAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
-    if (sceneAxisSystem != targetAxisSystem)
+
+    if (sceneAxisSystem != UnrealTargetAxisSystem)
     {
-        targetAxisSystem.ConvertScene(scene);
+        UnrealTargetAxisSystem.ConvertScene(scene);
     }
     
     FbxSystemUnit SceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();
@@ -526,12 +540,12 @@ void FFbxLoader::LoadFbxSkeleton(
     }
 
     FbxAMatrix LocalTransform = node->EvaluateLocalTransform();
-    FMatrix Mat;
-    for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
-            Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
-    
-    FTransform Transform(Mat);
+    //FMatrix Mat;
+    //for (int i = 0; i < 4; ++i)
+    //    for (int j = 0; j < 4; ++j)
+    //        Mat.M[i][j] = static_cast<float>(LocalTransform[i][j]);
+    //FTransform Transform(Mat);
+    FTransform Transform = FTransformFromFbxMatrix(LocalTransform);
 
     joint.position = Transform.Translation;
     joint.rotation = Transform.Rotation;
@@ -605,6 +619,22 @@ void FFbxLoader::ParseFBXAnimationOnly(const FString& filename, USkeletalMesh* s
     }
 
     importer->Destroy();
+
+    FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
+    // Unreal Engine: Z-Up, X-Forward, Left-Handed
+    if (sceneAxisSystem != UnrealTargetAxisSystem)
+    {
+        UE_LOG(ELogLevel::Display, "ParseFBXAnimationOnly: Converting axis system for animation.");
+        UnrealTargetAxisSystem.ConvertScene(scene);
+    }
+
+    FbxSystemUnit sceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();
+    // FBX SDK에서 cm의 스케일 팩터는 1.0입니다. 다른 단위인 경우 변환합니다.
+    if (sceneSystemUnit.GetScaleFactor() != 1.0)
+    {
+        UE_LOG(ELogLevel::Display, "ParseFBXAnimationOnly: Converting system unit to cm for animation.");
+        FbxSystemUnit::cm.ConvertScene(scene); // 씬 단위를 센티미터로 변환
+    }
 
     TArray<UAnimSequence*> Sequences;
     LoadAnimationInfo(scene, skeletalMesh, Sequences);
