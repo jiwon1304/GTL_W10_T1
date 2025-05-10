@@ -13,11 +13,13 @@ public:
 private:
     void RenderSkeletalTree(int InParentIndex, USkeletalMeshComponent* SkeletalMeshComponent, const TMap<int, FString>& BoneIndexToName);
     void CreateSkeletalTreeNode();
-    void CreateSkeletalDetail() const;
+    void CreateSkeletalDetail();
+    void DrawAnimationControls();
 
 private:
     float Width = 800, Height = 600;
 
     USkeletalMeshComponent* SelectedSkeleton = nullptr;
     int SelectedBoneIndex = -1;
+    
 };
