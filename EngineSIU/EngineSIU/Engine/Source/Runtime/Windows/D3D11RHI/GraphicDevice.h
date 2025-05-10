@@ -34,7 +34,8 @@ public:
     ID3D11RasterizerState* RasterizerWireframeBack = nullptr;
     ID3D11RasterizerState* RasterizerShadow = nullptr;
 
-    ID3D11DepthStencilState* DepthStencilState = nullptr;
+    ID3D11DepthStencilState* DepthStencilStateTestLess = nullptr;
+    ID3D11DepthStencilState* DepthStencilStateTestAlways = nullptr;
     
     ID3D11BlendState* AlphaBlendState = nullptr;
     
