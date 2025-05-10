@@ -10,7 +10,10 @@
 
 namespace ImGui {
     void RenderNeoSequencerBackground(const ImVec4 &color, const ImVec2 & cursor, const ImVec2 &size, ImDrawList * drawList, float sequencerRounding) {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         const ImRect area = {cursor, cursor + size};
 
@@ -19,7 +22,10 @@ namespace ImGui {
 
     void RenderNeoSequencerTopBarBackground(const ImVec4 &color, const ImVec2 &cursor, const ImVec2 &size,
                                             ImDrawList *drawList, float sequencerRounding) {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         const ImRect barArea = {cursor, cursor + size};
 
@@ -27,61 +33,77 @@ namespace ImGui {
     }
 
     void
-    RenderNeoSequencerTopBarOverlay(float zoom, float valuesWidth,uint32_t startFrame, uint32_t endFrame, uint32_t offsetFrame, const ImVec2 &cursor, const ImVec2 &size,
+    RenderNeoSequencerTopBarOverlay(float zoom, float valuesWidth,float_t startFrame, float_t endFrame, float_t offsetFrame, const ImVec2 &cursor, const ImVec2 &size,
                                     ImDrawList *drawList, bool drawFrameLines,
                                     bool drawFrameText, float maxPixelsPerTick) {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         const auto & style = GetStyle();
 
         const ImRect barArea = {cursor + ImVec2{style.FramePadding.x + valuesWidth,style.FramePadding.y}, cursor + size };
 
-        const uint32_t viewEnd = endFrame + offsetFrame;
-        const uint32_t viewStart = startFrame + offsetFrame;
+        const float_t viewEnd = endFrame + offsetFrame;
+        const float_t viewStart = startFrame + offsetFrame;
 
         if(drawFrameLines) {
-            const auto count = (int32_t)((float)((viewEnd + 1) - viewStart) / zoom);
+            const auto count = static_cast<int32_t>(((viewEnd + 1) - viewStart) / zoom);
 
-            int32_t counter = 0;
-            uint32_t primaryFrames = pow(10, counter++);
-            uint32_t secondaryFrames = pow(10, counter);
+            float_t counter = 0;
+            float_t primaryFrames = powf(10.0f, counter++);
+            float_t secondaryFrames = powf(10.0f, counter);
 
             float perFrameWidth = GetPerFrameWidth(size.x, valuesWidth, endFrame, startFrame, zoom);
 
-            if(perFrameWidth <= 0.0f) return;
+            if(perFrameWidth <= 0.0f)
+            {
+                return;
+            }
 
             while (perFrameWidth < maxPixelsPerTick)
             {
-                primaryFrames = pow(10, counter++);
-                secondaryFrames = pow(10, counter);
+                primaryFrames = powf(10.0f, counter++);
+                secondaryFrames = powf(10.0f, counter);
 
                 perFrameWidth *= (float)primaryFrames;
             }
 
-            if(primaryFrames == 0 || secondaryFrames == 0) {
+            if(primaryFrames == 0.0f || secondaryFrames == 0.0f) {
                 primaryFrames = 1;
                 secondaryFrames = 10;
             }
 
             for(int32_t i = 0; i < count; i++) {
+                // 현재 프레임이 주 눈금(secondaryFrames)이나 보조 눈금(primaryFrames)에 해당하는지 확인
+                const bool isPrimaryTick = (fmod(viewStart + static_cast<float_t>(i), primaryFrames) < 0.001f);
+                const bool isSecondaryTick = (fmod(viewStart + static_cast<float_t>(i), secondaryFrames) < 0.001f);
 
-                const auto primaryFrame = ((viewStart + i) % primaryFrames == 0);
-                const auto secondaryFrame = ((viewStart + i) % secondaryFrames == 0);
+                // 어느 눈금에도 해당하지 않으면 건너뜀
+                if(!isPrimaryTick && !isSecondaryTick)
+                {
+                    continue;
+                }
 
-                if(!primaryFrame && !secondaryFrame) continue;
+                // 눈금 높이 결정 (주 눈금은 전체 높이, 보조 눈금은 절반 높이)
+                const float barHeight = barArea.GetSize().y;
+                const float lineHeight = isSecondaryTick ? barHeight : barHeight / 2.0f;
+    
+                // 눈금 위치 계산
+                const float xPos = barArea.Min.x + static_cast<float>(i) * (perFrameWidth / (float)primaryFrames);
+                const ImVec2 p1 = {xPos, barArea.Max.y};
+                const ImVec2 p2 = {xPos, barArea.Max.y - lineHeight};
 
-                const auto lineHeight = secondaryFrame ? barArea.GetSize().y : barArea.GetSize().y / 2.0f;
+                // 선 그리기
+                drawList->AddLine(p1, p2, IM_COL32_WHITE, 1.0f);
 
-                const ImVec2 p1 = {barArea.Min.x + (float)i * (perFrameWidth / (float)primaryFrames), barArea.Max.y};
-                const ImVec2 p2 = {barArea.Min.x + (float)i * (perFrameWidth / (float)primaryFrames), barArea.Max.y - lineHeight};
-
-                drawList->AddLine(p1,p2, IM_COL32_WHITE, 1.0f);
-
-                if(drawFrameText && secondaryFrame) {
-                    char text[10];
-                    const auto printRes = snprintf(text, sizeof(text), "%i", viewStart + i);
-                    if(printRes > 0) {
-                        drawList->AddText(NULL, 0, {p1.x + 2.0f, barArea.Min.y }, IM_COL32_WHITE,text);
+                // 주 눈금에만 텍스트 표시
+                if(drawFrameText && isSecondaryTick) {
+                    char text[16];
+                    int frameNum = static_cast<int>(viewStart) + i;
+                    if(snprintf(text, sizeof(text), "%i", frameNum) > 0) {
+                        drawList->AddText(nullptr, 0, ImVec2(xPos + 2.0f, barArea.Min.y), IM_COL32_WHITE, text);
                     }
                 }
             }
@@ -92,7 +114,10 @@ namespace ImGui {
     {
         const auto& imStyle = GetStyle();
 
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         auto c = cursor;
 
@@ -107,13 +132,19 @@ namespace ImGui {
     void RenderNeoTimelinesBorder(const ImVec4 &color, const ImVec2 &cursor, const ImVec2 &size, ImDrawList *drawList,
                                   float rounding, float borderSize)
     {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         drawList->AddRect(cursor,cursor + size,ColorConvertFloat4ToU32(color),rounding, 0, borderSize);
     }
 
-    void RenderNeoTimelane(bool selected,const ImVec2 & cursor, const ImVec2& size, const ImVec4& highlightColor, ImDrawList *drawList) {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+    void RenderNeoTimeline(bool selected,const ImVec2 & cursor, const ImVec2& size, const ImVec4& highlightColor, ImDrawList *drawList) {
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         if(selected) {
             const ImRect area = {cursor, cursor + size};
@@ -121,7 +152,7 @@ namespace ImGui {
         }
     }
 
-    float GetPerFrameWidth(float totalSizeX, float valuesWidth, uint32_t endFrame, uint32_t startFrame, float zoom) {
+    float GetPerFrameWidth(float totalSizeX, float valuesWidth, float_t endFrame, float_t startFrame, float zoom) {
         const auto& imStyle = GetStyle();
 
         const auto size = totalSizeX - valuesWidth - imStyle.FramePadding.x;
@@ -144,7 +175,10 @@ namespace ImGui {
 
     void RenderNeoSequencerCurrentFrame(const ImVec4 &color, const ImVec4 &topColor, const ImRect &pointerBB,
                                                float timelineHeight, float lineWidth, ImDrawList *drawList) {
-        if(!drawList) drawList = ImGui::GetWindowDrawList();
+        if(!drawList)
+        {
+            drawList = ImGui::GetWindowDrawList();
+        }
 
         const auto pair = getCurrentFrameLine(pointerBB, timelineHeight);
 

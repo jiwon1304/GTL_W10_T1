@@ -98,7 +98,7 @@ struct ImGuiNeoSequencerStyle {
 };
 
 namespace ImGui {
-    typedef int32_t FrameIndexType;
+    typedef float_t FrameIndexType;
 
     IMGUI_API const ImVec4& GetStyleNeoSequencerColorVec4(ImGuiNeoSequencerCol idx);
     IMGUI_API ImGuiNeoSequencerStyle& GetNeoSequencerStyle();
@@ -118,7 +118,7 @@ namespace ImGui {
 
     // Fully customizable timeline with per key callback
     IMGUI_API bool BeginNeoTimelineEx(const char* label, bool * open = nullptr, ImGuiNeoTimelineFlags flags = ImGuiNeoTimelineFlags_None);
-    IMGUI_API void NeoKeyframe(int32_t* value);
+    IMGUI_API void NeoKeyframe(float_t* value);
 
     IMGUI_API bool IsNeoKeyframeHovered();
     IMGUI_API bool IsNeoKeyframeSelected();
@@ -148,7 +148,7 @@ namespace ImGui {
 
 #ifdef __cplusplus
     // C++ helper
-    IMGUI_API bool BeginNeoTimeline(const char* label,std::vector<int32_t> & keyframes ,bool * open = nullptr, ImGuiNeoTimelineFlags flags = ImGuiNeoTimelineFlags_None);
+    IMGUI_API bool BeginNeoTimeline(const char* label,std::vector<float_t> & keyframes ,bool * open = nullptr, ImGuiNeoTimelineFlags flags = ImGuiNeoTimelineFlags_None);
 #endif
 }
 
