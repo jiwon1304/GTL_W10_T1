@@ -109,7 +109,7 @@ void UImGuiManager::PreferenceStyle()
     Style.Colors[ImGuiCol_FrameBgActive] = ImVec4{ 1, 1, 1, 0.3f };
 
     // Check
-    Style.Colors[ImGuiCol_CheckMark] = ImVec4(0.00f, 0.30f, 0.00f, 1.0f);;
+    Style.Colors[ImGuiCol_CheckMark] = ImVec4(0.00f, 0.30f, 0.00f, 1.0f);
 
     // Slider
     Style.Colors[ImGuiCol_SliderGrab] = AccentColor;
