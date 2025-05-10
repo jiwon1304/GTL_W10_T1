@@ -20,6 +20,7 @@ public:
     void GetCurrentPoseMatrices(TArray<FMatrix>& OutMatrices) const;
     TArray<int> GetChildrenOfBone(int InParentIndex) const;
     const TMap<int, FString> GetBoneIndexToName();
+    virtual int CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const override;
     void ResetPose();
     
     int SelectedBoneIndex = -1;

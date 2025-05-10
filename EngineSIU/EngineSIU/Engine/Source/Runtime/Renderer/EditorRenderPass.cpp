@@ -540,6 +540,33 @@ void FEditorRenderPass::RenderAABBInstanced()
         BufferAll.Add(b);
     }
 
+    for (USkeletalMeshComponent* SMComp : Resources.Components.SkinnedMesh)
+    {
+        // 매 프레임마다 하고있는데, scenecomponent에서 변경이 발생하면 갱신하도록 변경필요
+        if (SMComp->GetSkeletalMesh() == nullptr)
+            return;
+        FVector min = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
+        FVector max = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+        for (FSkelMeshRenderSection RenderData : SMComp->GetSkeletalMesh()->GetRenderData().RenderSections) {
+            for (const FSkeletalVertex& Vertex : RenderData.Vertices)
+            {
+                FVector VertexWorld = Vertex.Position;
+                VertexWorld = SMComp->GetWorldMatrix().TransformPosition(VertexWorld);
+                min.X = std::min(min.X, VertexWorld.X);
+                min.Y = std::min(min.Y, VertexWorld.Y);
+
+                min.Z = std::min(min.Z, VertexWorld.Z);
+                max.X = std::max(max.X, VertexWorld.X);
+                max.Y = std::max(max.Y, VertexWorld.Y);
+                max.Z = std::max(max.Z, VertexWorld.Z);
+            }
+            FConstantBufferDebugAABB b;
+            b.Position = (min + max) / 2.f;
+            b.Extent = (max - min) / 2.f;
+            BufferAll.Add(b);
+        }
+    }
+
     int BufferIndex = 0;
     for (int i = 0; i < (1 + BufferAll.Num() / ConstantBufferSizeAABB) * ConstantBufferSizeAABB; ++i)
     {

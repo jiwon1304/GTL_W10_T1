@@ -273,6 +273,11 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
                 Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
             }
         }
+
+        if (Viewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
+        {
+            FEngineLoop::PrimitiveDrawBatch.AddAABBToBatch(SkeletalMeshComponent->GetBoundingBox(), SkeletalMeshComponent->GetWorldLocation(), SkeletalMeshComponent->GetWorldMatrix());
+        }
     }
 
 

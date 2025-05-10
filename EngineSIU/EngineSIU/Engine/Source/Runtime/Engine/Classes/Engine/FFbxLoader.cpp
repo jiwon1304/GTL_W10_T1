@@ -82,7 +82,6 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     if (!fbxObject) // 파싱 실패
         return nullptr;
 
-
     // SkeletalMesh로 변환
     USkeletalMesh* newSkeletalMesh = FObjectFactory::ConstructObject<USkeletalMesh>(nullptr);
 
@@ -90,6 +89,8 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     renderData.ObjectName = fbxObject->name;
     renderData.RenderSections.SetNum(fbxObject->mesh.Num());
     renderData.MaterialSubsets.SetNum(fbxObject->materialSubsets.Num());
+    renderData.BoundingBoxMax = fbxObject->AABBmax;
+    renderData.BoundingBoxMin = fbxObject->AABBmin;
 
     for (int i = 0; i < fbxObject->mesh.Num(); ++i)
     {
@@ -162,6 +163,9 @@ USkeletalMesh* FFbxLoader::GetFbxObject(const FString& filename)
     newSkeletalMesh->SetData(renderData, refSkeleton, InverseBindPoseMatrices, Materials);
     newSkeletalMesh->bCPUSkinned = InverseBindPoseMatrices.Num() > 128 ? 1 : 0; // GPU Skinning 최대 bone 개수 128개를 넘어가면 CPU로 전환
     SkeletalMeshMap.Add(filename, newSkeletalMesh);
+
+    delete fbxObject;
+
     return newSkeletalMesh;
 }
 
@@ -463,13 +467,54 @@ void FFbxLoader::LoadFBXMesh(
             FVector convertPos(pos[0], pos[1], pos[2]);
             v.position = convertPos;
             
-            AABBmin.X = std::min(AABBmin.X, v.position.X);
+            /*AABBmin.X = std::min(AABBmin.X, v.position.X);
+            AABBmin.Z = std::min(AABBmin.Z, v.position.Y);
+            AABBmin.Y = std::min(AABBmin.Y, v.position.Z);
+            AABBmax.X = std::max(AABBmax.X, v.position.X);
+            AABBmax.Z = std::max(AABBmax.Z, v.position.Y);
+            AABBmax.Y = std::max(AABBmax.Y, v.position.Z);*/
+            
+            /*AABBmin.X = std::min(AABBmin.X, v.position.X);
             AABBmin.Y = std::min(AABBmin.Y, v.position.Y);
             AABBmin.Z = std::min(AABBmin.Z, v.position.Z);
             AABBmax.X = std::max(AABBmax.X, v.position.X);
             AABBmax.Y = std::max(AABBmax.Y, v.position.Y);
-            AABBmax.Z = std::max(AABBmax.Z, v.position.Z);
-            
+            AABBmax.Z = std::max(AABBmax.Z, v.position.Z);*/
+
+            FVector skinnedPos = FVector::ZeroVector;
+            TArray<BoneWeights>* Weights = boneWeight.Find(controlPointIndex);
+
+            if (Weights)
+            {
+                for (int i = 0; i < FMath::Min(8, Weights->Num()); ++i)
+                {
+                    int boneIdx = (*Weights)[i].jointIndex;
+                    float weight = (*Weights)[i].weight;
+
+                    if (weight <= 0.f)
+                        continue;
+
+                    // 본 행렬 = joint → model
+                    const FMatrix& BoneToModel = fbxObject->skeleton.joints[boneIdx].localBindPose; // or current pose if animating
+                    const FMatrix& InverseBind = fbxObject->skeleton.joints[boneIdx].inverseBindPose;
+
+                    FMatrix SkinMatrix = InverseBind.Inverse(InverseBind) * BoneToModel; // 이게 현재 애니메이션 상태면 더 정확
+
+                    skinnedPos += SkinMatrix.TransformPosition(v.position) * weight;
+                }
+            }
+            else
+            {
+                skinnedPos = v.position; // no skin weights
+            }
+
+            // AABB 업데이트
+            AABBmin.X = FMath::Min(AABBmin.X, skinnedPos.X);
+            AABBmin.Y = FMath::Min(AABBmin.Y, skinnedPos.Y);
+            AABBmin.Z = FMath::Min(AABBmin.Z, skinnedPos.Z);
+            AABBmax.X = FMath::Max(AABBmax.X, skinnedPos.X);
+            AABBmax.Y = FMath::Max(AABBmax.Y, skinnedPos.Y);
+            AABBmax.Z = FMath::Max(AABBmax.Z, skinnedPos.Z);
             // Normal
             FbxVector4 normal = {0, 0, 0};
             if (normalElement) {

@@ -64,6 +64,9 @@ void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InSkeletalMesh)
     SkeletalMesh = InSkeletalMesh;
     SelectedBoneIndex = -1;
     ResetPose();
+
+    AABB.MinLocation = SkeletalMesh->GetRenderData().BoundingBoxMin;
+    AABB.MaxLocation = SkeletalMesh->GetRenderData().BoundingBoxMax;
 }
 void USkeletalMeshComponent::GetSkinningMatrices(TArray<FMatrix>& OutMatrices) const
 {
@@ -234,6 +237,63 @@ const TMap<int, FString> USkeletalMeshComponent::GetBoneIndexToName()
         BoneIndexToName.Add(i, RefSkeleton.RawRefBoneInfo[i].Name);
     }
     return BoneIndexToName;
+}
+
+int USkeletalMeshComponent::CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const
+{
+    if (!AABB.Intersect(InRayOrigin, InRayDirection, OutHitDistance))
+    {
+        return 0;
+    }
+    if (SkeletalMesh == nullptr)
+    {
+        return 0;
+    }
+    OutHitDistance = FLT_MAX;
+
+    int IntersectionNum = 0;
+
+    FSkeletalMeshRenderData RenderData = SkeletalMesh->GetRenderData();
+    
+    for (int i = 0; i < RenderData.RenderSections.Num(); i++) {
+        const TArray<FSkeletalVertex>& Vertices = RenderData.RenderSections[i].Vertices;
+        const int32 VertexNum = Vertices.Num();
+        if (VertexNum == 0)
+        {
+            return 0;
+        }
+        const TArray<UINT>& Indices = RenderData.RenderSections[i].Indices;
+        const int32 IndexNum = Indices.Num();
+        const bool bHasIndices = (IndexNum > 0);
+
+        int32 TriangleNum = bHasIndices ? (IndexNum / 3) : (VertexNum / 3);
+        for (int32 i = 0; i < TriangleNum; i++)
+        {
+            int32 Idx0 = i * 3;
+            int32 Idx1 = i * 3 + 1;
+            int32 Idx2 = i * 3 + 2;
+
+            if (bHasIndices)
+            {
+                Idx0 = Indices[Idx0];
+                Idx1 = Indices[Idx1];
+                Idx2 = Indices[Idx2];
+            }
+
+            FVector v0 = Vertices[Idx0].Position;
+            FVector v1 = Vertices[Idx1].Position;
+            FVector v2 = Vertices[Idx2].Position;
+
+            float HitDistance = FLT_MAX;
+            if (IntersectRayTriangle(InRayOrigin, InRayDirection, v0, v1, v2, HitDistance))
+            {
+                OutHitDistance = FMath::Min(HitDistance, OutHitDistance);
+                IntersectionNum++;
+            }
+        }
+    }
+    
+    return IntersectionNum;
 }
 
 void USkeletalMeshComponent::ResetPose()

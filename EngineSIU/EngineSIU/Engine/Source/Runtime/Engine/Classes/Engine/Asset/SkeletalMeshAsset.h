@@ -109,4 +109,7 @@ struct FSkeletalMeshRenderData
 
     TArray<FSkelMeshRenderSection> RenderSections;
     TArray<FMaterialSubset> MaterialSubsets;
+
+    FVector BoundingBoxMin;
+    FVector BoundingBoxMax;
 };
