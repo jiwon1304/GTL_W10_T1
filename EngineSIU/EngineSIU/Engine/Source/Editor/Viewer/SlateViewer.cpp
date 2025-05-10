@@ -247,6 +247,11 @@ void SlateViewer::RegisterViewerInputDelegates()
         {
             return;
         }
+
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            return;
+        }
         
         switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
         {
@@ -378,6 +383,11 @@ void SlateViewer::RegisterViewerInputDelegates()
     InputDelegatesHandles.Add(Handler->OnRawMouseInputDelegate.AddLambda([this](HWND hWnd, const FPointerEvent& InMouseEvent)
     {
         if (hWnd != Handle)
+        {
+            return;
+        }
+
+        if (ImGui::GetIO().WantCaptureKeyboard)
         {
             return;
         }

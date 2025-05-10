@@ -499,7 +499,7 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
 
             default:
             {
-                if (GEngineLoop.AppMessageHandler != nullptr)
+                if (GEngineLoop.AppMessageHandler != nullptr && IsWindowEnabled(hWnd))
                 {
                     GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
                 }

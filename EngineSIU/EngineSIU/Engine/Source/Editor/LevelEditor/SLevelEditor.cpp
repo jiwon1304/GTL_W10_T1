@@ -628,6 +628,8 @@ void SLevelEditor::RegisterEditorInputDelegates()
         {
             return;
         }
+
+        if (ImGui::GetIO().WantCaptureMouse) return;
         
         switch (InMouseEvent.GetEffectingButton())  // NOLINT(clang-diagnostic-switch-enum)
         {
@@ -680,6 +682,8 @@ void SLevelEditor::RegisterEditorInputDelegates()
         {
             return;
         }
+
+        if (ImGui::GetIO().WantCaptureMouse) return;
         
         // Mouse Move 이벤트 일때만 실행
         if (InMouseEvent.GetInputEvent() == IE_Axis

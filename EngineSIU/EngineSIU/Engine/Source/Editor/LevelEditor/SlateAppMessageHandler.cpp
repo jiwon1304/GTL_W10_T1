@@ -391,6 +391,12 @@ void FSlateAppMessageHandler::OnKeyUp(HWND hWnd, const uint32 KeyCode, const uin
 
 void FSlateAppMessageHandler::OnMouseDown(HWND hWnd, const EMouseButtons::Type Button, const FVector2D CursorPos)
 {
+    // Handle taking mouse input from ImGui when delegate occurs
+    if (ImGui::GetIO().WantCaptureMouse)
+    {
+        return;
+    }
+    
     EKeys::Type EffectingButton = EKeys::Invalid;
     switch (Button)
     {
@@ -428,6 +434,12 @@ void FSlateAppMessageHandler::OnMouseDown(HWND hWnd, const EMouseButtons::Type B
 
 void FSlateAppMessageHandler::OnMouseUp(HWND hWnd, const EMouseButtons::Type Button, const FVector2D CursorPos)
 {
+    // Handle taking mouse input from ImGui when delegate occurs
+    if (ImGui::GetIO().WantCaptureMouse)
+    {
+        return;
+    }
+    
     EKeys::Type EffectingButton = EKeys::Invalid;
     switch (Button)
     {
