@@ -187,7 +187,7 @@ namespace ImGui
 
                 const auto frameViewVal = (float) context.StartFrame + (clamped * (float) viewSize);
 
-                const auto finalFrame = (FrameIndexType) round(frameViewVal) + context.OffsetFrame;
+                const auto finalFrame = frameViewVal + context.OffsetFrame; // Int -> float
 
                 context.CurrentFrameColor = GetStyleNeoSequencerColorVec4(ImGuiNeoSequencerCol_FramePointerPressed);
 
@@ -208,6 +208,12 @@ namespace ImGui
         }
 
         context.CurrentFrame = *frame;
+        if (hovered && IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+        {
+            BeginTooltip();
+            Text("(%.2f)(%.2lf%%)", *frame, 100 * (*frame) / context.EndFrame);
+            EndTooltip();
+        }
     }
 
     static void finishPreviousTimeline(ImGuiNeoSequencerInternalData& context)
@@ -517,14 +523,14 @@ namespace ImGui
             window->DC.CursorPos.x += sideOffset;
 
             PushItemWidth(inputWidth);
-            InputScalar("##input_start_frame", ImGuiDataType_Float, &startFrameVal, nullptr, nullptr, "%lf",
+            InputScalar("##input_start_frame", ImGuiDataType_Float, &startFrameVal, nullptr, nullptr, "%.2lf",
                         allowEditingLength ? 0 : ImGuiInputTextFlags_ReadOnly);
 
             window->DC.CursorPos = ImVec2{zoomBarEndWithSpacing.x, cursor.y};
             window->DC.CursorPos.x -= sideOffset;
 
             PushItemWidth(inputWidth);
-            InputScalar("##input_end_frame", ImGuiDataType_Float, &endFrameVal, nullptr, nullptr, "%lf",
+            InputScalar("##input_end_frame", ImGuiDataType_Float, &endFrameVal, nullptr, nullptr, "%.2lf",
                         allowEditingLength ? 0 : ImGuiInputTextFlags_ReadOnly);
 
             window->DC.CursorPos = prevWindowCursor;
@@ -664,7 +670,7 @@ namespace ImGui
 
             char overlayTextBuffer[128];
 
-            snprintf(overlayTextBuffer, sizeof(overlayTextBuffer), "%lf - %lf", viewStart, viewEnd);
+            snprintf(overlayTextBuffer, sizeof(overlayTextBuffer), "%.2lf - %.2lf", viewStart, viewEnd);
 
             const auto overlaySize = CalcTextSize(overlayTextBuffer);
 
