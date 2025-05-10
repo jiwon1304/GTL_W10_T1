@@ -18,6 +18,7 @@
 
 #define ICON_PLAY        0xE9A8
 #define ICON_STOP        0xE9E6
+#define ICON_PAUSE        0xE99C
 #define ICON_SQUARE     0xE9E4
 
 #define ICON_FORWARD    0xE96A
