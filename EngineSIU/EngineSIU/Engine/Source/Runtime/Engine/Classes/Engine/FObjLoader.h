@@ -5,6 +5,7 @@
 #include "HAL/PlatformType.h"
 #include "Serialization/Serializer.h"
 #include <mutex>
+#include "Core/Misc/Spinlock.h"
 
 class UStaticMesh;
 struct FObjManager;
@@ -78,12 +79,13 @@ private:
         LoadState State;
         UStaticMesh* Mesh;
     };
-    inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
+    inline static FSpinLock MapLock;
+
     inline static TMap<FString, MeshEntry> MeshMap;
 
     static LoadState GetState(const FString& filename)
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard lock(MapLock);
         if (MeshMap.Contains(filename))
         {
             return MeshMap[filename].State;
@@ -92,13 +94,13 @@ private:
     }
     static void SetState(const FString& filename, LoadState state)
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard lock(MapLock);
         MeshMap[filename].State = state;
     }
     // 이미 등록되어있으면 false를 반환
     static bool SetCompleted(const FString& filename, UStaticMesh* Mesh)
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard lock(MapLock);
         if (!MeshMap.Contains(filename))
         {
             return false;
@@ -107,7 +109,7 @@ private:
     }
     static bool SetFailed(const FString& filename)
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard lock(MapLock);
         if (!MeshMap.Contains(filename))
         {
             return false;
@@ -116,7 +118,7 @@ private:
     }
     static bool IsRegistered(const FString& filename)
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard lock(MapLock);
         return MeshMap.Contains(filename);
     }
 };

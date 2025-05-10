@@ -471,7 +471,7 @@ void PropertyEditorPanel::DrawAnimationControls(USkeletalMeshComponent* Skeletal
 
     TArray<FString> animNames;
     {
-        std::lock_guard<std::mutex> lock(FFbxLoader::AnimMapMutex);
+        FSpinLockGuard Lock(FFbxLoader::AnimMapLock);
         for (auto const& [name, entry] : FFbxLoader::AnimMap)
         {
             if (entry.State == FFbxLoader::LoadState::Completed && entry.Sequence != nullptr)

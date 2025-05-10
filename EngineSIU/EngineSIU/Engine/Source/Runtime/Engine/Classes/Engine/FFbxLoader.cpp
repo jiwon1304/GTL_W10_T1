@@ -42,7 +42,7 @@ void FFbxLoader::Init()
 void FFbxLoader::LoadFBX(const FString& filename)
 {
     {
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard Lock(MapLock);
         if (MeshMap.Contains(filename)) return;
 
         // 바로 Loading 상태 등록
@@ -51,7 +51,7 @@ void FFbxLoader::LoadFBX(const FString& filename)
 
     std::thread loader([filename]() {
         USkeletalMesh* mesh = ParseSkeletalMesh(filename);
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard Lock(MapLock);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
             OnLoadFBXCompleted.Execute(filename);
@@ -72,7 +72,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
     while (true)
     {
         {
-            std::lock_guard<std::mutex> lock(MapMutex);
+            FSpinLockGuard Lock(MapLock);
 
             // 로드를 시도했으면 기다림
             if (MeshMap.Contains(filename))
@@ -106,7 +106,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
     {
         // 메인쓰레드에서 실행
         mesh = ParseSkeletalMesh(filename);
-        std::lock_guard<std::mutex> lock(MapMutex);
+        FSpinLockGuard Lock(MapLock);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
             UAssetManager::Get().RegisterAsset(StringToWString(*filename), FAssetInfo::LoadState::Completed);
@@ -1215,7 +1215,7 @@ void FFbxLoader::CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Ver
 
 UAnimSequence* FFbxLoader::GetAnimSequenceByName(const FString& SequenceName)
 {
-    std::lock_guard<std::mutex> lock(AnimMapMutex); // AnimMap 접근 동기화
+    FSpinLockGuard Lock(AnimMapLock);
 
     if (AnimMap.Contains(SequenceName))
     {

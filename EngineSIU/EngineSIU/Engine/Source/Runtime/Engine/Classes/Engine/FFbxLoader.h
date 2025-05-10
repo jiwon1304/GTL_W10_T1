@@ -10,7 +10,7 @@
 
 #include "Animation/AnimSequence.h"
 #include "Delegates/DelegateCombination.h"
-
+#include "Core/Misc/Spinlock.h"
 
 struct FFbxSkeletalMesh;
 struct BoneWeights;
@@ -94,11 +94,10 @@ public:
     inline static const FQuat FinalBoneCorrectionQuat = FQuat(FVector(0, 0, 1), FMath::DegreesToRadians(-90.0f));
 
 private:
-    inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
-
+    inline static FSpinLock MapLock; // MeshEntry의 Map에 접근할 때 쓰는 스핀락 : map 접근에는 mutex사용안함
     inline static TMap<FString, MeshEntry> MeshMap;
 public:
-    inline static std::mutex AnimMapMutex; // AnimEntry의 Map에 접근할 때 쓰는 뮤텍스
+    inline static FSpinLock AnimMapLock; // AnimEntry의 Map에 접근할 때 쓰는 스핀락
     inline static TMap<FString, FAnimEntry> AnimMap;
 
     static UAnimSequence* GetAnimSequenceByName(const FString& SequenceName);

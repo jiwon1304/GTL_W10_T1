@@ -932,7 +932,7 @@ UStaticMesh* FObjManager::GetStaticMesh(const FString& filename)
     while (true)
     {
         {
-            std::lock_guard<std::mutex> lock(MapMutex);
+            FSpinLockGuard lock(MapLock);
 
             // 로드를 시도했으면 기다림
             if (MeshMap.Contains(filename))
