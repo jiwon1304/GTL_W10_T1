@@ -328,7 +328,9 @@ void FEditorRenderPass::PrepareRendertarget(const std::shared_ptr<FEditorViewpor
 
     FViewportResource* ViewportResource = Viewport->GetViewportResource();
     FRenderTargetRHI* RenderTargetRHI = ViewportResource->GetRenderTarget(ResourceType);
-    Graphics->DeviceContext->OMSetRenderTargets(1, &RenderTargetRHI->RTV, ViewportResource->GetDepthStencil(ResourceType)->DSV);
+    // Scene Depth를 이용
+    // Scene Depth가 더이상 이용되지 않는다고 생각하고 overwrite함
+    Graphics->DeviceContext->OMSetRenderTargets(1, &RenderTargetRHI->RTV, ViewportResource->GetDepthStencil(EResourceType::ERT_Scene)->DSV);
 }
 
 void FEditorRenderPass::PrepareRenderArr()
@@ -457,6 +459,9 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
 
     PrepareRendertarget(Viewport);
 
+    ID3D11DepthStencilState* DepthStateEnable = Graphics->DepthStencilStateTestLess;
+    Graphics->DeviceContext->OMSetDepthStencilState(DepthStateEnable, 0);
+
     RenderGrid(Viewport);
     if (GEngine->ActiveWorld->WorldType == EWorldType::EditorPreview)
     {
@@ -478,8 +483,6 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
         RenderSkinnedMeshs();
     }
 
-    //ID3D11DepthStencilState* DepthStateEnable = Graphics->DepthStencilStateTestWriteEnable;
-    //Graphics->DeviceContext->OMSetDepthStencilState(DepthStateEnable, 0);
 
     if (Viewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
     {
@@ -490,7 +493,7 @@ void FEditorRenderPass::Render(const std::shared_ptr<FEditorViewportClient>& Vie
     {
         RenderShapes();
     }
-    //ID3D11DepthStencilState* DepthStateDisable = Graphics->DepthStencilStateTestWriteDisable;
+    //ID3D11DepthStencilState* DepthStateDisable = Graphics->DepthStencilStateTestAlways;
     //Graphics->DeviceContext->OMSetDepthStencilState(DepthStateDisable, 0);
 }
 
@@ -704,6 +707,13 @@ void FEditorRenderPass::RenderGrid(const std::shared_ptr<FEditorViewportClient>&
     b.GridOrigin = GridOrigin;
     b.GridCount = 32;
     b.GridSpacing = Spacing;
+    b.Color = 0.7f;
+    b.Alpha = 0.5f;
+    BufferManager->UpdateConstantBuffer(GridKey, b);
+    Graphics->DeviceContext->DrawInstanced(2, b.GridCount, 0, 0); // 내부에서 버텍스 사용중
+
+    b.GridCount *= 10;
+    b.GridSpacing /= 10;
     b.Color = 0.5f;
     b.Alpha = 0.5f;
     BufferManager->UpdateConstantBuffer(GridKey, b);
@@ -712,13 +722,6 @@ void FEditorRenderPass::RenderGrid(const std::shared_ptr<FEditorViewportClient>&
     b.GridCount *= 10;
     b.GridSpacing /= 10;
     b.Color = 0.3f;
-    b.Alpha = 0.5f;
-    BufferManager->UpdateConstantBuffer(GridKey, b);
-    Graphics->DeviceContext->DrawInstanced(2, b.GridCount, 0, 0); // 내부에서 버텍스 사용중
-
-    b.GridCount *= 10;
-    b.GridSpacing /= 10;
-    b.Color = 0.1f;
     b.Alpha = 0.5f;
     BufferManager->UpdateConstantBuffer(GridKey, b);
     Graphics->DeviceContext->DrawInstanced(2, b.GridCount, 0, 0); // 내부에서 버텍스 사용중

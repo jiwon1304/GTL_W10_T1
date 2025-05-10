@@ -426,12 +426,12 @@ void FRenderer::RenderEditorOverlay(const std::shared_ptr<FEditorViewportClient>
      *       텍스처를 전달해서 렌더하는 방식이 더 좋음.
      *       이렇게 하는 경우 필요없는 빌보드 컴포넌트가 아웃라이너에 나오지 않음.
      */
-    if (ShowFlag & EEngineShowFlags::SF_BillboardText && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
-    {
-        QUICK_SCOPE_CYCLE_COUNTER(EditorBillboardPass_CPU)
-        QUICK_GPU_SCOPE_CYCLE_COUNTER(EditorBillboardPass_GPU, *GPUTimingManager)
-        EditorBillboardRenderPass->Render(Viewport);
-    }
+    //if (ShowFlag & EEngineShowFlags::SF_BillboardText && GEngine->ActiveWorld->WorldType != EWorldType::EditorPreview)
+    //{
+    //    QUICK_SCOPE_CYCLE_COUNTER(EditorBillboardPass_CPU)
+    //    QUICK_GPU_SCOPE_CYCLE_COUNTER(EditorBillboardPass_GPU, *GPUTimingManager)
+    //    EditorBillboardRenderPass->Render(Viewport);
+    //}
 
     //{
     //    QUICK_SCOPE_CYCLE_COUNTER(LinePass_CPU)
