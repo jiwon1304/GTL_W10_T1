@@ -189,18 +189,6 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath, USkeletalMesh
     scene->Destroy();
     result->name = FBXFilePath;
 
-    if (Mesh)
-    {
-        TArray<UAnimSequence*> AnimSequences;
-        LoadAnimationInfo(scene, Mesh, AnimSequences);
-        for (UAnimSequence* Sequence : AnimSequences)
-        {
-            LoadAnimationData(scene, scene->GetRootNode(), Mesh, Sequence);
-        }
-#ifdef DEBUG_DUMP_ANIMATION
-        DumpAnimationDebug(FBXFilePath, Mesh, AnimSequences);
-#endif
-    }
     return result;
 }
 
@@ -623,6 +611,7 @@ void FFbxLoader::ParseFBXAnimationOnly(const FString& filename, USkeletalMesh* s
     for (UAnimSequence* Sequence : Sequences)
     {
         LoadAnimationData(scene, scene->GetRootNode(), skeletalMesh, Sequence);
+        AnimMap.Add(Sequence->GetSeqName(), { LoadState::Completed, Sequence });
     }
 
 #ifdef DEBUG_DUMP_ANIMATION
@@ -704,7 +693,7 @@ void FFbxLoader::LoadAnimationData(FbxScene* Scene, FbxNode* RootNode, USkeletal
      const int32 FrameCount = Sequence->GetDataModel()->NumberOfFrames;
      const float DeltaTime = Sequence->GetDataModel()->PlayLength / FrameCount;
 
-     TArray<FBoneAnimationTrack>& Tracks = Sequence->GetDataModel()->BoneAnimationTracks;
+    TArray<FBoneAnimationTrack>& Tracks = Sequence->GetDataModel()->BoneAnimationTracks;
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
 
@@ -1198,6 +1187,41 @@ void FFbxLoader::CalculateTangent(FFbxVertex& PivotVertex, const FFbxVertex& Ver
     PivotVertex.tangent.Y = Tangent.Y;
     PivotVertex.tangent.Z = Tangent.Z;
     PivotVertex.tangent.W = Sign;
+}
+
+UAnimSequence* FFbxLoader::GetAnimSequenceByName(const FString& SequenceName)
+{
+    std::lock_guard<std::mutex> lock(AnimMapMutex); // AnimMap 접근 동기화
+
+    if (AnimMap.Contains(SequenceName))
+    {
+        const FAnimEntry& entry = AnimMap[SequenceName]; // const 참조로 가져옴
+
+        switch (entry.State)
+        {
+        case LoadState::Completed:
+            return entry.Sequence;
+
+        case LoadState::Loading:
+            // 현재 로딩 중. 호출 측에서 나중에 다시 시도해야 함.
+            UE_LOG(ELogLevel::Display, TEXT("GetAnimSequenceByName: Sequence '%s' is currently loading. Try again later."), *SequenceName);
+            return nullptr;
+        case LoadState::Failed:
+            // 이전에 로드 시도했으나 실패함.
+            UE_LOG(ELogLevel::Warning, TEXT("GetAnimSequenceByName: Sequence '%s' failed to load previously."), *SequenceName);
+            return nullptr;
+        default:
+            // 알 수 없는 상태
+            UE_LOG(ELogLevel::Error, TEXT("GetAnimSequenceByName: Sequence '%s' has an unknown load state."), *SequenceName);
+            return nullptr;
+        }
+    }
+    else
+    {
+        // AnimMap에 해당 SequenceName 키 자체가 없는 경우.
+        UE_LOG(ELogLevel::Display, TEXT("GetAnimSequenceByName: Sequence '%s' not found in AnimMap. Ensure it has been (or is being) loaded from an FBX file."), *SequenceName);
+        return nullptr;
+    }
 }
 
 // .bin 파일로 저장합니다.

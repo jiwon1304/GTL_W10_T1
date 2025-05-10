@@ -1,4 +1,6 @@
 #include "SkeletalTreePanel.h"
+
+#include "Animation/AnimSequence.h"
 #include "Engine/Engine.h"
 #include "Engine/EditorEngine.h"
 #include "UObject/Object.h"
@@ -6,6 +8,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Contents/Actors/ItemActor.h"
+#include "Engine/FFbxLoader.h"
 #include "Engine/Asset/SkeletalMeshAsset.h"
 #include "UnrealEd/ImGuiWidget.h"
 #include "World/World.h"
@@ -130,7 +133,7 @@ void SkeletalTreePanel::CreateSkeletalTreeNode()
     }
 }
 
-void SkeletalTreePanel::CreateSkeletalDetail() const
+void SkeletalTreePanel::CreateSkeletalDetail()
 {
     if (SelectedBoneIndex > -1 && SelectedSkeleton->SelectedBoneIndex > -1)
     {

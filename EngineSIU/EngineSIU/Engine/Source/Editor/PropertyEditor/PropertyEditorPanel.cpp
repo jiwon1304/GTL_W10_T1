@@ -437,8 +437,94 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
     ImGui::PopStyleColor();
 }
 
-void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp) const
+void PropertyEditorPanel::DrawAnimationControls(USkeletalMeshComponent* SkeletalComp) 
 {
+    USkeletalMeshComponent* SelectedSkeleton = Cast<USkeletalMeshComponent>(SkeletalComp); // 선택된 스켈레탈 메시 컴포넌트 저장
+    ImGui::Separator();
+    ImGui::Text("Animation Control");
+    ImGui::Spacing();
+
+    if (!SelectedSkeleton) // SelectedSkeleton이 유효한지 먼저 확인
+    {
+        ImGui::Text("No Skeletal Mesh Component selected.");
+        ImGui::Spacing();
+        ImGui::Separator();
+        return;
+    }
+
+    TArray<FString> animNames;
+    {
+        std::lock_guard<std::mutex> lock(FFbxLoader::AnimMapMutex);
+        for (auto const& [name, entry] : FFbxLoader::AnimMap)
+        {
+            if (entry.State == FFbxLoader::LoadState::Completed && entry.Sequence != nullptr)
+            {
+                animNames.Add(name);
+            }
+        }
+    }
+
+    const char* preview_value = (SelectedAnimIndex != -1 && SelectedAnimIndex < animNames.Num()) ? *animNames[SelectedAnimIndex] : "None";
+
+    if (ImGui::BeginCombo("Animations", preview_value))
+    {
+        for (int i = 0; i < animNames.Num(); ++i)
+        {
+            const bool is_selected = (SelectedAnimIndex == i);
+            if (ImGui::Selectable(*animNames[i], is_selected))
+            {
+                SelectedAnimIndex = i;
+                SelectedAnimName = animNames[i]; // 선택된 애니메이션 이름 업데이트
+            }
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::Spacing();
+
+    bool bCanPlay = (SelectedAnimIndex != -1 && !SelectedAnimName.IsEmpty());
+
+    if (ImGui::Button("Play Animation", ImVec2(120, 0)))
+    {
+        if (SelectedSkeleton && bCanPlay) // SelectedSkeleton 유효성 재확인
+        {
+            UAnimSequence* animToPlay = FFbxLoader::GetAnimSequenceByName(SelectedAnimName);
+            if (animToPlay)
+            {
+                UE_LOG(ELogLevel::Display, TEXT("Playing animation: %s"), *SelectedAnimName);
+                SelectedSkeleton->PlayAnimation(animToPlay, true); // bLooping = true
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not find or load animation: %s"), *SelectedAnimName);
+            }
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Stop Animation", ImVec2(120, 0)))
+    {
+        if (SelectedSkeleton)
+        {
+            UE_LOG(ELogLevel::Display, TEXT("Stopping animation."));
+            SelectedSkeleton->PlayAnimation(nullptr, false); // null 재생으로 중지
+            SelectedSkeleton->ResetPose(); // 기본 포즈로
+        }
+    }
+    ImGui::Spacing();
+    ImGui::Separator();
+
+
+}
+
+void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp)
+{
+    DrawAnimationControls(SkeletalComp);
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
     if (ImGui::TreeNodeEx("Skinned Mesh", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {

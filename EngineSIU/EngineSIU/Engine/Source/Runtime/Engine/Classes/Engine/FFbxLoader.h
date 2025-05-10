@@ -72,6 +72,7 @@ private:
     // 비동기용 로드 상태
     inline static std::mutex SDKMutex;
     inline static FbxManager* Manager;
+public:
     enum class LoadState
     {
         Loading,
@@ -82,8 +83,20 @@ private:
         LoadState State;
         USkeletalMesh* Mesh;
     };
+    struct FAnimEntry
+    {
+        LoadState State;
+        UAnimSequence* Sequence;
+    };
+private:
     inline static std::mutex MapMutex; // MeshEntry의 Map에 접근할 때 쓰는 뮤텍스
+
     inline static TMap<FString, MeshEntry> MeshMap;
+public:
+    inline static std::mutex AnimMapMutex; // AnimEntry의 Map에 접근할 때 쓰는 뮤텍스
+    inline static TMap<FString, FAnimEntry> AnimMap;
+
+    static UAnimSequence* GetAnimSequenceByName(const FString& SequenceName);
 };
 
 struct FFbxManager

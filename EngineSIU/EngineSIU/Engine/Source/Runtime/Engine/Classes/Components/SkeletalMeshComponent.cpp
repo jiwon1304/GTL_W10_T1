@@ -357,7 +357,6 @@ void USkeletalMeshComponent::SetAnimationMode(EAnimationMode::Type InAnimationMo
 
 void USkeletalMeshComponent::PlayAnimation(class UAnimSequenceBase* NewAnimToPlay, bool bLooping)
 {
-    
     SetAnimationMode(EAnimationMode::AnimationSingleNode);
     SetAnimation(NewAnimToPlay);
     Play(bLooping);
