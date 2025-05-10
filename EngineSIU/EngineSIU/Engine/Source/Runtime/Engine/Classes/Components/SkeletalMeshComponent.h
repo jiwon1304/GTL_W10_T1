@@ -1,9 +1,21 @@
 #pragma once
 #include "MeshComponent.h"
+#include "Animation/AnimSingleNodeInstance.h"
 #include "Engine/Asset/SkeletalMeshAsset.h"
 
 class UAnimInstance;
 class USkeletalMesh;
+
+namespace EAnimationMode
+{
+    enum Type : int
+    {
+        AnimationBlueprint,
+        AnimationSingleNode,
+        // This is custom type, engine leaves AnimInstance as it is
+        AnimationCustomMode,
+    };
+}
 
 class USkeletalMeshComponent: public UMeshComponent
 {
@@ -25,10 +37,20 @@ public:
     
     virtual int CheckRayIntersection(const FVector& InRayOrigin, const FVector& InRayDirection, float& OutHitDistance) const override;
 
+    UAnimSingleNodeInstance* GetSingleNodeInstance() const;
+    void SetAnimation(UAnimSequenceBase* NewAnimToPlay);
+    void SetAnimationMode(EAnimationMode::Type AnimationSingleNode);
+    void PlayAnimation(class UAnimSequenceBase* NewAnimToPlay, bool bLooping);
+    void Play(bool bLooping) const;
+public:
     int SelectedBoneIndex = -1;
     TArray<FTransform> CurrentPose;
-    
+
+protected:
+    EAnimationMode::Type AnimationMode;
+    uint8 bEnableAnimation : 1;
+
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
-    UAnimInstance* AnimInstance = nullptr;
+    UAnimInstance* AnimScriptInstance = nullptr;
 };

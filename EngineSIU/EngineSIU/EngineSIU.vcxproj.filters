@@ -1717,6 +1717,7 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimCurveTypes.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Misc\FrameRate.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

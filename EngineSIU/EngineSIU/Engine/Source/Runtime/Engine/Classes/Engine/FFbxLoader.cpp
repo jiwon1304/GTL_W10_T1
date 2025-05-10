@@ -653,7 +653,7 @@ void FFbxLoader::LoadAnimationInfo(FbxScene* Scene, USkeletalMesh* SkeletalMesh,
         Sequence->SetName(FString(animStack->GetName()));
 
         UAnimDataModel* DataModel = FObjectFactory::ConstructObject<UAnimDataModel>(Sequence);
-        Sequence->DataModel = DataModel;
+        Sequence->SetDataModel(DataModel);
 
         const float Duration = (float)takeInfo->mLocalTimeSpan.GetDuration().GetSecondDouble();
         const FFrameRate FrameRate((int32)FbxTime::GetFrameRate(Scene->GetGlobalSettings().GetTimeMode()), 1);
@@ -663,6 +663,8 @@ void FFbxLoader::LoadAnimationInfo(FbxScene* Scene, USkeletalMesh* SkeletalMesh,
         DataModel->FrameRate = FrameRate;
         DataModel->NumberOfFrames = FMath::RoundToInt(Duration * FrameRate.Numerator / (float)FrameRate.Denominator);
         DataModel->NumberOfKeys = DataModel->NumberOfFrames;
+
+        Sequence->SetSequenceLength( Duration);
 
         OutSequences.Add(Sequence);
     }
@@ -676,33 +678,33 @@ void FFbxLoader::LoadAnimationInfo(FbxScene* Scene, USkeletalMesh* SkeletalMesh,
     {
         UE_LOG(ELogLevel::Display, "  → Sequence: %s, Duration: %.2f, Frames: %d",
             *Seq->GetSeqName(),
-            Seq->DataModel->PlayLength,
-            Seq->DataModel->NumberOfFrames);
+            Seq->GetDataModel()->PlayLength,
+            Seq->GetDataModel()->NumberOfFrames);
     }
 }
 
 
 void FFbxLoader::LoadAnimationData(FbxScene* Scene, FbxNode* RootNode, USkeletalMesh* SkeletalMesh, UAnimSequence* Sequence)
 {
-     if (!Sequence || !Sequence->DataModel || !SkeletalMesh)
-        return;
+     if (!Sequence || !Sequence->GetDataModel() || !SkeletalMesh)
+         return;
 
      auto NameDebug = *Sequence->GetSeqName();
-    FbxAnimStack* AnimStack = Scene->FindMember<FbxAnimStack>(*Sequence->GetSeqName());
-    if (!AnimStack)
-    {
-        UE_LOG(ELogLevel::Warning, "AnimStack not found for sequence: %s", *Sequence->GetSeqName());
-        return;
-    }
+     FbxAnimStack* AnimStack = Scene->FindMember<FbxAnimStack>(*Sequence->GetSeqName());
+     if (!AnimStack)
+     {
+         UE_LOG(ELogLevel::Warning, "AnimStack not found for sequence: %s", *Sequence->GetSeqName());
+         return;
+     }
 
-    Scene->SetCurrentAnimationStack(AnimStack);
-    FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>();
-    if (!AnimLayer) return;
+     Scene->SetCurrentAnimationStack(AnimStack);
+     FbxAnimLayer* AnimLayer = AnimStack->GetMember<FbxAnimLayer>();
+     if (!AnimLayer) return;
 
-    const int32 FrameCount = Sequence->DataModel->NumberOfFrames;
-    const float DeltaTime = Sequence->DataModel->PlayLength / FrameCount;
+     const int32 FrameCount = Sequence->GetDataModel()->NumberOfFrames;
+     const float DeltaTime = Sequence->GetDataModel()->PlayLength / FrameCount;
 
-    TArray<FBoneAnimationTrack>& Tracks = Sequence->DataModel->BoneAnimationTracks;
+     TArray<FBoneAnimationTrack>& Tracks = Sequence->GetDataModel()->BoneAnimationTracks;
     FReferenceSkeleton RefSkeleton;
     SkeletalMesh->GetRefSkeleton(RefSkeleton);
 
@@ -758,11 +760,11 @@ void FFbxLoader::DumpAnimationDebug(const FString& FBXFilePath, const USkeletalM
     for (const UAnimSequence* Seq : AnimSequences)
     {
         File << "[Sequence] " << (*Seq->GetName()) << "\n";
-        File << "Duration: " << Seq->DataModel->PlayLength << " seconds\n";
-        File << "FrameRate: " << Seq->DataModel->FrameRate.Numerator << "\n";
-        File << "Frames: " << Seq->DataModel->NumberOfFrames << "\n\n";
+        File << "Duration: " << Seq->GetDataModel()->PlayLength << " seconds\n";
+        File << "FrameRate: " << Seq->GetDataModel()->FrameRate.Numerator << "\n";
+        File << "Frames: " << Seq->GetDataModel()->NumberOfFrames << "\n\n";
 
-        const TArray<FBoneAnimationTrack>& Tracks = Seq->DataModel->BoneAnimationTracks;
+        const TArray<FBoneAnimationTrack>& Tracks = Seq->GetDataModel()->BoneAnimationTracks;
 
         for (const FBoneAnimationTrack& Track : Tracks)
         {

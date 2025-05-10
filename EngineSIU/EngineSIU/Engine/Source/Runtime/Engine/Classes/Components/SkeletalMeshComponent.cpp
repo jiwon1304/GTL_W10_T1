@@ -1,5 +1,6 @@
 #include "SkeletalMeshComponent.h"
 
+#include "Animation/AnimSingleNodeInstance.h"
 #include "Engine/AssetManager.h"
 #include "Engine/FbxObject.h"
 #include "Engine/FFbxLoader.h"
@@ -322,4 +323,62 @@ int USkeletalMeshComponent::CheckRayIntersection(const FVector& InRayOrigin, con
     }
 
     return IntersectionNum;
+}
+
+UAnimSingleNodeInstance* USkeletalMeshComponent::GetSingleNodeInstance() const
+{
+    return Cast<class UAnimSingleNodeInstance>(AnimScriptInstance);
+}
+
+void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* NewAnimToPlay)
+{
+    if (!bEnableAnimation)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("SetAnimation: Animation is currently disabled"));
+        return;
+    }
+
+    UAnimSingleNodeInstance* SingleNodeInstance = GetSingleNodeInstance();
+    if (SingleNodeInstance)
+    {
+        SingleNodeInstance->SetAnimationAsset(NewAnimToPlay, false);
+        SingleNodeInstance->SetPlaying(false);
+    }
+    else if (AnimScriptInstance != nullptr)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("No A in Animation Blueprint mode. Please change AnimationMode to Use Animation Asset"));
+    }
+}
+
+void USkeletalMeshComponent::SetAnimationMode(EAnimationMode::Type InAnimationMode)
+{
+    AnimationMode = InAnimationMode;
+}
+
+void USkeletalMeshComponent::PlayAnimation(class UAnimSequenceBase* NewAnimToPlay, bool bLooping)
+{
+    
+    SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    SetAnimation(NewAnimToPlay);
+    Play(bLooping);
+}
+
+void USkeletalMeshComponent::Play(bool bLooping) const
+{
+    if (!bEnableAnimation)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("Play: Animation is currently disabled"));
+        return;
+    }
+
+    UAnimSingleNodeInstance* SingleNodeInstance = GetSingleNodeInstance();
+    if (SingleNodeInstance)
+    {
+        SingleNodeInstance->SetPlaying(true);
+        SingleNodeInstance->SetLooping(bLooping);
+    }
+    else if (AnimScriptInstance != nullptr)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("Currently in Animation Blueprint mode. Please change AnimationMode to Use Animation Asset"));
+    }
 }
