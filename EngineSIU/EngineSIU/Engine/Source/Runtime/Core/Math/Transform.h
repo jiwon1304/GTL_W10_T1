@@ -6,7 +6,7 @@ struct FTransform
 {
 public:
     FVector Translation;
-    FRotator Rotation;
+    FQuat Rotation;
     FVector Scale3D;
 
 public:
@@ -19,12 +19,12 @@ public:
     {
     }
 
-    FTransform(const FVector InTranslation, const FRotator& InRotation, const FVector InScale)
+    /*FTransform(const FVector InTranslation, const FRotator& InRotation, const FVector InScale)
         : Translation(InTranslation)
         , Scale3D(InScale)
     {
         Rotation = InRotation;
-    }
+    }*/
 
     FTransform(const FVector InTranslation, const FQuat InQuat, const FVector InScale)
         : Translation(InTranslation)
@@ -37,7 +37,7 @@ public:
 
     FORCEINLINE bool Equal(const FTransform& Other) const
     {
-        return Translation == Other.Translation && Rotation == Other.Rotation && Scale3D == Other.Scale3D;
+        return Translation == Other.Translation && Rotation.Equals(Other.Rotation)&& Scale3D == Other.Scale3D;
     }
 
     // 뷰 행렬을 구하는 함수 (왼손 좌표계, LookAtLH 방식)
@@ -56,21 +56,15 @@ public:
         Translation = { x, y, z };
     }
 
-    // 객체의 회전을 설정하는 함수 (Euler 각도 벡터를 인자로 받아 쿼터니언으로 변환)
-    FORCEINLINE void SetRotation(const FRotator& InRotation)
-    {
-        Rotation = InRotation;
-    }
-
     FORCEINLINE void SetRotation(const FQuat& InQuat)
     {
-        Rotation = InQuat.Rotator();
+        Rotation = InQuat;
     }
 
     // 객체의 회전을 설정하는 함수 (x, y, z Euler 각도를 각각 인자로 받음)
-    inline void SetRotation(const float x, const float y, const float z)
+    inline void SetRotation(const float x, const float y, const float z, const float w)
     {
-        SetRotation(FRotator(x, y, z));
+        SetRotation(FQuat(x, y, z, w));
     }
 
     // 객체의 스케일을 설정하는 함수 (벡터로 설정)
@@ -100,7 +94,7 @@ public:
     }
 
     // 객체의 현재 회전을 반환하는 함수 (쿼터니언으로 반환)
-    FRotator GetRotation() const
+    FQuat GetRotation() const
     {
         return Rotation;
     }
@@ -169,4 +163,9 @@ public:
     FTransform Inverse() const;
 
     FTransform operator*(const FTransform& Other) const;
+
+    FORCEINLINE void NormalizeRotation()
+    {
+        Rotation.Normalize();
+    }
 };

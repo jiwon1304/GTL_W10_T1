@@ -262,6 +262,8 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClCompile Include="Engine\Source\Runtime\Core\Stats\ProfilerStatsManager.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Stats\Stats.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\ActorEditor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Actors\AmbientLightActor.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Actors\CapsuleActor.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Actors\Cube.cpp" />
@@ -548,6 +550,7 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Vector4.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Misc\Char.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Misc\CoreMiscDefines.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Misc\FrameRate.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Misc\Parse.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Misc\Spinlock.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Serialization\Archive.h" />
@@ -557,9 +560,12 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClInclude Include="Engine\Source\Runtime\Core\Stats\StatDefine.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Stats\Stats.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Traits\IsCharType.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimCurveTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequence.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequenceBase.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimTypes.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Actors\AmbientLightActor.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Actors\CapsuleActor.h" />

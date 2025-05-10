@@ -1664,6 +1664,8 @@
     <ClCompile Include="Engine\Source\Runtime\Renderer\DebugRenderPass.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Transform.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\MathSSE.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineSIU.natvis" />
@@ -1686,6 +1688,7 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\SkeletalMeshVertexShader.hlsl" />
+    <FxCompile Include="Shaders\CameraEffectShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\ThirdParty\DirectXTK\Include\DirectXTK\SimpleMath.inl" />
@@ -1712,6 +1715,10 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequenceBase.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSequence.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimCurveTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Misc\FrameRate.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -1725,9 +1732,6 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\EditorShaderConstants.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Shaders\CameraEffectShader.hlsl">
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\CompositingShader.hlsl">

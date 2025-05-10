@@ -61,7 +61,8 @@ private:
     
     /* Static Mesh Settings */
     void RenderForStaticMesh(UStaticMeshComponent* StaticMeshComp) const;
-    void RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp) const;
+    void DrawAnimationControls(USkeletalMeshComponent* SkeletalComp);
+    void RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp);
     void RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent);
 
     void RenderForAmbientLightComponent(UAmbientLightComponent* AmbientLightComponent) const;
@@ -104,6 +105,10 @@ private:
     bool IsCreateMaterial;
 
     const FString TemplateFilePath = FString("LuaScripts/template.lua");
+
+    /* Animation Property for Debug */
+    int SelectedAnimIndex = -1;
+    FString SelectedAnimName;
 };
 
 template <typename T> requires std::derived_from<T, UActorComponent>
