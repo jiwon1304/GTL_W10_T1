@@ -8,18 +8,13 @@
 
 #endif // !__ICON_FONT_INDEX__
 
-enum EWindowType : uint8
-{
-    WT_Main,
-    WT_Sub
-};
-
 class UEditorPanel
 {
 public:
     virtual ~UEditorPanel() = default;
     virtual void Render() = 0;
     virtual void OnResize(HWND hWnd) = 0;
-
-    EWindowType WindowType = WT_Main;
+    
+public:
+    HWND Handle = nullptr;
 };

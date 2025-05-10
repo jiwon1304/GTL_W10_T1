@@ -74,6 +74,7 @@ enum ImGuiNeoSequencerCol_
 
 struct ImGuiNeoSequencerStyle {
     float       SequencerRounding       = 2.5f;                 // Corner rounding around whole sequencer
+    float       ZoomBarRounding         = 1.5f;                 // Corner rounding around zoom bar
     float       TopBarHeight            = 0.0f;                 // Value <= 0.0f = Height is calculated by FontSize + FramePadding.y * 2.0f
     bool        TopBarShowFrameLines    = true;                 // Show line for every frame in top bar
     bool        TopBarShowFrameTexts    = true;                 // Show frame number every 10th frame

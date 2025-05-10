@@ -25,7 +25,7 @@ namespace ImGui
         uint32_t Count;
     };
 
-    enum class SelectionState
+    enum class SelectionState : uint8_t
     {
         Idle, // Doing nothing related
         Selecting,  // Selecting selection
@@ -542,7 +542,7 @@ namespace ImGui
         //Background
         drawList->AddRectFilled(bb.Min, bb.Max,
                                 ColorConvertFloat4ToU32(GetStyleNeoSequencerColorVec4(ImGuiNeoSequencerCol_ZoomBarBg)),
-                                10.0f);
+                                style.ZoomBarRounding);
 
         const auto baseWidth = bb.GetSize().x -
                                imStyle.ItemInnerSpacing.x; //There is just half spacing applied, doing it normally makes big gap on sides
@@ -649,7 +649,7 @@ namespace ImGui
             }
 
             //Render bar
-            drawList->AddRectFilled(finalSliderBB.Min, finalSliderBB.Max, ColorConvertFloat4ToU32(sliderColor), 10.0f);
+            drawList->AddRectFilled(finalSliderBB.Min, finalSliderBB.Max, ColorConvertFloat4ToU32(sliderColor), style.ZoomBarRounding);
 
             const auto sliderCenter = finalSliderBB.GetCenter();
 
@@ -1114,6 +1114,7 @@ namespace ImGui
         ImGuiWindow* window = GetCurrentWindow();
         const ImGuiID id = window->GetID(label);
         auto labelSize = CalcTextSize(label);
+        if (labelSize.x <= 24.0f) labelSize.x = 32.0f;
 
         labelSize.y += imStyle.FramePadding.y * 2 + style.ItemSpacing.y * 2;
         labelSize.x += imStyle.FramePadding.x * 2 + style.ItemSpacing.x * 2 +
@@ -1347,30 +1348,30 @@ namespace ImGui
 
 ImGuiNeoSequencerStyle::ImGuiNeoSequencerStyle()
 {
-    Colors[ImGuiNeoSequencerCol_Bg] = ImVec4{0.31f, 0.31f, 0.31f, 1.00f};
-    Colors[ImGuiNeoSequencerCol_TopBarBg] = ImVec4{0.22f, 0.22f, 0.22f, 0.84f};
-    Colors[ImGuiNeoSequencerCol_SelectedTimeline] = ImVec4{0.98f, 0.706f, 0.322f, 0.88f};
+    Colors[ImGuiNeoSequencerCol_Bg] = ImVec4{0.02f, 0.02f, 0.02f, 1.0f};
+    Colors[ImGuiNeoSequencerCol_TopBarBg] = ImVec4{ 0.05f, 0.05f, 0.05f, 1.0f };
+    Colors[ImGuiNeoSequencerCol_SelectedTimeline] = ImVec4{0.098f, 0.098f, 0.098f, 0.5f};
     Colors[ImGuiNeoSequencerCol_TimelinesBg] = Colors[ImGuiNeoSequencerCol_TopBarBg];
     Colors[ImGuiNeoSequencerCol_TimelineBorder] = Colors[ImGuiNeoSequencerCol_Bg] * ImVec4{0.5f, 0.5f, 0.5f, 1.0f};
 
-    Colors[ImGuiNeoSequencerCol_FramePointer] = ImVec4{0.98f, 0.24f, 0.24f, 0.50f};
+    Colors[ImGuiNeoSequencerCol_FramePointer] = ImVec4{1.0f, 0.0f, 0.0f, 1.0f};
     Colors[ImGuiNeoSequencerCol_FramePointerHovered] = ImVec4{0.98f, 0.15f, 0.15f, 1.00f};
     Colors[ImGuiNeoSequencerCol_FramePointerPressed] = ImVec4{0.98f, 0.08f, 0.08f, 1.00f};
 
-    Colors[ImGuiNeoSequencerCol_Keyframe] = ImVec4{0.59f, 0.59f, 0.59f, 0.50f};
+    Colors[ImGuiNeoSequencerCol_Keyframe] = ImVec4{1.0f, 1.0f, 1.0f, 1.0f};
     Colors[ImGuiNeoSequencerCol_KeyframeHovered] = ImVec4{0.98f, 0.39f, 0.36f, 1.00f};
     Colors[ImGuiNeoSequencerCol_KeyframePressed] = ImVec4{0.98f, 0.39f, 0.36f, 1.00f};
     Colors[ImGuiNeoSequencerCol_KeyframeSelected] = ImVec4{0.32f, 0.23f, 0.98f, 1.00f};
 
     Colors[ImGuiNeoSequencerCol_FramePointerLine] = ImVec4{0.98f, 0.98f, 0.98f, 0.8f};
 
-    Colors[ImGuiNeoSequencerCol_ZoomBarBg] = ImVec4{0.59f, 0.59f, 0.59f, 0.90f};
+    Colors[ImGuiNeoSequencerCol_ZoomBarBg] = ImVec4{0.59f, 0.59f, 0.59f, 0.10f};
     Colors[ImGuiNeoSequencerCol_ZoomBarSlider] = ImVec4{0.8f, 0.8f, 0.8f, 0.60f};
-    Colors[ImGuiNeoSequencerCol_ZoomBarSliderHovered] = ImVec4{0.98f, 0.98f, 0.98f, 0.80f};
+    Colors[ImGuiNeoSequencerCol_ZoomBarSliderHovered] = ImVec4{0.98f, 0.98f, 0.98f, 0.40f};
     Colors[ImGuiNeoSequencerCol_ZoomBarSliderEnds] = ImVec4{0.59f, 0.59f, 0.59f, 0.90f};
-    Colors[ImGuiNeoSequencerCol_ZoomBarSliderEndsHovered] = ImVec4{0.93f, 0.93f, 0.93f, 0.93f};
+    Colors[ImGuiNeoSequencerCol_ZoomBarSliderEndsHovered] = ImVec4{0.93f, 0.93f, 0.93f, 0.43f};
 
-    Colors[ImGuiNeoSequencerCol_SelectionBorder] = ImVec4{0.98f, 0.706f, 0.322f, 0.61f};
-    Colors[ImGuiNeoSequencerCol_Selection] = ImVec4{0.98f, 0.706f, 0.322f, 0.33f};
+    Colors[ImGuiNeoSequencerCol_SelectionBorder] = ImVec4{1.0f, 1.0f, 1.0f, 1.0f};
+    Colors[ImGuiNeoSequencerCol_Selection] = ImVec4{1.0f, 1.0f, 1.0f, 0.25f};
 
 }

@@ -22,6 +22,7 @@ private:
     bool bOpenModal = false;
     bool bShowImGuiDemoWindow = false; // 데모 창 표시 여부를 관리하는 변수
     bool bShowSkeletalMeshViewer = false; // 스켈레탈 메시 뷰어 표시 여부를 관리하는 변수
+    bool bShowAnimationViewer = false; // Animation viewer control boolean.
 
     float* FOV = nullptr;
     float CameraSpeed = 0.0f;

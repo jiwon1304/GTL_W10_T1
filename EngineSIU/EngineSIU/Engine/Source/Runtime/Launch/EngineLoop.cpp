@@ -22,6 +22,7 @@ UPrimitiveDrawBatch FEngineLoop::PrimitiveDrawBatch;
 FResourceMgr FEngineLoop::ResourceManager;
 uint32 FEngineLoop::TotalAllocationBytes = 0;
 uint32 FEngineLoop::TotalAllocationCount = 0;
+TMap<HWND, ImGuiContext*> FEngineLoop::WndImGuiContextMap = {};
 
 FEngineLoop::FEngineLoop()
     : MainAppWnd(nullptr)
@@ -55,6 +56,8 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
         ShowWindow(MainAppWnd, SW_SHOW);
     }
     SkeletalMeshViewerAppWnd = CreateNewWindow(hInstance, L"SkeletalWindowClass", L"SkeletalMesh Viewer", 800, 600, nullptr);
+
+    AnimationViewerAppWnd = CreateNewWindow(hInstance, L"AnimationWindowClass", L"Animation Viewer", 800, 600, nullptr);
     
     /** New Constructor */
     BufferManager = new FDXDBufferManager();
@@ -71,6 +74,8 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     /** Initialized */
     GraphicDevice.Initialize(MainAppWnd);
     GraphicDevice.CreateAdditionalSwapChain(SkeletalMeshViewerAppWnd);
+    GraphicDevice.CreateAdditionalSwapChain(AnimationViewerAppWnd);
+    
     BufferManager->Initialize(GraphicDevice.Device, GraphicDevice.DeviceContext);
     Renderer.Initialize(&GraphicDevice, BufferManager, &GPUTimingManager);
     PrimitiveDrawBatch.Initialize(&GraphicDevice);
@@ -82,6 +87,10 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     SkeletalMeshViewerUIManager->Initialize(SkeletalMeshViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
     AnimationViewerUIManager->Initialize(AnimationViewerAppWnd, GraphicDevice.Device, GraphicDevice.DeviceContext);
 
+    WndImGuiContextMap.Add(MainAppWnd, MainUIManager->GetContext());
+    WndImGuiContextMap.Add(SkeletalMeshViewerAppWnd, SkeletalMeshViewerUIManager->GetContext());
+    WndImGuiContextMap.Add(AnimationViewerAppWnd, AnimationViewerUIManager->GetContext());
+    
     LevelEditor->Initialize(1400, 1000);
     SkeletalMeshViewer->Initialize(SkeletalMeshViewerAppWnd, "SkeletalMeshViewer.ini", 800, 600);
     AnimationViewer->Initialize(AnimationViewerAppWnd, "AnimationViewer.ini", 800, 600);
@@ -167,6 +176,16 @@ void FEngineLoop::Render(HWND Handle) const
 
     if (Handle && IsWindowVisible(Handle))
     {
+        SlateViewer* Viewer = nullptr;
+        if (Handle == SkeletalMeshViewerAppWnd)
+        {
+            Viewer = SkeletalMeshViewer;
+        }
+        else if (Handle == AnimationViewerAppWnd)
+        {
+            Viewer = AnimationViewer;
+        }
+        
         // ActiveWorld를 변경하여 FRenderer::Render()에서 EditorPreviewWorld를 접근하도록 함
         UWorld* CurrentWorld = GEngine->ActiveWorld;
         if (const UEditorEngine* E = Cast<UEditorEngine>(GEngine))
@@ -175,13 +194,13 @@ void FEngineLoop::Render(HWND Handle) const
             if (EditorWorld)
             {
                 GEngine->ActiveWorld = EditorWorld;
-                Renderer.Render(SkeletalMeshViewer->GetActiveViewportClient());
-                auto Viewport = SkeletalMeshViewer->GetActiveViewportClient();
+                Renderer.Render(Viewer->GetActiveViewportClient());
+                auto Viewport = Viewer->GetActiveViewportClient();
                 auto Location = Viewport->GetCameraLocation();
 
-                UE_LOG(ELogLevel::Display, TEXT("%f %f %f"), Location.X, Location.Y, Location.Z);
+                // UE_LOG(ELogLevel::Display, TEXT("%f %f %f"), Location.X, Location.Y, Location.Z);
             }
-            Renderer.RenderViewport(Handle, SkeletalMeshViewer->GetActiveViewportClient());
+            Renderer.RenderViewport(Handle, Viewer->GetActiveViewportClient());
         }
 
         GEngine->ActiveWorld = CurrentWorld;
@@ -193,7 +212,7 @@ void FEngineLoop::Render(HWND Handle) const
         if (SkeletalMeshViewerUIManager && SkeletalMeshViewerUIManager->GetContext() && Handle == SkeletalMeshViewerAppWnd)
         {
             SkeletalMeshViewerUIManager->BeginFrame();
-            UnrealEditor->RenderSubWindowPanel();
+            UnrealEditor->RenderSubWindowPanel(Handle);
             SkeletalMeshViewerUIManager->EndFrame();
         }
 
@@ -201,7 +220,7 @@ void FEngineLoop::Render(HWND Handle) const
         if (AnimationViewerUIManager && AnimationViewerUIManager->GetContext() && Handle == AnimationViewerAppWnd)
         {
             AnimationViewerUIManager->BeginFrame();
-            UnrealEditor->RenderSubWindowPanel();
+            UnrealEditor->RenderSubWindowPanel(Handle);
             AnimationViewerUIManager->EndFrame();
         }
     }
@@ -409,17 +428,19 @@ HWND FEngineLoop::CreateNewWindow(HINSTANCE hInstance, const WCHAR* WindowClass,
 
 LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
 {
+    /** ImContext Proc */
+    ImGuiContext* UpdateContext = WndImGuiContextMap[hWnd];
+    if (UpdateContext)
+    {
+        ImGui::SetCurrentContext(UpdateContext);
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+        {
+            return true;
+        }
+    }
+    
     if (hWnd == GEngineLoop.MainAppWnd)
     {
-        if (GEngineLoop.MainUIManager)
-        {
-            ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
-            if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
-            {
-                return true;
-            }
-        }
-
         switch (Msg)
         {
             case WM_DESTROY:
@@ -472,7 +493,7 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
                     break;
                 }
 
-                ImGui::SetCurrentContext(GEngineLoop.MainUIManager->GetContext());
+                ImGui::SetCurrentContext(UpdateContext);
                 GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
             }
 
@@ -485,163 +506,84 @@ LRESULT CALLBACK FEngineLoop::AppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, L
             }
             return DefWindowProc(hWnd, Msg, wParam, lParam);
         }
-        
-        return 0;
     }
-
-    if (hWnd == GEngineLoop.SkeletalMeshViewerAppWnd)
+    
+    switch (Msg)
     {
-        if (GEngineLoop.SkeletalMeshViewerUIManager)
+        case WM_SIZE:
         {
-            ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
-            if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+            if (wParam != SIZE_MINIMIZED)
             {
-                return true;
-            }
-        }
+                GraphicDevice.Resize(hWnd);
 
-        switch (Msg)
-        {
-            case WM_CLOSE:
-            {
-                ::ShowWindow(hWnd, SW_HIDE);
-            }
-            return 0;
-
-            case WM_SIZE:
-            {
-                if (wParam != SIZE_MINIMIZED)
+                uint32 ClientWidth = 0;
+                uint32 ClientHeight = 0;
+                GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
+                
+                GEngineLoop.UpdateUI(hWnd, true);
+                
+                if (hWnd == GEngineLoop.SkeletalMeshViewerAppWnd)
                 {
-                    if (auto AssetViewer = GEngineLoop.GetSkeletalMeshViewer())
+                    if (SlateViewer* SkeletalViewer = GEngineLoop.GetSkeletalMeshViewer())
                     {
-                        GraphicDevice.Resize(hWnd);
-                        
-                        uint32 ClientWidth = 0;
-                        uint32 ClientHeight = 0;
-                        GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
-                        
-                        AssetViewer->ResizeEditor(ClientWidth, ClientHeight);
-                        if (AssetViewer->GetActiveViewportClient())
+                        SkeletalViewer->ResizeEditor(ClientWidth, ClientHeight);
+                        if (SkeletalViewer->GetActiveViewportClient())
                         {
                             // 필요하다면 TileLightCullingPass 버퍼도 리사이즈
-                            FEngineLoop::Renderer.TileLightCullingPass->ResizeViewBuffers(
-                                static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Width),
-                                static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Height)
+                            Renderer.TileLightCullingPass->ResizeViewBuffers(
+                                static_cast<uint32>(SkeletalViewer->GetActiveViewportClient()->GetD3DViewport().Width),
+                                static_cast<uint32>(SkeletalViewer->GetActiveViewportClient()->GetD3DViewport().Height)
                             );
                         }
                     }
-                    GEngineLoop.UpdateUI(hWnd, true);
                 }
-            }
-            return 0;
 
-            case WM_ACTIVATE:
-            {
-                if (ImGui::GetCurrentContext() == nullptr)
+                if (hWnd == GEngineLoop.AnimationViewerAppWnd)
                 {
-                    break;
+                    if (SlateViewer* AnimationViewer = GEngineLoop.GetAnimationViewer())
+                    {
+                        AnimationViewer->ResizeEditor(ClientWidth, ClientHeight);
+                        if (AnimationViewer->GetActiveViewportClient())
+                        {
+                            
+                            Renderer.TileLightCullingPass->ResizeViewBuffers(
+                                static_cast<uint32>(AnimationViewer->GetActiveViewportClient()->GetD3DViewport().Width),
+                                static_cast<uint32>(AnimationViewer->GetActiveViewportClient()->GetD3DViewport().Height)
+                            );
+                        }
+                    }
                 }
-                ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
-                GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
             }
-            return 0;
-        
-            default:
-            {
-                GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
-            }
-            break;
         }
+        return 0;
+        
+        case WM_CLOSE:
+        {
+            ::ShowWindow(hWnd, SW_HIDE);
+        }
+        return 0;
+    
+        case WM_ACTIVATE:
+        {
+            if (ImGui::GetCurrentContext() == nullptr)
+            {
+                break;
+            }
+            ImGui::SetCurrentContext(UpdateContext);
+            GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
+        }
+        return 0;
+            
+        default:
+        {
+            GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
+        }
+        break;
     }
+
     return DefWindowProc(hWnd, Msg, wParam, lParam);
 }
 
-LRESULT FEngineLoop::SubAppWndProc(HWND hWnd, uint32 Msg, WPARAM wParam, LPARAM lParam)
-{
-    // 이전 ImGui 컨텍스트 저장
-    ImGuiContext* PreviousContext = ImGui::GetCurrentContext();
-    
-    if (GEngineLoop.SkeletalMeshViewerUIManager)
-    {
-        // 서브 윈도우 컨텍스트로 임시 설정하고 이벤트 처리
-        ImGui::SetCurrentContext(GEngineLoop.SkeletalMeshViewerUIManager->GetContext());
-        GEngineLoop.CurrentImGuiContext = ImGui::GetCurrentContext();
-        if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
-        {
-            // 이벤트 처리 후 이전 컨텍스트 복원
-            ImGui::SetCurrentContext(PreviousContext);
-            return true;
-        }
-    }
-
-    switch (Msg)
-    {
-    case WM_DESTROY:
-        // Do Nothing (ShowWindow로 관리하므로 직접 처리할 필요 없음. DESTROY가 호출될 때에는 Exit에서 일괄처리함)
-        break;
-    case WM_SIZE:
-        if (wParam != SIZE_MINIMIZED)
-        {
-            // 클라이언트 영역 크기 가져오기
-            uint32 ClientWidth = 0;
-            uint32 ClientHeight = 0;
-            GEngineLoop.GetClientSize(hWnd, ClientWidth, ClientHeight);
-            
-            // AssetViewer 리사이즈
-            if (auto AssetViewer = GEngineLoop.GetSkeletalMeshViewer())
-            {
-                AssetViewer->ResizeEditor(ClientWidth, ClientHeight);
-                if (AssetViewer->GetActiveViewportClient())
-                {
-                    // 필요하다면 TileLightCullingPass 버퍼도 리사이즈
-                    FEngineLoop::Renderer.TileLightCullingPass->ResizeViewBuffers(
-                        static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Width),
-                        static_cast<uint32>(AssetViewer->GetActiveViewportClient()->GetD3DViewport().Height)
-                    );
-                }
-            }
-        }
-        // UI 업데이트는 기존대로 호출
-        break;
-    case WM_CLOSE:
-        ShowWindow(hWnd, SW_HIDE);
-        ImGui::SetCurrentContext(PreviousContext); // 컨텍스트 복원 후 반환
-        return 0;
-    case WM_ACTIVATE:
-        if (ImGui::GetCurrentContext() == nullptr || !GEngineLoop.SkeletalMeshViewerUIManager)
-        {
-            break;
-        }
-        
-        // 윈도우가 비활성화될 때 키 상태 초기화
-        if (wParam == WA_INACTIVE)
-        {
-            if (GEngineLoop.GetSkeletalMeshViewer() && GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient())
-            {
-                GEngineLoop.GetSkeletalMeshViewer()->GetActiveViewportClient()->ResetKeyState();
-            }
-        }
-        // 활성화 상태일 때만 컨텍스트 업데이트 (WA_ACTIVE=1, WA_CLICKACTIVE=2)
-        else if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
-        {
-            // SubAppWnd가 활성화될 때 ImGui 컨텍스트를 현재 윈도우용으로 유지
-            // 단, 이전 컨텍스트를 변경하지 않도록 GEngineLoop.CurrentImGuiContext만 업데이트
-            GEngineLoop.CurrentImGuiContext = GEngineLoop.SkeletalMeshViewerUIManager->GetContext();
-        }
-        break;
-    default:
-        // MessageHandler 처리
-        GEngineLoop.AppMessageHandler->ProcessMessage(hWnd, Msg, wParam, lParam);
-        break;
-    }
-
-    LRESULT Result = DefWindowProc(hWnd, Msg, wParam, lParam);
-    
-    // 이전 컨텍스트로 복원
-    ImGui::SetCurrentContext(PreviousContext);
-    
-    return Result;
-}
 
 void FEngineLoop::UpdateUI(HWND hWnd, bool bSubWindow) const
 {
@@ -655,7 +597,7 @@ void FEngineLoop::UpdateUI(HWND hWnd, bool bSubWindow) const
     ViewportTypePanel::GetInstance().OnResize(hWnd);
 }
 
-void FEngineLoop::ToggleWindow(const HWND hWnd)
+void FEngineLoop::ToggleWindow(const HWND hWnd) const
 {
     if (hWnd && !IsWindowVisible(hWnd))
     {
@@ -667,7 +609,7 @@ void FEngineLoop::ToggleWindow(const HWND hWnd)
     }
 }
 
-void FEngineLoop::Show(const HWND HWnd)
+void FEngineLoop::Show(const HWND HWnd) const
 {
     if (HWnd)
     {
@@ -683,7 +625,7 @@ void FEngineLoop::Show(const HWND HWnd)
     }
 }
 
-void FEngineLoop::Hide(const HWND hWnd)
+void FEngineLoop::Hide(const HWND hWnd) const
 {
     if (hWnd)
     {

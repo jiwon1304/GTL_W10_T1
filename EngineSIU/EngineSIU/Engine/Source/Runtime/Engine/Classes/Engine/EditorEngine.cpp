@@ -193,8 +193,6 @@ void UEditorEngine::StartPreviewWorld(UMeshComponent* TargetMesh)
         return;
     }
 
-    FSlateAppMessageHandler* Handler = GEngineLoop.GetAppMessageHandler();
-
     FWorldContext& EditorPreviewWorldContext = CreateNewWorldContext(EWorldType::EditorPreview);
 
     EditorPreviewWorld = UWorld::CreateWorld(this, EWorldType::EditorPreview, FString("EditorPreviewWorld"));

@@ -114,6 +114,11 @@ void OutlinerEditorPanel::Render()
     
 void OutlinerEditorPanel::OnResize(HWND hWnd)
 {
+    if (hWnd != Handle)
+    {
+        return;
+    }
+    
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
     Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);

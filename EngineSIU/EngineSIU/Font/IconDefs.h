@@ -20,4 +20,8 @@
 #define ICON_STOP        0xE9E6
 #define ICON_SQUARE     0xE9E4
 
+#define ICON_FORWARD    0xE96A
+#define ICON_REWIND    0xE9D2
+#define ICON_REPEAT     0xE9D1
+
 #endif // !__ICON_FONT__

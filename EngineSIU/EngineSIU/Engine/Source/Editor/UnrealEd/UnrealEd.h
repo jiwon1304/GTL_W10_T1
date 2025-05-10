@@ -13,7 +13,7 @@ public:
     void Initialize();
 
     void Render() const;
-    void RenderSubWindowPanel() const;
+    void RenderSubWindowPanel(HWND hWnd) const;
     void OnResize(HWND hWnd, bool bSubWindow = false) const;
 
     void AddEditorPanel(const FString& PanelId, const std::shared_ptr<UEditorPanel>& EditorPanel, bool bSubWindow = false);

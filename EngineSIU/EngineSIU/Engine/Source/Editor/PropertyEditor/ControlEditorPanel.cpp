@@ -106,6 +106,12 @@ void ControlEditorPanel::Render()
             {
                 bShowSkeletalMeshViewer = true;
             }
+
+            if (ImGui::MenuItem("Animation Viewer"))
+            {
+                bShowAnimationViewer = true;
+            }
+            
             ImGui::EndMenu();
         }
 
@@ -186,6 +192,15 @@ void ControlEditorPanel::Render()
         if (GEngineLoop.SkeletalMeshViewerAppWnd)
         {
             GEngineLoop.Show(GEngineLoop.SkeletalMeshViewerAppWnd);
+        }
+    }
+
+    if (bShowAnimationViewer)
+    {
+        bShowAnimationViewer = false;
+        if (GEngineLoop.AnimationViewerAppWnd)
+        {
+            GEngineLoop.Show(GEngineLoop.AnimationViewerAppWnd);
         }
     }
 }
@@ -683,6 +698,11 @@ void ControlEditorPanel::CreateSRTButton(ImVec2 ButtonSize)
 
 void ControlEditorPanel::OnResize(const HWND hWnd)
 {
+    if (hWnd != Handle)
+    {
+        return;
+    }
+    
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
     Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);

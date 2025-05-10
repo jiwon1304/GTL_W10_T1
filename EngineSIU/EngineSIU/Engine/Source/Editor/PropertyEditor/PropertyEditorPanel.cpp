@@ -56,31 +56,17 @@ void PropertyEditorPanel::Render()
     /* Pre Setup */
     // Splitter 기반 영역 계산
     FRect PropertyRect{ 0,0,0,0 };
-    if (this->WindowType == WT_Main)
-    {
-        SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
-        if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideRB)
-        {
-            PropertyRect = LevelEditor->EditorHSplitter->SideRB->GetRect();
-        }
-        else
-        {
-            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
-        }
-    }
-    else if (this->WindowType == WT_Sub)
-    {
-        SlateViewer* AssetViewer = GEngineLoop.GetSkeletalMeshViewer();
-        if (AssetViewer && AssetViewer->CenterAndRightVSplitter && AssetViewer->CenterAndRightVSplitter->SideRB)
-        {
-            PropertyRect = AssetViewer->CenterAndRightVSplitter->SideRB->GetRect();
-        }
-        else
-        {
-            PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
-        }
-    }
 
+    SLevelEditor* LevelEditor = GEngineLoop.GetLevelEditor();
+    if (LevelEditor && LevelEditor->EditorHSplitter && LevelEditor->EditorHSplitter->SideRB)
+    {
+        PropertyRect = LevelEditor->EditorHSplitter->SideRB->GetRect();
+    }
+    else
+    {
+        PropertyRect = FRect{ 0, 0, static_cast<float>(Width), static_cast<float>(Height) };
+    }
+    
     float PanelPosX = PropertyRect.TopLeftX;
     float PanelPosY = PropertyRect.TopLeftY;
     float PanelWidth = PropertyRect.Width;
@@ -1405,6 +1391,11 @@ void PropertyEditorPanel::RenderCreateMaterialView()
 
 void PropertyEditorPanel::OnResize(HWND hWnd)
 {
+    if (hWnd != Handle)
+    {
+        return;
+    }
+    
     RECT ClientRect;
     GetClientRect(hWnd, &ClientRect);
     Width = static_cast<FLOAT>(ClientRect.right - ClientRect.left);
