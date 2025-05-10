@@ -1,12 +1,12 @@
 #pragma once
 #include <format>
-#include <mutex>
 #include "Container/Array.h"
 #include "D3D11RHI/GraphicDevice.h"
 #include "HAL/PlatformType.h"
 #include "UObject/NameTypes.h"
 #include "ImGui/imgui.h"
 #include "PropertyEditor/IWindowToggleable.h"
+#include "Core/Misc/Spinlock.h"
 
 static consteval const char* GetFileName(const char* Path)
 {
@@ -137,5 +137,5 @@ private:
     UINT Width;
     UINT Height;
 
-    std::mutex LogEntryMutex;
+    FSpinLock LogLock; // 로그 추가 시 동기화를 위한 스핀락
 };

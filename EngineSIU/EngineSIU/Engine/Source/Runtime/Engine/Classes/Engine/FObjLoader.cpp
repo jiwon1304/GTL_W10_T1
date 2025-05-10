@@ -630,8 +630,8 @@ void FObjLoader::CalculateTangent(FStaticMeshVertex& PivotVertex, const FStaticM
 // 하나 쓰레드만 사용
 FStaticMeshRenderData FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
-    static std::mutex M;
-    std::lock_guard<std::mutex> L(M);
+    //static std::mutex M;
+    //std::lock_guard<std::mutex> L(M);
     FStaticMeshRenderData NewStaticMesh;
 
     // 바이너리 로드

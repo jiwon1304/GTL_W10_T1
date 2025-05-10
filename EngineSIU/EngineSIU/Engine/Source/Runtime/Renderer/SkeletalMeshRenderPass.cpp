@@ -212,12 +212,14 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         TArray<FMatrix> SkinningMatrices;
         SkeletalMeshComponent->GetSkinningMatrices(SkinningMatrices);
 
+        bool ForceCPUSkinning = SkeletalMeshComponent->GetSkeletalMesh()->bForcedCPUSkinning ? true : bCPUSkinning;
+
         // Update constant buffers
         UpdateObjectConstant(
             SkeletalMeshComponent->GetWorldMatrix(),
             SkeletalMeshComponent->EncodeUUID() / 255.0f,
             SkeletalMeshComponent->IsActive(),
-            SkeletalMeshComponent->GetSkeletalMesh()->bCPUSkinned
+            ForceCPUSkinning
         );
 
         TArray<UMaterial*> Materials;
@@ -228,20 +230,20 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         {
             const FSkelMeshRenderSection& RenderSection = Renderdata.RenderSections[SectionIndex];
             FVertexInfo VertexInfo;
-            if (SkeletalMesh->bCPUSkinned)
+            if (ForceCPUSkinning)
             {
                 // Update vertex buffer
                 TArray<FSkeletalVertex> Vertices;
                 GetSkinnedVertices(SkeletalMesh, SectionIndex, SkinningMatrices, Vertices);
 
-                BufferManager->CreateDynamicVertexBuffer(RenderSection.Name, Vertices, VertexInfo);
-                BufferManager->UpdateDynamicVertexBuffer(RenderSection.Name, Vertices);
+                BufferManager->CreateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices, VertexInfo);
+                BufferManager->UpdateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices);
             }
             else
             {
                 // Update bone matrices
                 UpdateBoneMatrices(SkinningMatrices);
-                BufferManager->CreateVertexBuffer(RenderSection.Name,
+                BufferManager->CreateVertexBuffer(RenderSection.Name + "_GPU",
                     RenderSection.Vertices, VertexInfo);
             }
 

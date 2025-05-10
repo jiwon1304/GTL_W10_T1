@@ -38,11 +38,13 @@ public:
     void UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected, bool bCPUSkinning) const;
     void UpdateBoneMatrices(const TArray<FMatrix>& BoneMatrices) const;
 
+    void SetCPUSkinning(bool bValue) { bCPUSkinning = bValue; }
 private:
     void CreateShader();
 
     void UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices);
     void GetSkinnedVertices(USkeletalMesh* SkeletalMesh, uint32 Section, const TArray<FMatrix>& BoneMatrices, TArray<FSkeletalVertex>& OutVertices) const;
+    bool bCPUSkinning = false;
 
 protected:
     TArray<USkeletalMeshComponent*> SkeletalMeshComponents;

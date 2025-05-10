@@ -44,7 +44,7 @@ public:
         TArray<FMatrix> InInverseBindPoseMatrices,
         TArray<UMaterial*> InMaterials);
 
-    bool bCPUSkinned : 1 = false;
+    bool bForcedCPUSkinning : 1 = false;
 private:
     // TODO : UPROPERTIES
     // FbxLoader에 저장되어있음

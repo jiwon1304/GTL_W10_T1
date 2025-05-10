@@ -316,7 +316,7 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     if (InverseBindPoseMatrices.Num() > 128)
     {
         // GPU Skinning: 최대 bone 개수 128개를 넘어가면 CPU로 전환
-        newSkeletalMesh->bCPUSkinned = true;
+        newSkeletalMesh->bForcedCPUSkinning = true;
     }
 
     {

@@ -61,8 +61,6 @@ public:
     void RegisterAsset(std::wstring filePath, FAssetInfo::LoadState State);
 
 private:
-
-
     void OnLoaded(const FString& filename);
 
     void OnFailed(const FString& filename);
