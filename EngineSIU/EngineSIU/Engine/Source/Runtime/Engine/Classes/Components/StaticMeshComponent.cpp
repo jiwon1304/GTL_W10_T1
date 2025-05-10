@@ -28,16 +28,9 @@ void UStaticMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) 
     if (CurrentMesh != nullptr) {
 
         // 1. std::wstring 경로 얻기
-        std::wstring PathWString = CurrentMesh->GetOjbectName(); // 이 함수가 std::wstring 반환 가정
-
-        // 2. std::wstring을 FString으로 변환
-        FString PathFString(PathWString.c_str()); // c_str()로 const wchar_t* 얻어서 FString 생성
-       // PathFString = CurrentMesh->ConvertToRelativePathFromAssets(PathFString);
-
-        FWString PathWString2 = PathFString.ToWideString();
-
+        FString PathString = CurrentMesh->GetOjbectName();
         
-        OutProperties.Add(TEXT("StaticMeshPath"), PathFString);
+        OutProperties.Add(TEXT("StaticMeshPath"), PathString);
     } else
     {
         OutProperties.Add(TEXT("StaticMeshPath"), TEXT("None")); // 메시 없음 명시
@@ -58,7 +51,7 @@ void UStaticMeshComponent::SetProperties(const TMap<FString, FString>& InPropert
         {
             // 경로 문자열로 UStaticMesh 에셋 로드 시도
            
-            if (UStaticMesh* MeshToSet = FObjManager::CreateStaticMesh(*TempStr))
+            if (UStaticMesh* MeshToSet = FObjManager::GetStaticMesh(*TempStr))
             {
                 SetStaticMesh(MeshToSet); // 성공 시 메시 설정
                 UE_LOG(ELogLevel::Display, TEXT("Set StaticMesh '%s' for %s"), **TempStr, *GetName());
@@ -157,16 +150,16 @@ int UStaticMeshComponent::CheckRayIntersection(const FVector& InRayOrigin, const
     
     int IntersectionNum = 0;
 
-    FStaticMeshRenderData* RenderData = StaticMesh->GetRenderData();
+    const FStaticMeshRenderData& RenderData = StaticMesh->GetRenderData();
 
-    const TArray<FStaticMeshVertex>& Vertices = RenderData->Vertices;
+    const TArray<FStaticMeshVertex>& Vertices = RenderData.Vertices;
     const int32 VertexNum = Vertices.Num();
     if (VertexNum == 0)
     {
         return 0;
     }
     
-    const TArray<UINT>& Indices = RenderData->Indices;
+    const TArray<UINT>& Indices = RenderData.Indices;
     const int32 IndexNum = Indices.Num();
     const bool bHasIndices = (IndexNum > 0);
     

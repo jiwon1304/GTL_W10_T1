@@ -200,11 +200,7 @@ void FGizmoRenderPass::RenderGizmoComponent(UGizmoBaseComponent* GizmoComp, cons
         return;
     }
     
-    FStaticMeshRenderData* RenderData = GizmoComp->GetStaticMesh()->GetRenderData();
-    if (!RenderData)
-    {
-        return;
-    }
+    const FStaticMeshRenderData& RenderData = GizmoComp->GetStaticMesh()->GetRenderData();
 
     UpdateShader();
 
@@ -220,10 +216,10 @@ void FGizmoRenderPass::RenderGizmoComponent(UGizmoBaseComponent* GizmoComp, cons
     UINT Offset = 0;
 
     FVertexInfo VertexInfo;
-    BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+    BufferManager->CreateVertexBuffer(RenderData.ObjectName, RenderData.Vertices, VertexInfo);
 
     FIndexInfo IndexInfo;
-    BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
+    BufferManager->CreateIndexBuffer(RenderData.ObjectName, RenderData.Indices, IndexInfo);
     
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &Stride, &Offset);
 
@@ -233,16 +229,16 @@ void FGizmoRenderPass::RenderGizmoComponent(UGizmoBaseComponent* GizmoComp, cons
     }
     Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
     
-    if (RenderData->MaterialSubsets.Num() == 0)
+    if (RenderData.MaterialSubsets.Num() == 0)
     {
-        Graphics->DeviceContext->DrawIndexed(RenderData->Indices.Num(), 0, 0);
+        Graphics->DeviceContext->DrawIndexed(RenderData.Indices.Num(), 0, 0);
     }
     else
     {
         // TODO: 현재 기즈모 메시는 머티리얼이 하나뿐이지만, 추후 여러 머티리얼을 사용하는 경우가 생길 수 있음.
-        for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
+        for (int SubMeshIndex = 0; SubMeshIndex < RenderData.MaterialSubsets.Num(); SubMeshIndex++)
         {
-            int32 MaterialIndex = RenderData->MaterialSubsets[SubMeshIndex].MaterialIndex;
+            int32 MaterialIndex = RenderData.MaterialSubsets[SubMeshIndex].MaterialIndex;
 
             FSubMeshConstants SubMeshData = FSubMeshConstants(false);
             BufferManager->UpdateConstantBuffer(TEXT("FSubMeshConstants"), SubMeshData);
@@ -258,8 +254,8 @@ void FGizmoRenderPass::RenderGizmoComponent(UGizmoBaseComponent* GizmoComp, cons
                 MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
             }
 
-            uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
-            uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
+            uint32 StartIndex = RenderData.MaterialSubsets[SubMeshIndex].IndexStart;
+            uint32 IndexCount = RenderData.MaterialSubsets[SubMeshIndex].IndexCount;
 
             Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
         }

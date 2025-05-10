@@ -41,7 +41,7 @@ public:
         else
         {
             OverrideMaterials.SetNum(value->GetMaterials().Num());
-            AABB = FBoundingBox(StaticMesh->GetRenderData()->BoundingBoxMin, StaticMesh->GetRenderData()->BoundingBoxMax);
+            AABB = FBoundingBox(StaticMesh->GetRenderData().BoundingBoxMin, StaticMesh->GetRenderData().BoundingBoxMax);
         }
     }
 

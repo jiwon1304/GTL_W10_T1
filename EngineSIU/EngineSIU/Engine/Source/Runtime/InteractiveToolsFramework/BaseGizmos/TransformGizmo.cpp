@@ -14,15 +14,6 @@ ATransformGizmo::ATransformGizmo()
 {
     static int a = 0;
     UE_LOG(ELogLevel::Error, "Gizmo Created %d", a++);
-    FObjManager::CreateStaticMesh("Assets/GizmoTranslationX.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoTranslationY.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoTranslationZ.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoRotationX.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoRotationY.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoRotationZ.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoScaleX.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoScaleY.obj");
-    FObjManager::CreateStaticMesh("Assets/GizmoScaleZ.obj");
 
     SetRootComponent(
         AddComponent<USceneComponent>()

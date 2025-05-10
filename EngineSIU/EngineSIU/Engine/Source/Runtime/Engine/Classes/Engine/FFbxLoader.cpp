@@ -31,7 +31,6 @@ void FFbxLoader::Init()
 // 현재는 UAssetManager에서 Contents 폴더의 모든 파일에 대해서 프로그램 시작 시 호출됩니다.
 void FFbxLoader::LoadFBX(const FString& filename)
 {
-    UE_LOG(ELogLevel::Display, "Loading FBX : %s", *filename);
     {
         std::lock_guard<std::mutex> lock(MapMutex);
         if (MeshMap.Contains(filename)) return;
@@ -45,12 +44,13 @@ void FFbxLoader::LoadFBX(const FString& filename)
         std::lock_guard<std::mutex> lock(MapMutex);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
+            OnLoadFBXCompleted.Execute(filename);
         }
         else
         {
             MeshMap[filename] = { LoadState::Failed, nullptr };
+            OnLoadFBXFailed.Execute(filename);
         }
-        OnLoadFBXCompleted.Execute(filename);
         });
     loader.detach();
 }
@@ -92,22 +92,6 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
     // 이 경우 AssetManager에서 로드한 적이 없는거이므로
     // AssetManager에 추가
 
-    TMap<FName, FAssetInfo> AssetRegistry = UAssetManager::Get().GetAssetRegistry();
-    bool bRegistered = false;
-    for (const auto& Asset : AssetRegistry)
-    {
-        if (Asset.Value.GetFullPath() == filename)
-        {
-            bRegistered = true;
-            break;
-        }
-
-    }
-    // 만약 등록되지 않았으면 등록하고 로드
-    if (!bRegistered)
-    {
-        UAssetManager::Get().RegisterAsset(StringToWString(*filename));
-    }
     USkeletalMesh* mesh = nullptr;
     {
         // 메인쓰레드에서 실행
@@ -115,13 +99,16 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
         std::lock_guard<std::mutex> lock(MapMutex);
         if (mesh) {
             MeshMap[filename] = { LoadState::Completed, mesh };
+            UAssetManager::Get().RegisterAsset(StringToWString(*filename), FAssetInfo::LoadState::Completed);
+            OnLoadFBXCompleted.Execute(filename);
         }
         else
         {
             MeshMap[filename] = { LoadState::Failed, nullptr };
+            OnLoadFBXFailed.Execute(filename);
+            UAssetManager::Get().RegisterAsset(StringToWString(*filename), FAssetInfo::LoadState::Failed);
         }
     }
-    
     return mesh;
 }
 
@@ -139,6 +126,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     if (!importer->Initialize(GetData(FBXFilePath), -1, GetFbxIOSettings()))
     {
         importer->Destroy();
+        UE_LOG(ELogLevel::Warning, "Failed to parse FBX: %s", *FBXFilePath);
         return nullptr;
     }
 
@@ -158,6 +146,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     importer->Destroy();
     if (!bIsImported)
     {
+        UE_LOG(ELogLevel::Warning, "Failed to parse FBX: %s", *FBXFilePath);
         return nullptr;
     }
 
@@ -184,11 +173,13 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
     result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
+    UE_LOG(ELogLevel::Display, "FBX parsed: %s", *FBXFilePath);
     return result;
 }
 
 // Skeletal Mesh를 파싱합니다.
 // 등록되지 않은 .bin 또는 .fbx 파일을 파싱합니다.
+// 실패하면 nullptr을 반환합니다.
 USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
 {
     FWString BinaryPath = (filename + ".bin").ToWideString();
@@ -216,8 +207,11 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     // bin 파일 없음. fbx 파싱 필요
     if (bCreateNewMesh)
     {
-        std::lock_guard<std::mutex> lock(SDKMutex);
-        fbxObject = ParseFBX(filename);
+        {
+            std::lock_guard<std::mutex> lock(SDKMutex);
+            fbxObject = ParseFBX(filename);
+        }
+
         if (fbxObject)
         {
             FFbxManager::SaveFBXToBinary(BinaryPath, lastModifiedTime, *fbxObject);
@@ -458,6 +452,7 @@ void FFbxLoader::LoadFbxSkeleton(
             for (int j = 0; j < 4; ++j)
                 joint.localBindPose.M[i][j] = static_cast<float>(bindLocal[i][j]);
 
+        // 이거 틀렸음..
         // FBX 행렬을 Unreal 형식으로 복사
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
@@ -1141,11 +1136,12 @@ bool FFbxManager::SaveFBXToBinary(const FWString& FilePath, int64_t LastModified
 // .bin 파일을 파싱합니다.
 bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifiedTime, FFbxSkeletalMesh& OutFBXObject)
 {
-    UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", WStringToString(FilePath).c_str());
+    UE_LOG(ELogLevel::Display, "Loading binary: %s", WStringToString(FilePath).c_str());
     std::ifstream File(FilePath, std::ios::binary);
     if (!File.is_open())
     {
         assert("CAN'T OPEN FBX BINARY FILE");
+        UE_LOG(ELogLevel::Warning, "Failed to load binary : %s", WStringToString(FilePath).c_str());
         return false;
     }
 
@@ -1156,6 +1152,7 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
     // File is changed.
     if (LastModifiedTime != FileLastModifiedTime)
     {
+        UE_LOG(ELogLevel::Display, "Binary file is modified. Parinsg FBX : %s", WStringToString(FilePath).c_str());
         return false;
     }
 
@@ -1354,6 +1351,7 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
             }
         }
     }
-    
+    UE_LOG(ELogLevel::Display, "Binary loaded : %s", WStringToString(FilePath).c_str());
+
     return true;
 }

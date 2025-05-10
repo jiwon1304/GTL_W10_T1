@@ -4,7 +4,7 @@
 #include "Components/Material/Material.h"
 #include "Define.h"
 
-struct FStaticMeshRenderData;
+#include "Engine/Asset/StaticMeshAsset.h"
 
 class UStaticMesh : public UObject
 {
@@ -18,14 +18,14 @@ public:
     const TArray<FStaticMaterial*>& GetMaterials() const { return materials; }
     uint32 GetMaterialIndex(FName MaterialSlotName) const;
     void GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const;
-    FStaticMeshRenderData* GetRenderData() const { return RenderData; }
+    const FStaticMeshRenderData& GetRenderData() const { return RenderData; }
 
     //ObjectName은 경로까지 포함
-    FWString GetOjbectName() const;
+    FString GetOjbectName() const;
 
-    void SetData(FStaticMeshRenderData* InRenderData);
+    void SetData(const FStaticMeshRenderData& InRenderData);
 
 private:
-    FStaticMeshRenderData* RenderData = nullptr;
+    FStaticMeshRenderData RenderData;
     TArray<FStaticMaterial*> materials;
 };

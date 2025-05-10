@@ -407,10 +407,8 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
         FString PreviewName = FString("None");
         if (UStaticMesh* StaticMesh = StaticMeshComp->GetStaticMesh())
         {
-            if (FStaticMeshRenderData* RenderData = StaticMesh->GetRenderData())
-            {
-                PreviewName = RenderData->DisplayName;
-            }
+            const FStaticMeshRenderData& RenderData = StaticMesh->GetRenderData();
+            PreviewName = RenderData.DisplayName;
         }
 
         const TMap<FName, FAssetInfo> Assets = UAssetManager::Get().GetAssetRegistry();
@@ -419,14 +417,33 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
         {
             for (const auto& Asset : Assets)
             {
-                if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                if (Asset.Value.AssetType == EAssetType::StaticMesh)
                 {
-                    FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                    UStaticMesh* StaticMesh = FObjManager::GetStaticMesh(MeshName.ToWideString());
-                    if (StaticMesh)
+                    FString Label = Asset.Value.AssetName.ToString();
+
+                    bool bIsLoaded = (Asset.Value.State == FAssetInfo::LoadState::Completed);
+                    bool bIsFailed = (Asset.Value.State == FAssetInfo::LoadState::Failed);
+                    bool bIsLoading = (Asset.Value.State == FAssetInfo::LoadState::Loading);
+
+                    // 상태별로 이름 뒤에 태그 추가
+                    if (bIsLoading) Label += TEXT(" (Loading)");
+                    else if (bIsFailed) Label += TEXT(" (Failed)");
+
+                    if (!bIsLoaded)
+                        ImGui::BeginDisabled(); // 선택 불가하게 만듦
+
+                    if (ImGui::Selectable(*Label, false) && bIsLoaded)
                     {
-                        StaticMeshComp->SetStaticMesh(StaticMesh);
+                        FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
+                        UStaticMesh* StaticMesh = FObjManager::GetStaticMesh(MeshName);
+                        if (StaticMesh)
+                        {
+                            StaticMeshComp->SetStaticMesh(StaticMesh);
+                        }
                     }
+
+                    if (!bIsLoaded)
+                        ImGui::EndDisabled();
                 }
             }
             ImGui::EndCombo();
@@ -459,23 +476,33 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
             {
                 if (Asset.Value.AssetType == EAssetType::SkeletalMesh)
                 {
-                    if (Asset.Value.IsLoaded)
+                    FString Label = Asset.Value.AssetName.ToString();
+
+                    bool bIsLoaded = (Asset.Value.State == FAssetInfo::LoadState::Completed);
+                    bool bIsLoading = (Asset.Value.State == FAssetInfo::LoadState::Loading);
+                    bool bIsFailed = (Asset.Value.State == FAssetInfo::LoadState::Failed);
+
+                    // 상태에 따라 라벨에 태그 추가
+                    if (bIsLoading)
+                        Label += TEXT(" (Loading)");
+                    else if (bIsFailed)
+                        Label += TEXT(" (Failed)");
+
+                    if (!bIsLoaded)
+                        ImGui::BeginDisabled();  // 선택 비활성화
+
+                    if (ImGui::Selectable(*Label, false) && bIsLoaded)
                     {
-                        if (ImGui::Selectable(GetData(Asset.Value.AssetName.ToString()), false))
+                        FString MeshName = Asset.Value.GetFullPath();
+                        USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
+                        if (SkeletalMesh)
                         {
-                            //FString MeshName = Asset.Value.PackagePath.ToString() + "/" + Asset.Value.AssetName.ToString();
-                            FString MeshName = Asset.Value.GetFullPath();
-                            USkeletalMesh* SkeletalMesh = FFbxLoader::GetSkeletalMesh(MeshName.ToWideString());
-                            if (SkeletalMesh)
-                            {
-                                SkeletalComp->SetSkeletalMesh(SkeletalMesh);
-                            }
+                            SkeletalComp->SetSkeletalMesh(SkeletalMesh);
                         }
                     }
-                    else
-                    {
-                        FString Path = Asset.Value.GetFullPath();
-                    }
+
+                    if (!bIsLoaded)
+                        ImGui::EndDisabled();
                 }
             }
             ImGui::EndCombo();
@@ -1162,7 +1189,7 @@ void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp
 
     if (ImGui::TreeNodeEx("SubMeshes", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
-        const auto Subsets = StaticMeshComp->GetStaticMesh()->GetRenderData()->MaterialSubsets;
+        const auto Subsets = StaticMeshComp->GetStaticMesh()->GetRenderData().MaterialSubsets;
         for (uint32 i = 0; i < Subsets.Num(); ++i)
         {
             std::string temp = "subset " + std::to_string(i);

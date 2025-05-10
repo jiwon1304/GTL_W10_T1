@@ -13,6 +13,22 @@ inline UAssetManager::UAssetManager() {
             OnLoaded(filename);
         }
     );
+    FFbxLoader::OnLoadFBXFailed.BindLambda(
+        [this](const FString& filename) {
+            OnFailed(filename);
+        }
+    );
+
+    FObjManager::OnLoadOBJCompleted.BindLambda(
+        [this](const FString& filename) {
+            OnLoaded(filename);
+        }
+    );
+    FObjManager::OnLoadOBJFailed.BindLambda(
+        [this](const FString& filename) {
+            OnFailed(filename);
+        }
+    );
 }
 
 bool UAssetManager::IsInitialized()
@@ -62,7 +78,7 @@ bool UAssetManager::AddAsset(std::wstring filePath) const
     else if (path.extension() == ".obj")
     {
         assetType = EAssetType::StaticMesh;
-        if (!FObjManager::CreateStaticMesh(filePath))
+        if (!FObjManager::GetStaticMesh(filePath))
             return false;
     } else
     {
@@ -74,6 +90,7 @@ bool UAssetManager::AddAsset(std::wstring filePath) const
     NewAssetInfo.PackagePath = FName(path.parent_path().string());
     NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(path));
     NewAssetInfo.AssetType = assetType;
+    NewAssetInfo.State = FAssetInfo::LoadState::Completed;
     AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 
     return true;
@@ -81,19 +98,61 @@ bool UAssetManager::AddAsset(std::wstring filePath) const
 
 void UAssetManager::LoadEntireAssets()
 {
-    const std::string BasePathName = "Contents/";
-
     // Obj, FBX 파일 로드
-    
-    for (const auto& Entry : std::filesystem::recursive_directory_iterator(BasePathName))
+    const std::string BasePathNameAssets = "Assets/";
+
+    for (const auto& Entry : std::filesystem::recursive_directory_iterator(BasePathNameAssets))
     {
         if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
         {
+            FName NewAssetName = FName(Entry.path().filename().string());
+            if (AssetRegistry->PathNameToAssetInfo.Contains(NewAssetName)) continue;
             FAssetInfo NewAssetInfo;
-            NewAssetInfo.AssetName = FName(Entry.path().filename().string());
+            NewAssetInfo.AssetName = NewAssetName;
             NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
             NewAssetInfo.AssetType = EAssetType::StaticMesh; // obj 파일은 무조건 StaticMesh
             NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
+            NewAssetInfo.State = FAssetInfo::LoadState::Loading; // obj는 비동기로 로드하므로 나중에 변경
+            AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
+
+            FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
+            FObjManager::CreateStaticMesh(MeshName);
+            // ObjFileNames.push_back(UGTLStringLibrary::StringToWString(Entry.path().string()));
+            // FObjManager::LoadObjStaticMeshAsset(UGTLStringLibrary::StringToWString(Entry.path().string()));
+        }
+        if (Entry.is_regular_file() && Entry.path().extension() == ".fbx")
+        {
+            FName NewAssetName = FName(Entry.path().filename().string());
+            if (AssetRegistry->PathNameToAssetInfo.Contains(NewAssetName)) continue;
+            FAssetInfo NewAssetInfo;
+            NewAssetInfo.AssetName = NewAssetName;
+            NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
+            NewAssetInfo.AssetType = EAssetType::SkeletalMesh;
+            NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
+            NewAssetInfo.State = FAssetInfo::LoadState::Loading; // fbx는 비동기로 로드하므로 나중에 변경
+            AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
+
+            FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
+            FFbxLoader::LoadFBX(MeshName);
+        }
+    }
+
+
+    // Obj, FBX 파일 로드
+    const std::string BasePathNameContents = "Contents/";
+    
+    for (const auto& Entry : std::filesystem::recursive_directory_iterator(BasePathNameContents))
+    {
+        if (Entry.is_regular_file() && Entry.path().extension() == ".obj")
+        {
+            FName NewAssetName = FName(Entry.path().filename().string());
+            if (AssetRegistry->PathNameToAssetInfo.Contains(NewAssetName)) continue;
+            FAssetInfo NewAssetInfo;
+            NewAssetInfo.AssetName = NewAssetName;
+            NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
+            NewAssetInfo.AssetType = EAssetType::StaticMesh; // obj 파일은 무조건 StaticMesh
+            NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
+            NewAssetInfo.State = FAssetInfo::LoadState::Loading; // obj는 비동기로 로드하므로 나중에 변경
             AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
             
             FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
@@ -103,12 +162,14 @@ void UAssetManager::LoadEntireAssets()
         }
         if (Entry.is_regular_file() && Entry.path().extension() == ".fbx")
         {
+            FName NewAssetName = FName(Entry.path().filename().string());
+            if (AssetRegistry->PathNameToAssetInfo.Contains(NewAssetName)) continue;
             FAssetInfo NewAssetInfo;
-            NewAssetInfo.AssetName = FName(Entry.path().filename().string());
+            NewAssetInfo.AssetName = NewAssetName;
             NewAssetInfo.PackagePath = FName(Entry.path().parent_path().string());
             NewAssetInfo.AssetType = EAssetType::SkeletalMesh;
             NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(Entry.path()));
-            NewAssetInfo.IsLoaded = false; // fbx는 비동기로 로드하므로 나중에 변경
+            NewAssetInfo.State = FAssetInfo::LoadState::Loading; // fbx는 비동기로 로드하므로 나중에 변경
             AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 
             FString MeshName = NewAssetInfo.PackagePath.ToString() + "/" + NewAssetInfo.AssetName.ToString();
@@ -118,15 +179,15 @@ void UAssetManager::LoadEntireAssets()
 }
 
 // 파일 로드의 호출이 UAssetManager 외부에서 발생하였을 때 등록하는 함수입니다.
-void UAssetManager::RegisterAsset(std::wstring filePath) const
+void UAssetManager::RegisterAsset(std::wstring filePath, FAssetInfo::LoadState State)
 {
     std::filesystem::path path(filePath);
     EAssetType assetType;
-    if (path.extension() == ".fbx")
+    if (path.extension() == ".fbx" || path.extension() == ".FBX")
     {
         assetType = EAssetType::SkeletalMesh;
     }
-    else if (path.extension() == ".obj")
+    else if (path.extension() == ".obj" || path.extension() == ".OBJ")
     {
         assetType = EAssetType::StaticMesh;
     }
@@ -140,6 +201,7 @@ void UAssetManager::RegisterAsset(std::wstring filePath) const
     NewAssetInfo.PackagePath = FName(path.parent_path().string());
     NewAssetInfo.Size = static_cast<uint32>(std::filesystem::file_size(path));
     NewAssetInfo.AssetType = assetType;
+    NewAssetInfo.State = State;
     AssetRegistry->PathNameToAssetInfo.Add(NewAssetInfo.AssetName, NewAssetInfo);
 }
 
@@ -148,11 +210,28 @@ void UAssetManager::OnLoaded(const FString& filename)
     FName AssetName = FName(filename);
     for (auto& asset : AssetRegistry->PathNameToAssetInfo)
     {
-        if (asset.Value.GetFullPath() == filename)
+        if (asset.Value.AssetName == filename || asset.Value.GetFullPath() == filename)
         {
-            asset.Value.IsLoaded = true;
-            UE_LOG(ELogLevel::Display, "Asset Loaded : %s", *filename);
+            asset.Value.State = FAssetInfo::LoadState::Completed;
+            UE_LOG(ELogLevel::Display, "Asset loaded : %s", *filename);
             return;
         }
     }
+    UE_LOG(ELogLevel::Warning, "Asset loaded but failed to register: %s", *filename);
+    return;
+}
+
+void UAssetManager::OnFailed(const FString& filename)
+{
+    FName AssetName = FName(filename);
+    for (auto& asset : AssetRegistry->PathNameToAssetInfo)
+    {
+        if (asset.Value.AssetName == filename || asset.Value.GetFullPath() == filename)
+        {
+            asset.Value.State = FAssetInfo::LoadState::Failed;
+            UE_LOG(ELogLevel::Display, "Failed loading asset: %s", *filename);
+            return;
+        }
+    }
+    UE_LOG(ELogLevel::Warning, "Asset failed and failed to register: %s", *filename);
 }

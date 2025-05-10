@@ -42,7 +42,7 @@ public:
     virtual void Render(const std::shared_ptr<FEditorViewportClient>& Viewport) override;    
     virtual void ClearRenderArr() override;
 
-    void RenderPrimitive(FStaticMeshRenderData* render_data, const TArray<FStaticMaterial*> array, TArray<UMaterial*> materials, int32 SelectedSubMeshIndex);
+    void RenderPrimitive(const FStaticMeshRenderData& render_data, const TArray<FStaticMaterial*> array, TArray<UMaterial*> materials, int32 SelectedSubMeshIndex);
     virtual void RenderAllStaticMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
     virtual void RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport); // friend로 하든지 변경 필요
     void RenderAllStaticMeshesForCSM(const std::shared_ptr<FEditorViewportClient>& Viewport,

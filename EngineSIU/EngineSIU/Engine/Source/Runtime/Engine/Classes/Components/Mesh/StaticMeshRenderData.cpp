@@ -3,7 +3,6 @@
 #include "UObject/Casts.h"
 #include "UObject/ObjectFactory.h"
 
-#include "Engine/Asset/StaticMeshAsset.h"
 
 UObject* UStaticMesh::Duplicate(UObject* InOuter)
 {
@@ -30,22 +29,22 @@ void UStaticMesh::GetUsedMaterials(TArray<UMaterial*>& OutMaterial) const
     }
 }
 
-FWString UStaticMesh::GetOjbectName() const
+FString UStaticMesh::GetOjbectName() const
 {
-    return RenderData->ObjectName;
+    return RenderData.ObjectName;
 }
 
-void UStaticMesh::SetData(FStaticMeshRenderData* InRenderData)
+void UStaticMesh::SetData(const FStaticMeshRenderData& InRenderData)
 {
     RenderData = InRenderData;
 
-    for (int materialIndex = 0; materialIndex < RenderData->Materials.Num(); materialIndex++)
+    for (int materialIndex = 0; materialIndex < RenderData.Materials.Num(); materialIndex++)
     {
         FStaticMaterial* newMaterialSlot = new FStaticMaterial();
-        UMaterial* newMaterial = FObjManager::CreateMaterial(RenderData->Materials[materialIndex]);
+        UMaterial* newMaterial = FObjManager::CreateMaterial(RenderData.Materials[materialIndex]);
 
         newMaterialSlot->Material = newMaterial;
-        newMaterialSlot->MaterialSlotName = RenderData->Materials[materialIndex].MaterialName;
+        newMaterialSlot->MaterialSlotName = RenderData.Materials[materialIndex].MaterialName;
 
         materials.Add(newMaterialSlot);
     }

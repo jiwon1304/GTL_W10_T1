@@ -242,32 +242,32 @@ void FStaticMeshRenderPass::UpdateLitUnlitConstant(int32 isLit) const
     BufferManager->UpdateConstantBuffer(TEXT("FLitUnlitConstants"), Data);
 }
 
-void FStaticMeshRenderPass::RenderPrimitive(FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int SelectedSubMeshIndex) const
+void FStaticMeshRenderPass::RenderPrimitive(const FStaticMeshRenderData& RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int SelectedSubMeshIndex) const
 {
     UINT Stride = sizeof(FStaticMeshVertex);
     UINT Offset = 0;
 
     FVertexInfo VertexInfo;
-    BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+    BufferManager->CreateVertexBuffer(RenderData.ObjectName, RenderData.Vertices, VertexInfo);
 
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &Stride, &Offset);
 
     FIndexInfo IndexInfo;
-    BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
+    BufferManager->CreateIndexBuffer(RenderData.ObjectName, RenderData.Indices, IndexInfo);
     if (IndexInfo.IndexBuffer)
     {
         Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
     }
 
-    if (RenderData->MaterialSubsets.Num() == 0)
+    if (RenderData.MaterialSubsets.Num() == 0)
     {
-        Graphics->DeviceContext->DrawIndexed(RenderData->Indices.Num(), 0, 0);
+        Graphics->DeviceContext->DrawIndexed(RenderData.Indices.Num(), 0, 0);
         return;
     }
 
-    for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
+    for (int SubMeshIndex = 0; SubMeshIndex < RenderData.MaterialSubsets.Num(); SubMeshIndex++)
     {
-        uint32 MaterialIndex = RenderData->MaterialSubsets[SubMeshIndex].MaterialIndex;
+        uint32 MaterialIndex = RenderData.MaterialSubsets[SubMeshIndex].MaterialIndex;
 
         FSubMeshConstants SubMeshData = (SubMeshIndex == SelectedSubMeshIndex) ? FSubMeshConstants(true) : FSubMeshConstants(false);
 
@@ -282,8 +282,8 @@ void FStaticMeshRenderPass::RenderPrimitive(FStaticMeshRenderData* RenderData, T
             MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
         }
 
-        uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
-        uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
+        uint32 StartIndex = RenderData.MaterialSubsets[SubMeshIndex].IndexStart;
+        uint32 IndexCount = RenderData.MaterialSubsets[SubMeshIndex].IndexCount;
         Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
     }
 }
@@ -314,11 +314,7 @@ void FStaticMeshRenderPass::RenderAllStaticMeshes(const std::shared_ptr<FEditorV
             continue;
         }
 
-        FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
-        if (RenderData == nullptr)
-        {
-            continue;
-        }
+        const FStaticMeshRenderData RenderData = Comp->GetStaticMesh()->GetRenderData();
 
         UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
 
@@ -341,20 +337,20 @@ void FStaticMeshRenderPass::RenderAllStaticMeshes(const std::shared_ptr<FEditorV
         const bool bIsSelected = (Engine && TargetComponent == Comp);
 
         UpdateObjectConstant(WorldMatrix, UUIDColor, bIsSelected);
-
-#pragma region W08
-        FDiffuseMultiplier DM = {};
-        DM.DiffuseMultiplier = 0.f;
-        if (AFish* Fish = Cast<AFish>(Comp->GetOwner()))
-        {
-            if (!Fish->IsDead())
-            {
-                DM.DiffuseMultiplier = 1.f - Fish->GetHealthPercent();
-            }
-        }
-        DM.DiffuseOverrideColor = FVector(0.55f, 0.45f, 0.067f);
-        BufferManager->UpdateConstantBuffer(TEXT("FDiffuseMultiplier"), DM);
-#pragma endregion W08
+//
+//#pragma region W08
+//        FDiffuseMultiplier DM = {};
+//        DM.DiffuseMultiplier = 0.f;
+//        if (AFish* Fish = Cast<AFish>(Comp->GetOwner()))
+//        {
+//            if (!Fish->IsDead())
+//            {
+//                DM.DiffuseMultiplier = 1.f - Fish->GetHealthPercent();
+//            }
+//        }
+//        DM.DiffuseOverrideColor = FVector(0.55f, 0.45f, 0.067f);
+//        BufferManager->UpdateConstantBuffer(TEXT("FDiffuseMultiplier"), DM);
+//#pragma endregion W08
 
         RenderPrimitive(RenderData, Comp->GetStaticMesh()->GetMaterials(), Comp->GetOverrideMaterials(), Comp->GetselectedSubMeshIndex());
 
@@ -420,8 +416,8 @@ void FStaticMeshRenderPass::RenderAllStaticMeshesForPointLight(const std::shared
     {
         if (!Comp || !Comp->GetStaticMesh()) { continue; }
 
-        FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
-        if (RenderData == nullptr) { continue; }
+        const FStaticMeshRenderData RenderData = Comp->GetStaticMesh()->GetRenderData();
+        if (RenderData.IsEmpty()) { continue; }
 
         UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
 

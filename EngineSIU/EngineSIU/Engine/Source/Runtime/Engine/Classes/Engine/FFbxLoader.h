@@ -15,6 +15,7 @@ struct BoneWeights;
 class USkeletalMesh;
 
 DECLARE_DELEGATE_OneParam(FOnLoadFBXCompleted, const FString& /*filename*/);
+DECLARE_DELEGATE_OneParam(FOnLoadFBXFailed, const FString& /*filename*/);
 
 struct FFbxLoader
 {
@@ -24,6 +25,7 @@ public:
     static USkeletalMesh* GetSkeletalMesh(const FString& filename);
 
     inline static FOnLoadFBXCompleted OnLoadFBXCompleted;
+    inline static FOnLoadFBXFailed OnLoadFBXFailed;
 private:
     static USkeletalMesh* ParseSkeletalMesh(const FString& filename);
     static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);

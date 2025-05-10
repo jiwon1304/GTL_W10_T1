@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Misc/Spinlock.h"
 #include "EngineStatics.h"
 #include "Object.h"
 #include "Class.h"
@@ -9,6 +10,8 @@
 class FObjectFactory
 {
 public:
+    inline static FSpinLock Lock;
+
     static UObject* ConstructObject(UClass* InClass, UObject* InOuter, FName InName = NAME_None)
     {
         const uint32 Id = UEngineStatics::GenUUID();
@@ -24,7 +27,10 @@ public:
         Obj->UUID = Id;
         Obj->OuterPrivate = InOuter;
 
-        GUObjectArray.AddObject(Obj);
+        {
+            FSpinLockGuard LockGuard = FSpinLockGuard(Lock);
+            GUObjectArray.AddObject(Obj);
+        }
 
         UE_LOG(ELogLevel::Display, "Created New Object : %s", *Name);
         return Obj;

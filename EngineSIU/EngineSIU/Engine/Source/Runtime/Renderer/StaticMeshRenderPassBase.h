@@ -40,7 +40,7 @@ protected:
 
     void RenderAllStaticMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
-    void RenderPrimitive(FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex) const;
+    void RenderPrimitive(const FStaticMeshRenderData& RenderData, const TArray<FStaticMaterial*>& Materials, const TArray<UMaterial*>& OverrideMaterials, int32 SelectedSubMeshIndex) const;
 
     void RenderPrimitive(ID3D11Buffer* Buffer, UINT VerticesNum) const;
 

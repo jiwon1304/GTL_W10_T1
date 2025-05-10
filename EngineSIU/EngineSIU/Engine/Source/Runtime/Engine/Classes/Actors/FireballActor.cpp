@@ -9,9 +9,6 @@
 
 AFireballActor::AFireballActor()
 {
-    FObjManager::CreateStaticMesh("Contents/Sphere.obj");
-
-
     SphereComp = AddComponent<USphereComp>("USphereComp_0");
     
     SphereComp->SetStaticMesh(FObjManager::GetStaticMesh(L"Contents/Sphere.obj"));

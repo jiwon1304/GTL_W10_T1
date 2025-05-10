@@ -200,32 +200,32 @@ void FShadowRenderPass::SetLightData(const TArray<class UPointLightComponent*>& 
     SpotLights = InSpotLights;
 }
 
-void FShadowRenderPass::RenderPrimitive(FStaticMeshRenderData* RenderData, const TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex)
+void FShadowRenderPass::RenderPrimitive(const FStaticMeshRenderData& RenderData, const TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int32 SelectedSubMeshIndex)
 {
     UINT Stride = sizeof(FStaticMeshVertex);
     UINT Offset = 0;
 
     FVertexInfo VertexInfo;
-    BufferManager->CreateVertexBuffer(RenderData->ObjectName, RenderData->Vertices, VertexInfo);
+    BufferManager->CreateVertexBuffer(RenderData.ObjectName, RenderData.Vertices, VertexInfo);
     
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &Stride, &Offset);
 
     FIndexInfo IndexInfo;
-    BufferManager->CreateIndexBuffer(RenderData->ObjectName, RenderData->Indices, IndexInfo);
+    BufferManager->CreateIndexBuffer(RenderData.ObjectName, RenderData.Indices, IndexInfo);
     if (IndexInfo.IndexBuffer)
     {
         Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
     }
 
-    if (RenderData->MaterialSubsets.Num() == 0)
+    if (RenderData.MaterialSubsets.Num() == 0)
     {
-        Graphics->DeviceContext->DrawIndexed(RenderData->Indices.Num(), 0, 0);
+        Graphics->DeviceContext->DrawIndexed(RenderData.Indices.Num(), 0, 0);
         return;
     }
 
-    for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
+    for (int SubMeshIndex = 0; SubMeshIndex < RenderData.MaterialSubsets.Num(); SubMeshIndex++)
     {
-        uint32 MaterialIndex = RenderData->MaterialSubsets[SubMeshIndex].MaterialIndex;
+        uint32 MaterialIndex = RenderData.MaterialSubsets[SubMeshIndex].MaterialIndex;
 
         FSubMeshConstants SubMeshData = (SubMeshIndex == SelectedSubMeshIndex) ? FSubMeshConstants(true) : FSubMeshConstants(false);
 
@@ -240,8 +240,8 @@ void FShadowRenderPass::RenderPrimitive(FStaticMeshRenderData* RenderData, const
             MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->Material->GetMaterialInfo());
         }
 
-        uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
-        uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
+        uint32 StartIndex = RenderData.MaterialSubsets[SubMeshIndex].IndexStart;
+        uint32 IndexCount = RenderData.MaterialSubsets[SubMeshIndex].IndexCount;
         Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
     }
 }
@@ -255,11 +255,7 @@ void FShadowRenderPass::RenderAllStaticMeshes(const std::shared_ptr<FEditorViewp
             continue;
         }
 
-        FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
-        if (RenderData == nullptr)
-        {
-            continue;
-        }
+        const FStaticMeshRenderData& RenderData = Comp->GetStaticMesh()->GetRenderData();
 
         UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
 
@@ -287,11 +283,7 @@ void FShadowRenderPass::RenderAllStaticMeshesForCSM(const std::shared_ptr<FEdito
             continue;
         }
 
-        FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
-        if (RenderData == nullptr)
-        {
-            continue;
-        }
+        const FStaticMeshRenderData& RenderData = Comp->GetStaticMesh()->GetRenderData();
 
         UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
         FMatrix WorldMatrix = Comp->GetWorldMatrix();
@@ -330,8 +322,7 @@ void FShadowRenderPass::RenderAllStaticMeshesForPointLight(const std::shared_ptr
     {
         if (!Comp || !Comp->GetStaticMesh()) { continue; }
 
-        FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
-        if (RenderData == nullptr) { continue; }
+        const FStaticMeshRenderData& RenderData = Comp->GetStaticMesh()->GetRenderData();
 
         UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
 

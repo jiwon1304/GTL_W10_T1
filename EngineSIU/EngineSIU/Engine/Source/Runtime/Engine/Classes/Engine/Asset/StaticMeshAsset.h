@@ -16,7 +16,7 @@ struct FStaticMeshVertex
 
 struct FStaticMeshRenderData
 {
-    FWString ObjectName;
+    FString ObjectName;
     FString DisplayName;
 
     TArray<FStaticMeshVertex> Vertices;
@@ -27,4 +27,10 @@ struct FStaticMeshRenderData
 
     FVector BoundingBoxMin;
     FVector BoundingBoxMax;
+
+public:
+    inline bool IsEmpty() const
+    {
+        return Vertices.IsEmpty();
+    }
 };

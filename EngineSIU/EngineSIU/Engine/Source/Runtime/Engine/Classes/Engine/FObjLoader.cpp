@@ -1,5 +1,7 @@
 #include "FObjLoader.h"
 
+#include <thread>
+
 #include "UObject/ObjectFactory.h"
 #include "Components/Material/Material.h"
 #include "Components/Mesh/StaticMeshRenderData.h"
@@ -35,18 +37,6 @@ bool FObjLoader::ParseOBJ(const FString& ObjFilePath, FObjInfo& OutObjInfo)
     {
         OutObjInfo.DisplayName = fileName;
     }
-
-    /**
-     * 블렌더 Export 설정
-     *   > General
-     *       Forward Axis:  Y
-     *       Up Axis:       Z
-     *   > Geometry
-     *       ✅ Triangulated Mesh
-     *   > Materials
-     *       ✅ PBR Extensions
-     *       Path Mode:     Strip
-     */
 
     std::string Line;
 
@@ -456,7 +446,7 @@ bool FObjLoader::ParseMaterial(FObjInfo& OutObjInfo, FStaticMeshRenderData& OutF
     return true;
 }
 
-bool FObjLoader::ConvertToStaticMesh(const FObjInfo& RawData, FStaticMeshRenderData& OutStaticMesh)
+bool FObjLoader::ConvertToRenderData(const FObjInfo& RawData, FStaticMeshRenderData& OutStaticMesh)
 {
     OutStaticMesh.ObjectName = RawData.ObjectName;
     OutStaticMesh.DisplayName = RawData.DisplayName;
@@ -636,63 +626,58 @@ void FObjLoader::CalculateTangent(FStaticMeshVertex& PivotVertex, const FStaticM
     PivotVertex.TangentW = Sign;
 }
 
-FStaticMeshRenderData* FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
+// 중복 체크를 하지 않고 .obj 파일이나 .bin 파일에서 로드
+// 하나 쓰레드만 사용
+FStaticMeshRenderData FObjManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
-    FStaticMeshRenderData* NewStaticMesh = new FStaticMeshRenderData();
+    static std::mutex M;
+    std::lock_guard<std::mutex> L(M);
+    FStaticMeshRenderData NewStaticMesh;
 
-    if ( const auto It = ObjStaticMeshMap.Find(PathFileName))
-    {
-        return *It;
-    }
-
+    // 바이너리 로드
     FWString BinaryPath = (PathFileName + ".bin").ToWideString();
     if (std::ifstream(BinaryPath).good())
     {
-        if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
+        if (LoadStaticMeshFromBinary(BinaryPath, NewStaticMesh))
         {
-            ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
             return NewStaticMesh;
         }
     }
 
-    // Parse OBJ
+    // .obj 파싱
     FObjInfo NewObjInfo;
     bool Result = FObjLoader::ParseOBJ(PathFileName, NewObjInfo);
 
     if (!Result)
-    {
-        delete NewStaticMesh;
-        return nullptr;
+    {   
+        return FStaticMeshRenderData();
     }
 
     // Material
     if (NewObjInfo.MaterialSubsets.Num() > 0)
     {
-        Result = FObjLoader::ParseMaterial(NewObjInfo, *NewStaticMesh);
+        Result = FObjLoader::ParseMaterial(NewObjInfo, NewStaticMesh);
 
         if (!Result)
         {
-            delete NewStaticMesh;
-            return nullptr;
+            return FStaticMeshRenderData();
         }
 
-        CombineMaterialIndex(*NewStaticMesh);
+        CombineMaterialIndex(NewStaticMesh);
 
-        for (int materialIndex = 0; materialIndex < NewStaticMesh->Materials.Num(); materialIndex++) {
-            CreateMaterial(NewStaticMesh->Materials[materialIndex]);
+        for (int materialIndex = 0; materialIndex < NewStaticMesh.Materials.Num(); materialIndex++) {
+            CreateMaterial(NewStaticMesh.Materials[materialIndex]);
         }
     }
 
     // Convert FStaticMeshRenderData
-    Result = FObjLoader::ConvertToStaticMesh(NewObjInfo, *NewStaticMesh);
+    Result = FObjLoader::ConvertToRenderData(NewObjInfo, NewStaticMesh);
     if (!Result)
     {
-        delete NewStaticMesh;
-        return nullptr;
+        return FStaticMeshRenderData();
     }
 
-    SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh); 
-    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+    SaveStaticMeshToBinary(BinaryPath, NewStaticMesh); 
     return NewStaticMesh;
 }
 
@@ -722,7 +707,7 @@ bool FObjManager::SaveStaticMeshToBinary(const FWString& FilePath, const FStatic
     }
 
     // Object Name
-    Serializer::WriteFWString(File, StaticMesh.ObjectName);
+    Serializer::WriteFString(File, StaticMesh.ObjectName);
 
     // Display Name
     Serializer::WriteFString(File, StaticMesh.DisplayName);
@@ -801,7 +786,7 @@ bool FObjManager::LoadStaticMeshFromBinary(const FWString& FilePath, FStaticMesh
     TArray<TPair<FWString, bool>> Textures;
 
     // Object Name
-    Serializer::ReadFWString(File, OutStaticMesh.ObjectName);
+    Serializer::ReadFString(File, OutStaticMesh.ObjectName);
 
     //// Path Name
     //Serializer::ReadFWString(File, OutStaticMesh.PathName);
@@ -907,27 +892,92 @@ UMaterial* FObjManager::GetMaterial(FString name)
     return MaterialMap[name];
 }
 
-UStaticMesh* FObjManager::CreateStaticMesh(const FString& filePath)
+// 비동기로 진행됩니다.
+void FObjManager::CreateStaticMesh(const FString& filePath)
 {
-    FStaticMeshRenderData* StaticMeshRenderData = FObjManager::LoadObjStaticMeshAsset(filePath);
+    UE_LOG(ELogLevel::Display, "Loading OBJ : %s", *filePath);
 
-    if (StaticMeshRenderData == nullptr) return nullptr;
-
-    UStaticMesh* StaticMesh = GetStaticMesh(StaticMeshRenderData->ObjectName);
-    if (StaticMesh != nullptr)
+    if (IsRegistered(filePath))
     {
-        return StaticMesh;
+        return;
     }
 
-    UAssetManager& AssetManager = UAssetManager::Get();
-    StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>(&AssetManager);
-    StaticMesh->SetData(StaticMeshRenderData);
+    SetState(filePath, LoadState::Loading);
 
-    StaticMeshMap.Add(StaticMeshRenderData->ObjectName, StaticMesh); // TODO: 장기적으로 보면 파일 이름 대신 경로를 Key로 사용하는게 좋음.
-    return StaticMesh;
+    std::thread Loader = std::thread([filePath]()
+        {
+            // obj 파싱은 race condition 무시
+            FStaticMeshRenderData StaticMeshRenderData = FObjManager::LoadObjStaticMeshAsset(filePath);
+
+            if (StaticMeshRenderData.Vertices.Num() == 0)
+            {
+                OnLoadOBJFailed.Execute(filePath);
+                FObjManager::SetFailed(filePath);
+                return;
+            }
+
+            UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>(nullptr);
+            StaticMesh->SetData(StaticMeshRenderData);
+            FObjManager::SetCompleted(filePath, StaticMesh);
+
+            // UAssetManager에서 등록
+            OnLoadOBJCompleted.Execute(filePath);
+        });
+    Loader.detach();
 }
 
-UStaticMesh* FObjManager::GetStaticMesh(const FWString& name)
+// 메인 쓰레드에서 실행됨
+UStaticMesh* FObjManager::GetStaticMesh(const FString& filename)
 {
-    return StaticMeshMap[name];
+    while (true)
+    {
+        {
+            std::lock_guard<std::mutex> lock(MapMutex);
+
+            // 로드를 시도했으면 기다림
+            if (MeshMap.Contains(filename))
+            {
+                const MeshEntry& entry = MeshMap[filename];
+                switch (entry.State)
+                {
+                case LoadState::Completed:
+                    return entry.Mesh;
+                case LoadState::Failed:
+                    return nullptr;
+                case LoadState::Loading:
+                    break; //switch break : 기다림
+                }
+            }
+            else
+            {
+                break; // while break : 메인 쓰레드에서 로드
+            }
+        }
+
+        // Sleep 없이 무한 루프 → CPU 낭비 방지
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // 로드를 시작한 적이 없으면 메인쓰레드에서 로드
+    // 이 경우 AssetManager에서 로드한 적이 없는거이므로
+    // AssetManager에 추가
+    UStaticMesh* mesh = nullptr;
+    {
+        // 메인쓰레드에서 실행
+        const FStaticMeshRenderData RenderData = FObjManager::LoadObjStaticMeshAsset(filename);
+        bool bFailed = RenderData.IsEmpty();
+        if (!bFailed)
+        {
+            mesh = FObjectFactory::ConstructObject<UStaticMesh>(nullptr);
+            mesh->SetData(RenderData);
+            SetCompleted(filename, mesh);
+            UAssetManager::Get().RegisterAsset(StringToWString(*filename), FAssetInfo::LoadState::Completed);
+        }
+        else
+        {
+            SetFailed(filename);
+            UAssetManager::Get().RegisterAsset(StringToWString(*filename), FAssetInfo::LoadState::Failed);
+        }
+    }
+    return mesh;
 }

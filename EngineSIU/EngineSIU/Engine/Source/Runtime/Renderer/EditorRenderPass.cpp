@@ -523,7 +523,7 @@ void FEditorRenderPass::RenderAABBInstanced()
             return;
         FVector min = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
         FVector max = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-        for (const FStaticMeshVertex& Vertex : SMComp->GetStaticMesh()->GetRenderData()->Vertices)
+        for (const FStaticMeshVertex& Vertex : SMComp->GetStaticMesh()->GetRenderData().Vertices)
         {
             FVector VertexWorld = FVector(Vertex.X, Vertex.Y, Vertex.Z);
             VertexWorld = SMComp->GetWorldMatrix().TransformPosition(VertexWorld);
@@ -739,8 +739,8 @@ void FEditorRenderPass::LazyLoad()
 
     // Gizmo arrow 로드
     UStaticMesh* Mesh = FObjManager::GetStaticMesh(L"Assets/GizmoTranslationZ.obj");
-    BufferManager->CreateVertexBuffer(ArrowKey, Mesh->GetRenderData()->Vertices);
-    BufferManager->CreateIndexBuffer(ArrowKey, Mesh->GetRenderData()->Indices);
+    BufferManager->CreateVertexBuffer(ArrowKey, Mesh->GetRenderData().Vertices);
+    BufferManager->CreateIndexBuffer(ArrowKey, Mesh->GetRenderData().Indices);
 }
 
 void FEditorRenderPass::RenderIcons(const std::shared_ptr<FEditorViewportClient>& Viewport)

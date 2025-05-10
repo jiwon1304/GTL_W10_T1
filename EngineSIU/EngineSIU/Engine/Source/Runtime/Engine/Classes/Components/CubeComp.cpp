@@ -19,7 +19,6 @@ void UCubeComp::InitializeComponent()
     //SetStaticMesh(FManagerGetStaticMesh(L"helloBlender.obj"));
     // 
     // Begin Test
-    FObjManager::CreateStaticMesh("Contents/Reference/Reference.obj");
     SetStaticMesh(FObjManager::GetStaticMesh(L"Reference.obj"));
     // End Test
 }

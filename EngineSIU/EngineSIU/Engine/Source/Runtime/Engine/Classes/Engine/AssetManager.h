@@ -12,11 +12,17 @@ enum class EAssetType : uint8
 
 struct FAssetInfo
 {
+    enum class LoadState : int8
+    {
+        Loading,
+        Completed,
+        Failed
+    };
     FName AssetName;      // Asset의 이름
     FName PackagePath;    // Asset의 패키지 경로
     EAssetType AssetType; // Asset의 타입
     uint32 Size;          // Asset의 크기 (바이트 단위)
-    bool IsLoaded = true;
+    LoadState State;
 
     FString GetFullPath() const { return PackagePath.ToString() / AssetName.ToString(); }
 };
@@ -52,9 +58,12 @@ public:
     //void LoadAssetsOnScene();
     void LoadEntireAssets();
 
-    void RegisterAsset(std::wstring filePath) const;
+    void RegisterAsset(std::wstring filePath, FAssetInfo::LoadState State);
 
 private:
 
+
     void OnLoaded(const FString& filename);
+
+    void OnFailed(const FString& filename);
 };
