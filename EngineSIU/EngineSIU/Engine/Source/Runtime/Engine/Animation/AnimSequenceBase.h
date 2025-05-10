@@ -10,7 +10,7 @@ class UAnimSequenceBase : public UObject
     DECLARE_CLASS(UAnimSequenceBase, UObject)
 
 public:
-    UAnimSequenceBase() = default;
+    UAnimSequenceBase();
 
 public:
     void SetName(const FString& InName) { Name = InName; }
@@ -21,6 +21,14 @@ public:
 
     void SetSequenceLength(float InLength) { SequenceLength = InLength; }
     float GetSequenceLength() const { return SequenceLength; }
+
+    void SetRateScale(float InRateScale) { RateScale = InRateScale; }
+    float GetRateScale() const { return RateScale; }
+
+    void SetLooping(bool bIsLooping) { bLoop = bIsLooping; }
+    bool IsLooping() const { return bLoop; }
+
+
 
 public:
     FString Name;
@@ -39,4 +47,9 @@ public:
 
     //struct FRawCurveTracks RawCurveData;
 };
+
+inline UAnimSequenceBase::UAnimSequenceBase()
+{
+    RateScale = 1.0f;
+}
 

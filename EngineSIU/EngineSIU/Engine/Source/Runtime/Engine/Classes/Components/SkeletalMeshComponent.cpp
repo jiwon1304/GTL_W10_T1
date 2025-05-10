@@ -6,7 +6,32 @@
 #include "Engine/FFbxLoader.h"
 #include "UObject/Casts.h"
 #include "Components/Mesh/SkeletalMesh.h"
+#include "GameFramework/Actor.h"
 #include "Math/JungleMath.h"
+#include "UObject/ObjectFactory.h"
+
+void USkeletalMeshComponent::InitializeComponent()
+{
+    Super::InitializeComponent();
+
+    /* ImGui로 play 버튼 누르면 editor에서도 움직이도록 수정 */
+    GetOwner()->SetActorTickInEditor(true);
+}
+
+void USkeletalMeshComponent::TickComponent(float DeltaSeconds)
+{
+    Super::TickComponent(DeltaSeconds);
+
+    /* 애니메이션 비활성화 또는 필요한 에셋과 인스턴스 없으면 실행 안 함
+     * 위 경우 CurrentPose는 이전 상태 유지하거나, ResetPose() 등으로 기본 포즈임
+     */
+    if (!bEnableAnimation || !SkeletalMesh || !AnimScriptInstance)
+    {
+        return;
+    }
+
+    AnimScriptInstance->UpdateAnimation(DeltaSeconds, CurrentPose);
+}
 
 UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 {
@@ -338,15 +363,40 @@ void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* NewAnimToPlay)
         return;
     }
 
+    // AnimationSingleNode 모드인지 확인 및 AnimScriptInstance 생성/가져오기
+    if (AnimationMode != EAnimationMode::AnimationSingleNode)
+    {
+        // UE_LOG(ELogLevel::Warning, TEXT("SetAnimation called but AnimationMode is not AnimationSingleNode. Forcing mode."));
+        SetAnimationMode(EAnimationMode::AnimationSingleNode); // 강제로 모드 변경
+    }
+
+    // SetAnimationMode 내부에서 AnimScriptInstance가 생성되도록 하거나, 여기서 생성
+    if (!AnimScriptInstance) 
+    {
+        AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
+        if (AnimScriptInstance) 
+        {
+            AnimScriptInstance->Initialize(this); // UAnimInstance 초기화
+        }
+        else 
+        {
+            UE_LOG(ELogLevel::Error, TEXT("Failed to create AnimScriptInstance in SetAnimation for %s"), *GetName());
+            return;
+        }
+    }
+
+
     UAnimSingleNodeInstance* SingleNodeInstance = GetSingleNodeInstance();
     if (SingleNodeInstance)
     {
-        SingleNodeInstance->SetAnimationAsset(NewAnimToPlay, false);
-        SingleNodeInstance->SetPlaying(false);
-    }
-    else if (AnimScriptInstance != nullptr)
-    {
-        UE_LOG(ELogLevel::Warning, TEXT("No A in Animation Blueprint mode. Please change AnimationMode to Use Animation Asset"));
+        // 애니메이션 설정 (시간 및 상태 리셋)
+        SingleNodeInstance->SetAnimationAsset(NewAnimToPlay, true); 
+        // 기본적으로는 재생 중지 상태로 설정 (Play 함수로 시작)
+        SingleNodeInstance->SetPlaying(false); 
+        if (!NewAnimToPlay) 
+        { 
+            ResetPose();        // 애니메이션이 null이면 참조 포즈로
+        }
     }
 }
 
@@ -357,7 +407,7 @@ void USkeletalMeshComponent::SetAnimationMode(EAnimationMode::Type InAnimationMo
 
 void USkeletalMeshComponent::PlayAnimation(class UAnimSequenceBase* NewAnimToPlay, bool bLooping)
 {
-    SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    SetAnimationMode(EAnimationMode::AnimationSingleNode); // 현재 기본모드는 single node
     SetAnimation(NewAnimToPlay);
     Play(bLooping);
 }
@@ -373,11 +423,14 @@ void USkeletalMeshComponent::Play(bool bLooping) const
     UAnimSingleNodeInstance* SingleNodeInstance = GetSingleNodeInstance();
     if (SingleNodeInstance)
     {
-        SingleNodeInstance->SetPlaying(true);
-        SingleNodeInstance->SetLooping(bLooping);
+        if (SingleNodeInstance->GetCurrentSequence())
+        {
+            SingleNodeInstance->SetPlaying(true);
+            SingleNodeInstance->GetCurrentSequence()->SetLooping(bLooping);
+        }
     }
-    else if (AnimScriptInstance != nullptr)
+    else
     {
-        UE_LOG(ELogLevel::Warning, TEXT("Currently in Animation Blueprint mode. Please change AnimationMode to Use Animation Asset"));
+        UE_LOG(ELogLevel::Warning, TEXT("Play: No animation sequence set in AnimSingleNodeInstance for %s."), *GetName());
     }
 }

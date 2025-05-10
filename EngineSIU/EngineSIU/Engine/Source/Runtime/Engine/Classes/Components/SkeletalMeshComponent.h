@@ -22,6 +22,8 @@ class USkeletalMeshComponent: public UMeshComponent
     DECLARE_CLASS(USkeletalMeshComponent, UMeshComponent)
 public:
     USkeletalMeshComponent() = default;
+    virtual void InitializeComponent() override;
+    virtual void TickComponent(float DeltaSeconds) override;
     
     virtual UObject* Duplicate(UObject* InOuter) override;
     virtual void GetProperties(TMap<FString, FString>& OutProperties) const override;
@@ -48,9 +50,11 @@ public:
 
 protected:
     EAnimationMode::Type AnimationMode;
-    uint8 bEnableAnimation : 1;
+    uint8 bEnableAnimation : 1 = true;
 
 protected:
     USkeletalMesh* SkeletalMesh = nullptr;
     UAnimInstance* AnimScriptInstance = nullptr;
+
+    float CurrentAnimTime = 0.0f;
 };

@@ -23,6 +23,11 @@ struct FReferenceSkeleton
     // joint pose 저장용도. Index는 RawRefBoneInfo를 따라갑니다.
     TArray<FTransform> RawRefBonePose;
     TMap<FString, int32> RawNameToIndexMap;
+
+    int32 GetRawBoneNum() const
+    {
+        return RawRefBoneInfo.Num();
+    }
 };  
 
 // !!! FFbxVertex랑 메모리 레이아웃이 같아야합니다.

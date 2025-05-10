@@ -1665,6 +1665,7 @@
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Transform.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\MathSSE.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimData\AnimDataModel.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimInstance.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="EngineSIU.natvis" />
