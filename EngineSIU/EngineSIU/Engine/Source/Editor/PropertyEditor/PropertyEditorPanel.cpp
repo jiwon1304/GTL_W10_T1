@@ -1385,7 +1385,25 @@ void PropertyEditorPanel::RenderMaterialView(UMaterial* Material)
     {
         const FVector NewColor = { EmissiveColorPick[0], EmissiveColorPick[1], EmissiveColorPick[2] };
         Material->SetEmissive(NewColor);
+    } 
+    
+    TArray<FTextureInfo>& Textures = Material->GetMaterialInfo().TextureInfos;
+    ImGui::Text("Texture Diffuse : %s", Textures[0].TexturePath.c_str());
+    ImGui::Text("Texture Specular : %s", Textures[1].TexturePath.c_str());
+    ImGui::Text("Texture Normal : %s", Textures[2].TexturePath.c_str());
+    ImGui::Text("Texture Emissive : %s", Textures[3].TexturePath.c_str());
+    ImGui::Text("Texture Alpha : %s", Textures[4].TexturePath.c_str());
+    ImGui::Text("Texture Ambient : %s", Textures[5].TexturePath.c_str());
+    ImGui::Text("Texture Shininess : %s", Textures[6].TexturePath.c_str());
+    ImGui::Text("Texture Metallic : %s", Textures[7].TexturePath.c_str());
+    ImGui::Text("Texture Roughness : %s", Textures[8].TexturePath.c_str());
+
+
+    for (const auto& Texture : Textures)
+    {
+        ImGui::Text("Texture : %s", Texture.TexturePath.c_str());
     }
+
 
     ImGui::Spacing();
     ImGui::Separator();

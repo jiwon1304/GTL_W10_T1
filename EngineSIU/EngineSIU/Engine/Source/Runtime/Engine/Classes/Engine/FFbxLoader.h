@@ -30,10 +30,10 @@ public:
     inline static FOnLoadFBXFailed OnLoadFBXFailed;
 private:
     static USkeletalMesh* ParseSkeletalMesh(const FString& filename);
-    static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath, USkeletalMesh* Mesh);
+    static FFbxSkeletalMesh* ParseFBX(const FString& FBXFilePath);
     static FbxIOSettings* GetFbxIOSettings();
     static FbxCluster* FindClusterForBone(FbxNode* boneNode);
-    static FFbxSkeletalMesh* LoadFBXObject(FbxScene* InFbxScene, USkeletalMesh* Mesh);
+    static FFbxSkeletalMesh* LoadFBXObject(FbxScene* InFbxScene);
     static void LoadFbxSkeleton(
         FFbxSkeletalMesh* fbxObject,
         FbxNode* node,

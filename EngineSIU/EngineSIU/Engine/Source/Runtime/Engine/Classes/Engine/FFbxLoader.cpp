@@ -123,7 +123,7 @@ USkeletalMesh* FFbxLoader::GetSkeletalMesh(const FString& filename)
 }
 
 // .fbx 파일을 파싱합니다.
-FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath, USkeletalMesh* Mesh)
+FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath)
 {
     UE_LOG(ELogLevel::Display, "Start FBX Parsing : %s", *FBXFilePath);
     // .fbx 파일을 로드/언로드 시에만 mutex를 사용
@@ -188,7 +188,7 @@ FFbxSkeletalMesh* FFbxLoader::ParseFBX(const FString& FBXFilePath, USkeletalMesh
 
     FFbxSkeletalMesh* result;
 
-    result = LoadFBXObject(scene, Mesh);
+    result = LoadFBXObject(scene);
     scene->Destroy();
     result->name = FBXFilePath;
     UE_LOG(ELogLevel::Display, "FBX parsed: %s", *FBXFilePath);
@@ -328,7 +328,7 @@ USkeletalMesh* FFbxLoader::ParseSkeletalMesh(const FString& filename)
     return newSkeletalMesh;
 }
 
-FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxScene, USkeletalMesh* Mesh)
+FFbxSkeletalMesh* FFbxLoader::LoadFBXObject(FbxScene* InFbxScene)
 {
     FFbxSkeletalMesh* result = new FFbxSkeletalMesh();
 
