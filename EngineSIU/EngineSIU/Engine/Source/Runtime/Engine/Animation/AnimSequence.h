@@ -12,6 +12,9 @@ public:
     UAnimSequence() = default;
     //virtual UObject* Duplicate(UObject* InOuter) override;
 
+    void SetName(const FString& InName) { Name = InName; }
+    FString GetSeqName() const { return Name; }
 
+    FString Name;
     UAnimDataModel* DataModel;
 };

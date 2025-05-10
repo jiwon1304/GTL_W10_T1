@@ -43,6 +43,7 @@ private:
         const TMap<FString, int>& boneNameToIndex,
         TMap<int, TArray<BoneWeights>>& OutBoneWeights
     );
+    static void ParseFBXAnimationOnly(const FString& filename, USkeletalMesh* skeletalMesh);
     static void LoadFBXMesh(
         FFbxSkeletalMesh* fbxObject,
         FbxNode* node,
