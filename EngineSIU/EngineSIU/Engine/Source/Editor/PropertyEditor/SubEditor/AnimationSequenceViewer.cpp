@@ -59,12 +59,11 @@ void AnimationSequenceViewer::OnResize(HWND hWnd)
 
 void AnimationSequenceViewer::RenderAnimationSequence(float Width, float Height) const
 {
-    static int32_t currentFrame = 0;
-    static int32_t startFrame = 0;
-    static int32_t endFrame = 64;
+    static float_t currentFrame = 0.0f;
+    static float_t startFrame = 0.0f;
+    static float_t endFrame = 64.0f;
     static bool transformOpen = false;
-    std::vector<ImGui::FrameIndexType> keys = {0, 10, 24};
-    bool doDelete = false;
+    std::vector<ImGui::FrameIndexType> keys = {0.0f, 10.2f, 24.3f};
 
     if (ImGui::BeginNeoSequencer("Sequencer", &currentFrame, &startFrame, &endFrame, {Width, Height},
                                  ImGuiNeoSequencerFlags_EnableSelection |
@@ -125,10 +124,9 @@ void AnimationSequenceViewer::RenderPlayController(float Width, float Height) co
 
     ImGui::SameLine();
 
-    if (ImGui::Button("\ue9d1", IconSize)) // Repeat
-    {
-        
-    }
+    static bool bRepeat = false;
+    RepeatButton(&bRepeat);
+    
     ImGui::PopFont();
 
     ImGui::SameLine();
@@ -146,4 +144,21 @@ void AnimationSequenceViewer::RenderAssetDetails() const
 void AnimationSequenceViewer::RenderAssetBrowser() const
 {
     
+}
+
+void AnimationSequenceViewer::PlayButton(bool* v) const
+{
+    // Not implement
+}
+
+void AnimationSequenceViewer::RepeatButton(bool* v) const
+{
+    ImVec4 ColorBg = *v ? ImVec4(0.0f, 0.3f, 0.0f, 1.0f) : ImVec4(0, 0, 0, 1.0f);
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, ColorBg);
+    if (ImGui::Button("\ue9d1", ImVec2(32, 32))) // Repeat
+    {
+        *v = !*v;
+    }
+    ImGui::PopStyleColor();
 }

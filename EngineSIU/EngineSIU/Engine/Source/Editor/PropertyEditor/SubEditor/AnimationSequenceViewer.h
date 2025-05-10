@@ -13,7 +13,9 @@ private:
     void RenderPlayController(float Width, float Height) const;
     void RenderAssetDetails() const;
     void RenderAssetBrowser() const;
-    
+
+    void PlayButton(bool* v) const;
+    void RepeatButton(bool* v) const;
 private:
     float Width = 800, Height = 600;
 };
