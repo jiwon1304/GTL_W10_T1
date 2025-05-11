@@ -484,8 +484,6 @@ void PropertyEditorPanel::DrawAnimationControls(USkeletalMeshComponent* Skeletal
         ImGui::EndCombo();
     }
 
-    ImGui::Spacing();
-
     bool bCanPlay = (SelectedAnimIndex != -1 && !SelectedAnimName.IsEmpty());
 
     if (ImGui::Button("Play Animation", ImVec2(120, 0)))
@@ -519,6 +517,79 @@ void PropertyEditorPanel::DrawAnimationControls(USkeletalMeshComponent* Skeletal
     ImGui::Spacing();
     ImGui::Separator();
 
+
+    if (ImGui::BeginCombo("Blend Animations A", preview_value))
+    {
+        for (int i = 0; i < animNames.Num(); ++i)
+        {
+            const bool is_selected = (SelectedAnimIndex == i);
+            if (ImGui::Selectable(*animNames[i], is_selected))
+            {
+                SelectedBlendingAnimIndexA = i;
+                SelectedBlendingAnimNameA = animNames[i]; // 선택된 애니메이션 이름 업데이트
+            }
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    if (ImGui::BeginCombo("Blend Animations B", preview_value))
+    {
+        for (int i = 0; i < animNames.Num(); ++i)
+        {
+            const bool is_selected = (SelectedBlendingAnimIndexB == i);
+            if (ImGui::Selectable(*animNames[i], is_selected))
+            {
+                SelectedBlendingAnimIndexB = i;
+                SelectedBlendingAnimNameB = animNames[i]; // 선택된 애니메이션 이름 업데이트
+            }
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::Spacing();
+
+    bool bCanPlayBlendedAnim = (SelectedBlendingAnimIndexA != -1 && SelectedBlendingAnimIndexB != -1 && !SelectedBlendingAnimNameA.IsEmpty() && !SelectedBlendingAnimNameB.IsEmpty());
+
+    if (ImGui::Button("Play Blending Animation", ImVec2(120, 0)))
+    {
+        if (SelectedSkeleton && bCanPlayBlendedAnim) // SelectedSkeleton 유효성 재확인
+        {
+            UAnimSequence* animToPlayA = FFbxLoader::GetAnimSequenceByName(SelectedBlendingAnimNameA);
+            UAnimSequence* animToPlayB = FFbxLoader::GetAnimSequenceByName(SelectedBlendingAnimNameB);
+
+            if (animToPlayA && animToPlayB)
+            {
+                UE_LOG(ELogLevel::Display, TEXT("Playing animation: %s, %s"), *SelectedBlendingAnimNameA, *SelectedBlendingAnimNameB);
+                SelectedSkeleton->PlayBlendingAnimation(animToPlayA, animToPlayB, true); // bLooping = true
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not find or load animation: %s"), *SelectedAnimName);
+            }
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Stop Animation", ImVec2(120, 0)))
+    {
+        if (SelectedSkeleton)
+        {
+            UE_LOG(ELogLevel::Display, TEXT("Stopping animation."));
+            SelectedSkeleton->PlayAnimation(nullptr, false); // null 재생으로 중지
+            SelectedSkeleton->ResetPose(); // 기본 포즈로
+        }
+    }
+    ImGui::Spacing();
+    ImGui::Separator();
+    
 
 }
 

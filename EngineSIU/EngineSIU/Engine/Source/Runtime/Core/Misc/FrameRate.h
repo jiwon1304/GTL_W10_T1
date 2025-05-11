@@ -32,8 +32,9 @@ struct FFrameRate
     double AsInterval() const;
 
     double AsDecimal() const;
-    double AsSeconds(FFrameTime FrameNumber) const;
-    FFrameTime AsFrameTime(double InTimeSeconds) const;
+  
+    double AsSeconds(FFrameTime FrameNumber) const;                 // 특정 프레임 위치를 초 단위로 변환.
+    FFrameTime AsFrameTime(double InTimeSeconds) const;             // 초 단위 시간을 FFrameTime으로 변환.
 
     // uint32 AsFrameNumber(double InTimeSeconds) const;
     // bool IsMultipleOf(FFrameRate Other) const;
@@ -71,11 +72,13 @@ struct FFrameRate
     //}
 };
 
+// 한 프레임의 시간 간격 반환
 inline double FFrameRate::AsInterval() const
 {
     return double(Denominator) / double(Numerator);
 }
 
+// 정수 표현 fps 부동소수점으로 반환
 inline double FFrameRate::AsDecimal() const
 {
     return double(Numerator) / double(Denominator);

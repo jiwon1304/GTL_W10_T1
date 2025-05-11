@@ -109,6 +109,13 @@ private:
     /* Animation Property for Debug */
     int SelectedAnimIndex = -1;
     FString SelectedAnimName;
+
+    /* Animation Blending Property for Debug*/
+    int SelectedBlendingAnimIndexA = -1;
+    FString SelectedBlendingAnimNameA;
+
+    int SelectedBlendingAnimIndexB = -1;
+    FString SelectedBlendingAnimNameB
 };
 
 template <typename T> requires std::derived_from<T, UActorComponent>

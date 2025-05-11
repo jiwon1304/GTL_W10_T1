@@ -85,7 +85,7 @@ void UAnimInstance::UpdateAnimation(float DeltaSeconds, TArray<FTransform>& OutP
             if (CurrentTime == SequenceLength) CurrentTime = 0.0f; // 정확히 0이 되도록
         }
     }
-    else // 루핑이 아닐 때
+    else 
     {
         if (CurrentTime >= SequenceLength)
         {
