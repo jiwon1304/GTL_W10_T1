@@ -412,6 +412,13 @@ void USkeletalMeshComponent::PlayAnimation(class UAnimSequenceBase* NewAnimToPla
     Play(bLooping);
 }
 
+void USkeletalMeshComponent::PlayBlendingAnimation(class UAnimSequenceBase* NewAnimToPlayA, class UAnimSequenceBase* NewAnimToPlayB, bool bLooping)
+{
+    SetAnimationMode(EAnimationMode::AnimationSingleNode); // 현재 기본모드는 single node
+    SetAnimation(NewAnimToPlay);
+    Play(bLooping);
+}
+
 void USkeletalMeshComponent::Play(bool bLooping) const
 {
     if (!bEnableAnimation)

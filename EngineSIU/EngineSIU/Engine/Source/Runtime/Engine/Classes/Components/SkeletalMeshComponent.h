@@ -43,6 +43,7 @@ public:
     void SetAnimation(UAnimSequenceBase* NewAnimToPlay);
     void SetAnimationMode(EAnimationMode::Type AnimationSingleNode);
     void PlayAnimation(class UAnimSequenceBase* NewAnimToPlay, bool bLooping);
+    void PlayBlendingAnimation(class UAnimSequenceBase* NewAnimToPlayA, class UAnimSequenceBase* NewAnimToPlayB, bool bLooping);
     void Play(bool bLooping) const;
 public:
     int SelectedBoneIndex = -1;
