@@ -42,7 +42,7 @@ public:
 
 public:
     FString Name;
-    UAnimDataModel* DataModel;
+    UAnimDataModel* DataModel = nullptr;
 
     TArray<struct FAnimNotifyEvent> Notifies;
 
