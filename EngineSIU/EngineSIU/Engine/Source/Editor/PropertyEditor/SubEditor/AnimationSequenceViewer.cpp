@@ -1,15 +1,12 @@
-#include "AnimationSequenceViewer.h"
+﻿#include "AnimationSequenceViewer.h"
 
 #include "Components/Mesh/SkeletalMesh.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimData/AnimDataModel.h"
-#include "Animation/AnimNotifies/AnimNotifyState_SlowMotion.h"
 #include "Contents/Actors/ItemActor.h"
 #include "Engine/EditorEngine.h"
 #include "Engine/FFbxLoader.h"
-
-//#define TEST_NOTIFY_STATE
 
 // UI Sample
 //https://dev.epicgames.com/documentation/ko-kr/unreal-engine#%EC%95%A0%EB%8B%88%EB%A9%94%EC%9D%B4%EC%85%98%EC%8B%9C%ED%80%80%EC%8A%A4%ED%8E%B8%EC%A7%91%ED%95%98%EA%B8%B0
@@ -244,13 +241,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                         NewNotify.TriggerTime = CurrentFrameSeconds;
                         NewNotify.Duration = 0.0f;
                         NewNotify.NotifyName = "NONE";
-#ifdef TEST_NOTIFY_STATE
-                        NewNotify.Duration = 2.0f;
-                        NewNotify.NotifyName = "SLOW_MOTION";
-                        UAnimNotifyState_SlowMotion* NewNotifyState = FObjectFactory::ConstructObject<UAnimNotifyState_SlowMotion>(nullptr);
-                            NewNotify.NotifyStateClass = Cast<UAnimNotifyState>(NewNotifyState);
-
-#endif
+                        
                         Notifies.Add(NewNotify);
                         bNeedsNotifyUpdate = true;
                     }

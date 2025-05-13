@@ -22,7 +22,7 @@ void UAnimNotifyState_SlowMotion::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 void UAnimNotifyState_SlowMotion::NotifyTick(USkeletalMeshComponent* MeshComp, float DeltaTime)
 {
     // Tick 처리 안해도 되지만 유지할 수 있음
-    UE_LOG(ELogLevel::Display,TEXT("[SlowMotion] NotifyTick - still active : %.9f"), DeltaTime);
+    UE_LOG(ELogLevel::Display,TEXT("[SlowMotion] NotifyTick - still active : %.1f"), DeltaTime);
 }
 
 void UAnimNotifyState_SlowMotion::NotifyEnd(USkeletalMeshComponent* MeshComp)
