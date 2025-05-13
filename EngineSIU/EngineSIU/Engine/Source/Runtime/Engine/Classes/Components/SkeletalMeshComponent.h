@@ -23,6 +23,7 @@ class USkeletalMeshComponent: public UMeshComponent
 public:
     USkeletalMeshComponent() = default;
     virtual void InitializeComponent() override;
+    void TickAnimation(float DeltaTime);
     virtual void TickComponent(float DeltaSeconds) override;
     
     virtual UObject* Duplicate(UObject* InOuter) override;
