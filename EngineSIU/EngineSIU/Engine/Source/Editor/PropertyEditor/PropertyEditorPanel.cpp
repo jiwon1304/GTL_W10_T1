@@ -44,6 +44,7 @@
 #include "LuaScripts/LuaScriptFileUtils.h"
 #include "imgui/imgui_bezier.h"
 #include "imgui/imgui_curve.h"
+#include "Animation/AnimData/AnimDataModel.h"
 
 void PropertyEditorPanel::Render()
 {
@@ -458,97 +459,176 @@ void PropertyEditorPanel::DrawAnimationControls(USkeletalMeshComponent* Skeletal
 {
     USkeletalMeshComponent* SelectedSkeleton = Cast<USkeletalMeshComponent>(SkeletalComp); // 선택된 스켈레탈 메시 컴포넌트 저장
     ImGui::Separator();
-    ImGui::Text("Animation Control");
     ImGui::Spacing();
-
-    if (!SelectedSkeleton) // SelectedSkeleton이 유효한지 먼저 확인
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::TreeNodeEx("Animation Control", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
-        ImGui::Text("No Skeletal Mesh Component selected.");
-        ImGui::Spacing();
-        ImGui::Separator();
-        return;
-    }
-
-    TArray<FString> animNames;
-    {
-        FSpinLockGuard Lock(FFbxManager::AnimMapLock);
-        for (auto const& [name, entry] : FFbxManager::GetAnimSequences())
+        if (!SelectedSkeleton) // SelectedSkeleton이 유효한지 먼저 확인
         {
-            if (entry.State == FFbxManager::LoadState::Completed && entry.Sequence != nullptr)
+            ImGui::Text("No Skeletal Mesh Component selected.");
+            ImGui::Spacing();
+            ImGui::Separator();
+            return;
+        }
+
+        TArray<FString> AnimSeqNames;
+        for (auto const& [name, Seq] : FFbxManager::GetAnimSequences())
+        {
+            if (Seq != nullptr)
             {
-                animNames.Add(name);
+                AnimSeqNames.Add(name);
             }
         }
-    }
 
-    const char* preview_value = (SelectedAnimIndex != -1 && SelectedAnimIndex < animNames.Num()) ? *animNames[SelectedAnimIndex] : "None";
-
-    if (ImGui::BeginCombo("Animations", preview_value))
-    {
-        for (int i = 0; i < animNames.Num(); ++i)
+        /*
+        Animation Sequence를 지정 (Data + Notify + ...)
+        또는 생성
+        */
+        ImGui::Text("Animation Sequence");
+        static int SelectedAnimSeqIndex = -1;
+        static FString SelectedAnimSeqName = "None"; // 선택된 애니메이션 이름 초기화
+        //UAnimSequenceBase* SelectedSequence = SelectedSkeleton->GetSingleNodeInstance()->GetCurrentSequence();
+        UAnimSingleNodeInstance* SelectedNodeInstance = SelectedSkeleton->GetSingleNodeInstance();
+        const char* preview_value_seq = (SelectedAnimSeqIndex != -1 && SelectedAnimSeqIndex < AnimSeqNames.Num()) ? *AnimSeqNames[SelectedAnimSeqIndex] : "None";
+        if (ImGui::BeginCombo("##AnimationSequence", preview_value_seq))
         {
-            const bool is_selected = (SelectedAnimIndex == i);
-            if (ImGui::Selectable(*animNames[i], is_selected))
+            for (int i = 0; i < AnimSeqNames.Num(); ++i)
             {
-                SelectedAnimIndex = i;
-                SelectedAnimName = animNames[i]; // 선택된 애니메이션 이름 업데이트
-            }
-            if (is_selected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
-
-    ImGui::Spacing();
-
-    bool bCanPlay = (SelectedAnimIndex != -1 && !SelectedAnimName.IsEmpty());
-
-    if (ImGui::Button("Play Animation", ImVec2(120, 0)))
-    {
-        if (SelectedSkeleton && bCanPlay) // SelectedSkeleton 유효성 재확인
-        {
-            UAnimSequence* animToPlay = FFbxManager::GetAnimSequenceByName(SelectedAnimName);
-            if (animToPlay)
-            {
-                UE_LOG(ELogLevel::Display, TEXT("Playing animation: %s"), *SelectedAnimName);
-                SelectedSkeleton->PlayAnimation(animToPlay, true); // bLooping = true
-            }
-            else
-            {
-                UE_LOG(ELogLevel::Warning, TEXT("Could not find or load animation: %s"), *SelectedAnimName);
-            }
-        }
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Stop Animation", ImVec2(120, 0)))
-    {
-        if (SelectedSkeleton)
-        {
-            UE_LOG(ELogLevel::Display, TEXT("Stopping animation."));
-            SelectedSkeleton->PlayAnimation(nullptr, false); // null 재생으로 중지
-            SelectedSkeleton->ResetPose(); // 기본 포즈로
-        }
-    }
-    if (SelectedSkeleton)
-    {
-        UAnimSingleNodeInstance* SingleNodeInstance = SelectedSkeleton->GetSingleNodeInstance();
-        if (SingleNodeInstance && SingleNodeInstance->IsPlaying())
-        {
-            UAnimSequenceBase* CurrentAnim = SingleNodeInstance->GetCurrentSequence();
-            if (CurrentAnim)
-            {
-                float CurrentRate = CurrentAnim->GetRateScale();
-                if (ImGui::SliderFloat("Rate Scale", &CurrentRate, -5.0f, 5.0f, "%.1f"))
+                const bool is_selected = (SelectedAnimSeqIndex == i);
+                if (ImGui::Selectable(*AnimSeqNames[i], is_selected))
                 {
-                    CurrentAnim->SetRateScale(CurrentRate);
+                    SelectedAnimSeqIndex = i;
+                    SelectedAnimSeqName = AnimSeqNames[i]; // 선택된 애니메이션 이름 업데이트
+                    UAnimSequenceBase* SelectedSequence = FFbxManager::GetAnimSequenceByName(SelectedAnimSeqName);
+                    SelectedNodeInstance->SetAnimationAsset(SelectedSequence, true);
+                }
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+    
+        static char NewAnimSeqName[32];
+        ImGui::PushID("MyInputText");
+        ImGui::InputText("##input", NewAnimSeqName, IM_ARRAYSIZE(NewAnimSeqName));
+        ImGui::PopID();
+        ImGui::SameLine();
+        if (ImGui::Button("Create"))
+        {
+            if (strlen(NewAnimSeqName))
+            {
+                FFbxManager::CreateAnimSequence(NewAnimSeqName);
+                std::fill(std::begin(NewAnimSeqName), std::end(NewAnimSeqName), '\0');
+            }
+        }
+    
+        /*
+        Animation Data를 지정
+        */
+        ImGui::Text("Animation Data");
+        TArray<FString> AnimDataNames;
+        {
+            FSpinLockGuard Lock(FFbxManager::AnimMapLock);
+            for (auto const& [name, entry] : FFbxManager::GetAnimData())
+            {
+                if (entry.State == FFbxManager::LoadState::Completed && entry.Data != nullptr)
+                {
+                    AnimDataNames.Add(name);
                 }
             }
         }
+
+        UAnimSequenceBase* CurrentAnimSeq = SelectedNodeInstance->GetCurrentSequence();
+        static int SelectedAnimData = -1;
+        static FString SelectedAnimDataName;
+        if (CurrentAnimSeq)
+        {
+            SelectedAnimSeqName = CurrentAnimSeq->GetSeqName(); // 현재 애니메이션 시퀀스 이름 업데이트
+        }
+        if (ImGui::BeginCombo("##AnimationDataModels", *SelectedAnimDataName))
+        {
+            for (int i = 0; i < AnimDataNames.Num(); ++i)
+            {
+                const bool is_selected = (SelectedAnimDataName == AnimDataNames[i]);
+                if (ImGui::Selectable(*AnimDataNames[i], is_selected))
+                {
+                    SelectedAnimData = i;
+                    SelectedAnimDataName = AnimDataNames[i]; // 선택된 애니메이션 이름 업데이트
+                    UAnimDataModel* AnimToSet = FFbxManager::GetAnimDataModelByName(SelectedAnimDataName);
+                    if (AnimToSet)
+                    {
+                        if (CurrentAnimSeq)
+                        {
+                            CurrentAnimSeq->SetDataModel(AnimToSet);
+                            CurrentAnimSeq->SetSequenceLength(AnimToSet->PlayLength);
+                        }
+                    }
+                }
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        /*
+        Animation 재생
+        */
+
+        ImGui::Spacing();
+        bool bCanPlay = (SelectedAnimData != -1 && !SelectedAnimDataName.IsEmpty());
+
+        if (ImGui::Button("Play Animation", ImVec2(120, 0)))
+        {
+            if (SelectedSkeleton && bCanPlay) // SelectedSkeleton 유효성 재확인
+            {
+                //UAnimDataModel* animToPlay = FFbxManager::GetAnimDataModelByName(SelectedAnimDataName);
+                if (CurrentAnimSeq)
+                {
+                    UE_LOG(ELogLevel::Display, TEXT("Playing animation: %s"), *SelectedAnimDataName);
+                    SelectedSkeleton->PlayAnimation(CurrentAnimSeq, true); // bLooping = true
+                }
+                else
+                {
+                    UE_LOG(ELogLevel::Warning, TEXT("Could not find or load animation: %s"), *SelectedAnimDataName);
+                }
+            }
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Stop Animation", ImVec2(120, 0)))
+        {
+            if (SelectedSkeleton)
+            {
+                UE_LOG(ELogLevel::Display, TEXT("Stopping animation."));
+                SelectedSkeleton->PlayAnimation(nullptr, false); // null 재생으로 중지
+                SelectedSkeleton->ResetPose(); // 기본 포즈로
+            }
+        }
+        if (SelectedSkeleton)
+        {
+            UAnimSingleNodeInstance* SingleNodeInstance = SelectedSkeleton->GetSingleNodeInstance();
+            if (SingleNodeInstance && SingleNodeInstance->IsPlaying())
+            {
+                UAnimSequenceBase* CurrentAnim = SingleNodeInstance->GetCurrentSequence();
+                if (CurrentAnim)
+                {
+                    float CurrentRate = CurrentAnim->GetRateScale();
+                    if (ImGui::SliderFloat("Rate Scale", &CurrentRate, -5.0f, 5.0f, "%.1f"))
+                    {
+                        CurrentAnim->SetRateScale(CurrentRate);
+                    }
+                }
+            }
+        }
+        ImGui::TreePop();
     }
+    ImGui::PopStyleColor();
+
     ImGui::Spacing();
     ImGui::Separator();
 

@@ -105,10 +105,6 @@ private:
     bool IsCreateMaterial;
 
     const FString TemplateFilePath = FString("LuaScripts/template.lua");
-
-    /* Animation Property for Debug */
-    int SelectedAnimIndex = -1;
-    FString SelectedAnimName;
 };
 
 template <typename T> requires std::derived_from<T, UActorComponent>
