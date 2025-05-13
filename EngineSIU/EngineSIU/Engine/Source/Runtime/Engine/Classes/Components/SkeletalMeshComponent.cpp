@@ -16,6 +16,8 @@ void USkeletalMeshComponent::InitializeComponent()
 
     /* ImGui로 play 버튼 누르면 editor에서도 움직이도록 수정 */
     GetOwner()->SetActorTickInEditor(true);
+    AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
+    AnimScriptInstance->InitializeAnimation(this); // UAnimInstance 초기화
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaSeconds)
@@ -331,20 +333,22 @@ void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* NewAnimToPlay)
         SetAnimationMode(EAnimationMode::AnimationSingleNode); // 강제로 모드 변경
     }
 
-    // SetAnimationMode 내부에서 AnimScriptInstance가 생성되도록 하거나, 여기서 생성
-    if (!AnimScriptInstance) 
-    {
-        AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
-        if (AnimScriptInstance) 
-        {
-            AnimScriptInstance->InitializeAnimation(this); // UAnimInstance 초기화
-        }
-        else 
-        {
-            UE_LOG(ELogLevel::Error, TEXT("Failed to create AnimScriptInstance in SetAnimation for %s"), *GetName());
-            return;
-        }
-    }
+    
+    //// SetAnimationMode 내부에서 AnimScriptInstance가 생성되도록 하거나, 여기서 생성
+    //if (!AnimScriptInstance) 
+    //{
+    //    AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
+    //    if (AnimScriptInstance) 
+    //    {
+    //        AnimScriptInstance->InitializeAnimation(this); // UAnimInstance 초기화
+    //    }
+    //    else 
+    //    {
+    //        UE_LOG(ELogLevel::Error, TEXT("Failed to create AnimScriptInstance in SetAnimation for %s"), *GetName());
+    //        return;
+    //    }
+    //}
+    // ----> Init에서 생성하게 변경
 
 
     UAnimSingleNodeInstance* SingleNodeInstance = GetSingleNodeInstance();
