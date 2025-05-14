@@ -600,20 +600,28 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
         TArray<UClass*> AnimClasses;
         GetChildOfClass(UAnimInstance::StaticClass(), AnimClasses);
         
-        if (ImGui::BeginCombo("AnimInstance", "None", ImGuiComboFlags_None))
+        UAnimInstance* CurrentInstance = SkeletalComp->GetAnimationInstance();
+        FString CurrentName = CurrentInstance ? CurrentInstance->GetClass()->GetName() : TEXT("None");
+        const char* ComboLabel = !CurrentName.IsEmpty() ? *CurrentName : "None";
+
+        if (ImGui::BeginCombo("AnimInstance", ComboLabel, ImGuiComboFlags_None))
         {
             for (auto* AnimInstance : AnimClasses)
             {
-                if (ImGui::Selectable(GetData(AnimInstance->GetName()), false))
+                FString UnrealName = AnimInstance ? AnimInstance->GetName() : TEXT("None");
+                const char* ItemName = !UnrealName.IsEmpty() ? *UnrealName : "None";
+                bool bIsSelected = (CurrentInstance && (AnimInstance == CurrentInstance->GetClass()));
+
+                if (ImGui::Selectable(ItemName, bIsSelected))
                 {
-                    UMyAnimInstance* Instance = Cast<UMyAnimInstance>(FObjectFactory::ConstructObject(AnimInstance, GEngine));
-                    UAnimInstance* CurrentInstance = SkeletalComp->GetAnimationInstance();
+                    UAnimInstance* Instance = Cast<UAnimInstance>(FObjectFactory::ConstructObject(AnimInstance, GEngine));
                     SkeletalComp->SetAnimationInstance(Instance);
                 }
+                if (bIsSelected)
+                    ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
         }
-
         
         TArray<FString> animNames;
         {
