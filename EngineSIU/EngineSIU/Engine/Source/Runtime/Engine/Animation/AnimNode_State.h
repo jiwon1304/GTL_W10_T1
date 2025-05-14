@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "UObject/Object.h"
 #include "UObject/ObjectMacros.h"
 
@@ -17,6 +17,9 @@ public:
 
     uint32 GetStateName() const { return StateName.GetComparisonIndex(); }
     UAnimSequenceBase* GetLinkAnimationSequence() const;
+
+    void GetProperties(TMap<FString, FString>& OutProperties) const;
+    void SetProperties(const TMap<FString, FString>& InProperties);
     
 private:
     /** State Name */

@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 #include <unordered_map>
 
 #include "ContainerAllocator.h"
 #include "Pair.h"
 #include "Serialization/Archive.h"
-
+#include "Container/Array.h"
 
 template <typename KeyType, typename ValueType, typename Allocator = FDefaultAllocator<std::pair<const KeyType, ValueType>>>
 class TMap
@@ -178,6 +178,82 @@ public:
     {
         ContainerPrivate.reserve(Number);
     }
+
+    // 가변 길이 컨테이너는 시작, 종료, separator를 사용하여 문자열을 생성합니다.
+    FString ToString() const
+    {
+        const FString StartMarker = TEXT("@@TMAP_START@@");
+        const FString EndMarker = TEXT("@@TMAP_END@@");
+        const FString PairSep = TEXT("@@TMAP_PAIR_SEP@@");
+        const FString KVSep = TEXT("@@TMAP_KV_SEP@@");
+
+        FString Result = StartMarker;
+
+        int32 NumPairs = ContainerPrivate.size();
+        int32 Index = 0;
+        for (const auto& Pair : ContainerPrivate)
+        {
+            Result += Pair.first.ToString();
+            Result += KVSep;
+            Result += Pair.second.ToString();
+            if (++Index < NumPairs)
+            {
+                Result += PairSep;
+            }
+        }
+        Result += EndMarker;
+        return Result;
+    }
+
+    template <typename InitKeyType = KeyType, typename InitValueType = ValueType>
+    bool InitFromString(const FString& InString)
+    {
+        // 1. @@TMAP_START@@, @@TMAP_END@@ 제거
+        FString TrimmedString = InString;
+        TrimmedString.RemoveFromStart(TEXT("@@TMAP_START@@"));
+        TrimmedString.RemoveFromEnd(TEXT("@@TMAP_END@@"));
+
+        const FString PairSeparator = TEXT("@@TMAP_PAIR_SEP@@");
+        const FString KeyValueSeparator = TEXT("@@TMAP_KV_SEP@@");
+        int32 StartIndex = 0;
+
+        while (StartIndex < TrimmedString.Len())
+        {
+            // 2. 쌍(Pair) 구간 추출
+            int32 SepIndex = TrimmedString.Find(PairSeparator, ESearchCase::CaseSensitive, ESearchDir::FromStart, StartIndex);
+
+            FString PairStr;
+            if (SepIndex == INDEX_NONE)
+            {
+                // 마지막 토큰
+                PairStr = TrimmedString.Mid(StartIndex);
+                StartIndex = TrimmedString.Len();
+            }
+            else
+            {
+                PairStr = TrimmedString.Mid(StartIndex, SepIndex - StartIndex);
+                StartIndex = SepIndex + PairSeparator.Len();
+            }
+
+            // 3. 키/값 분리
+            int32 ColonIdx = PairStr.Find(KeyValueSeparator, ESearchCase::CaseSensitive);
+            if (ColonIdx != INDEX_NONE)
+            {
+                FString KeyStr = PairStr.Left(ColonIdx);
+                FString ValueStr = PairStr.Mid(ColonIdx + KeyValueSeparator.Len());
+
+                KeyType Key;
+                ValueType Value;
+                if (!Key.InitFromString(KeyStr.TrimStartAndEnd()) || !Value.InitFromString(ValueStr.TrimStartAndEnd()))
+                {
+                    return false; // 실패시 false 반환
+                }
+                Emplace(std::move(Key), std::move(Value));
+            }
+        }
+        return true;
+    }
+
 };
 
 template <typename KeyType, typename ValueType, typename Allocator>

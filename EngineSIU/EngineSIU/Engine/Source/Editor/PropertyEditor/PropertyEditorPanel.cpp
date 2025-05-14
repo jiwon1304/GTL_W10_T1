@@ -607,6 +607,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent* Skeletal
                 if (ImGui::Selectable(GetData(AnimInstance->GetName()), false))
                 {
                     UMyAnimInstance* Instance = Cast<UMyAnimInstance>(FObjectFactory::ConstructObject(AnimInstance, GEngine));
+                    UAnimInstance* CurrentInstance = SkeletalComp->GetAnimationInstance();
                     SkeletalComp->SetAnimationInstance(Instance);
                 }
             }

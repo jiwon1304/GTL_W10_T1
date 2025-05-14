@@ -35,32 +35,72 @@ void UAnimInstance::InitializeAnimation(USkeletalMeshComponent* InOwningComponen
 
 void UAnimInstance::GetProperties(TMap<FString, FString>& OutProperties) const
 {
+    // AnimSM : 만들어줌
+    // -> CurrentState, CurrentAnimationSequence, Transitions를 여기서 저장
+    AnimSM->GetProperties(OutProperties);
+    
 
+    OutProperties.Add(TEXT("UAnimInstance::CurrentPose"), CurrentPose.ToString());
+    OutProperties.Add(TEXT("UAnimInstance::NotifyQueue"), NotifyQueue.ToString());
+    OutProperties.Add(TEXT("UAnimInstance::ActiveAnimNotifyState"), ActiveAnimNotifyState.ToString());
+    OutProperties.Add(TEXT("UAnimInstance::CurrentTime"), FString::Printf(TEXT("%f"), CurrentTime));
+    OutProperties.Add(TEXT("UAnimInstance::bPlaying"), FString::Printf(TEXT("%d"), bPlaying));
 }
 
 void UAnimInstance::SetProperties(const TMap<FString, FString>& InProperties)
 {
-    const FString* SkeletalMeshPath = InProperties.Find(TEXT("SkeletalMeshPath"));
-    if (SkeletalMeshPath)
+    const FString* TempStr = nullptr;
+    // ASM 생성
+    if (AnimSM == nullptr)
     {
-        if (*SkeletalMeshPath != TEXT("None"))
+        AnimSM = FObjectFactory::ConstructObject<UAnimationStateMachine>(this);
+    }
+    AnimSM->SetProperties(InProperties);
+
+    // CurrentPose
+    TempStr = InProperties.Find(TEXT("AI_CurrentPose"));
+    if (TempStr)
+    {
+        CurrentPose.InitFromString(*TempStr);
+    }
+    
+    // Sequence
+    TempStr = InProperties.Find(TEXT("AI_AnimSequence"));
+    if (TempStr)
+    {
+        if (UAnimSequenceBase* AnimSeq = FFbxManager::GetAnimSequenceByName(*TempStr))
         {
-            if (USkeletalMesh* MeshToSet = FFbxManager::GetSkeletalMesh(*SkeletalMeshPath))
-            {
-                OwningComp->SetSkeletalMesh(MeshToSet);
-                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-            }
-            else
-            {
-                UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
-                OwningComp->SetSkeletalMesh(nullptr);
-            }
+            Sequence = AnimSeq;
         }
         else
         {
-            OwningComp->SetSkeletalMesh(nullptr);
-            UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
+            UE_LOG(ELogLevel::Warning, TEXT("SetProperties: AnimSequence '%s' not found"), **TempStr);
+            Sequence = nullptr;
         }
+    }
+
+    // OwningComp는 USkeletalMeshComponent가 설정
+
+    // NotifyQueue
+    TempStr = InProperties.Find(TEXT("AI_NotifyQueue"));
+    if (TempStr)
+    {
+        NotifyQueue.InitFromString(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("AI_ActiveAnimNotifyState"));
+    if (TempStr)
+    {
+        ActiveAnimNotifyState.InitFromString(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("AI_CurrentTime"));
+    if (TempStr)
+    {
+        CurrentTime = FString::ToFloat(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("AI_bPlaying"));
+    if (TempStr)
+    {
+        bPlaying = FString::ToInt(*TempStr);
     }
 }
 

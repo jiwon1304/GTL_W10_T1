@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 #include "Container/Array.h"
 #include "Container/Set.h"
+#include "Core/Misc/Spinlock.h"
 
 class UClass;
 class UObject;
@@ -10,7 +11,7 @@ class FUObjectArray
 {
 public:
     void AddObject(UObject* Object);
-    void MarkRemoveObject(UObject* Object);
+    bool MarkRemoveObject(UObject* Object);
 
     void ProcessPendingDestroyObjects();
 
@@ -27,6 +28,8 @@ public:
 private:
     TSet<UObject*> ObjObjects;
     TArray<UObject*> PendingDestroyObjects;
+
+    FSpinLock Lock;
 };
 
 extern FUObjectArray GUObjectArray;

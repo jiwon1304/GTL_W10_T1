@@ -218,6 +218,8 @@ public:
      */
     bool RemoveFromStart(const FString& InPrefix, ESearchCase::Type SearchCase = ESearchCase::IgnoreCase);
 
+    bool RemoveFromEnd(const FString& InSuffix, ESearchCase::Type SearchCase = ESearchCase::IgnoreCase);
+
     void Reserve(int32 CharacterCount);
     void Resize(int32 CharacterCount);
 
@@ -288,6 +290,19 @@ public:
     {
         return PrivateString.ends_with(Suffix.PrivateString);
     }
+
+    bool Split(const FString& Separator, FString& OutLeft, FString& OutRight, ESearchCase::Type SearchCase = ESearchCase::IgnoreCase) const;
+
+    FString ToString() const {
+        return *this;
+    }
+    
+    bool InitFromString(const FString& InSourceString)
+    {
+        *this = InSourceString;
+        return true;
+    }
+
 };
 
 template <typename Number>

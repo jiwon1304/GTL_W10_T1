@@ -10,8 +10,6 @@
 class FObjectFactory
 {
 public:
-    inline static FSpinLock Lock;
-
     static UObject* ConstructObject(UClass* InClass, UObject* InOuter, FName InName = NAME_None)
     {
         const uint32 Id = UEngineStatics::GenUUID();
@@ -27,10 +25,7 @@ public:
         Obj->UUID = Id;
         Obj->OuterPrivate = InOuter;
 
-        {
-            FSpinLockGuard LockGuard = FSpinLockGuard(Lock);
-            GUObjectArray.AddObject(Obj);
-        }
+        GUObjectArray.AddObject(Obj);
 
         UE_LOG(ELogLevel::Display, "Created New Object : %s", *Name);
         return Obj;
@@ -41,5 +36,24 @@ public:
     static T* ConstructObject(UObject* InOuter)
     {
         return static_cast<T*>(ConstructObject(T::StaticClass(), InOuter));
+    }
+
+    static void DeleteObject(UObject* Object)
+    {
+        // Nullptr check
+        if (!Object)
+        {
+            UE_LOG(ELogLevel::Warning, "Attempted to delete a null object.");
+            return;
+        }
+
+        // Check if the object exists in GUObjectArray
+        if (!GUObjectArray.MarkRemoveObject(Object))
+        {
+            UE_LOG(ELogLevel::Warning, "Object not found in GUObjectArray: %s", *Object->GetName());
+            return;
+        }
+
+        UE_LOG(ELogLevel::Display, "Deleted Object : %s", *Object->GetName());
     }
 };

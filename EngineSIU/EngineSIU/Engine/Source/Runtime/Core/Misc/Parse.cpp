@@ -5,6 +5,7 @@
 #include "Container/CString.h"
 #include "Math/MathUtility.h"
 #include "Runtime/CoreUObject/UObject/NameTypes.h"
+#include "Container/String.h"
 
 
 bool FParse::Value(const TCHAR* Stream, const TCHAR* Match, TCHAR* Value, int32 MaxLen, bool bShouldStopOnSeparator, const TCHAR** OptStreamGotTo)

@@ -52,6 +52,19 @@ UObject* USkeletalMeshComponent::Duplicate(UObject* InOuter)
 void USkeletalMeshComponent::GetProperties(TMap<FString, FString>& OutProperties) const
 {
     Super::GetProperties(OutProperties);
+
+    // UAnimInstance는 USeketalMeshComponent와 1대1로 대응
+    // 그 아래의 변수도 모두 unique함
+    // 따라서 여기서 저장
+    // 이후 UObject를 저장한다면 나중에 변경 필요.
+    if (AnimScriptInstance)
+    {
+        AnimScriptInstance->GetProperties(OutProperties);
+    }
+    else
+    {
+        OutProperties.Add(TEXT("AnimScriptInstance"), TEXT("None"));
+    }
         
     if (SkeletalMesh != nullptr)
     {
@@ -94,6 +107,21 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
         {
             SetSkeletalMesh(nullptr);
             UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
+        }
+    }
+
+    if (!AnimScriptInstance)
+    {
+        AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
+        if (AnimScriptInstance)
+        {
+            AnimScriptInstance->InitializeAnimation(this); // UAnimInstance 초기화
+            AnimScriptInstance->SetProperties(InProperties);
+        }
+        else
+        {
+            UE_LOG(ELogLevel::Error, TEXT("Failed to create AnimScriptInstance in SetAnimation for %s"), *GetName());
+            return;
         }
     }
 

@@ -491,6 +491,7 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\Contents\MyAnimInstance.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Container\Helpers.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimationStateMachine.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimNode_State.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimNotifies\AnimNotifyState_SlowMotion.h" />

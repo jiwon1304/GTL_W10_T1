@@ -35,23 +35,8 @@ struct FAnimNotifyEvent
     float GetEndTriggerTime() const;
     bool IsStateNotify() const;
 
-    FString ToString() const
-    {
-        FString NotifyString = NotifyName.ToString();
-        return FString::Printf(TEXT("TrackIndex: %d, TriggerTime: %.3f, TriggerTimeOffset: %3.f, EndTriggerTimeOffset: %.3f Duration: %.3f"), TrackIndex, TriggerTime, TriggerTimeOffset, EndTriggerTimeOffset, Duration)
-            + NotifyString;
-    }
-    bool InitFromString(const FString& InSourceString)
-    {
-        TriggerTime = 0;
-        Duration = 0;
-        TrackIndex = 0;
-        // The initialization is only successful if the X and Y values can all be parsed from the string
-        const bool bSuccessful = FParse::Value(*InSourceString, TEXT("TrackIndex="), TrackIndex) &&
-            FParse::Value(*InSourceString, TEXT("TriggerTime="), TriggerTime) &&
-            FParse::Value(*InSourceString, TEXT("Duration="), Duration);
-        return bSuccessful;
-    }
+    FString ToString() const;
+    bool InitFromString(const FString& InSourceString);
 };
 
 /**
@@ -106,55 +91,43 @@ struct FRawAnimSequenceTrack
 
     FString ToString() const
     {
-        FString Result;
-        Result += TEXT("PosKeys: ");
-        for (const auto& Key : PosKeys)
-        {
-            Result += Key.ToString() + TEXT(", ");
-        }
-        Result += TEXT("\nRotKeys: ");
-        for (const auto& Key : RotKeys)
-        {
-            Result += Key.ToString() + TEXT(", ");
-        }
-        Result += TEXT("\nScaleKeys: ");
-        for (const auto& Key : ScaleKeys)
-        {
-            Result += Key.ToString() + TEXT(", ");
-        }
-        return Result;
+        return FString::Printf(TEXT("PosKeys=%s RotKeys=%s ScaleKeys=%s"),
+            *PosKeys.ToString(),
+            *RotKeys.ToString(),
+            *ScaleKeys.ToString());
     }
-
 
     bool InitFromString(const FString& InString)
     {
-        FString Trimmed = InString.TrimStartAndEnd();
+        FString PosKeysMarker = TEXT("PosKeys=");
+        FString RotKeysMarker = TEXT("RotKeys=");
+        FString ScaleKeysMarker = TEXT("ScaleKeys=");
 
-        // 각 Key의 시작 위치를 찾음
-        int32 PosStart = Trimmed.Find(TEXT("PosKeys:"));
-        int32 RotStart = Trimmed.Find(TEXT("RotKeys:"));
-        int32 ScaleStart = Trimmed.Find(TEXT("ScaleKeys:"));
+        int32 PosStart = InString.Find(PosKeysMarker, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+        int32 RotStart = InString.Find(RotKeysMarker, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+        int32 ScaleStart = InString.Find(ScaleKeysMarker, ESearchCase::IgnoreCase, ESearchDir::FromStart);
 
         if (PosStart == INDEX_NONE || RotStart == INDEX_NONE || ScaleStart == INDEX_NONE)
-        {
             return false;
-        }
 
-        // 각 Key의 값 추출
-        FString PosPart = Trimmed.Mid(PosStart + 8, RotStart - (PosStart + 8));
-        FString RotPart = Trimmed.Mid(RotStart + 8, ScaleStart - (RotStart + 8));
-        FString ScalePart = Trimmed.Mid(ScaleStart + 10);
+        // PosKeys 부분 추출
+        int32 PosValueStart = PosStart + PosKeysMarker.Len();
+        FString PosString = InString.Mid(PosValueStart, RotStart - PosValueStart).TrimStartAndEnd();
 
-        PosPart = PosPart.TrimStartAndEnd();
-        RotPart = RotPart.TrimStartAndEnd();
-        ScalePart = ScalePart.TrimStartAndEnd();
+        // RotKeys 부분 추출
+        int32 RotValueStart = RotStart + RotKeysMarker.Len();
+        FString RotString = InString.Mid(RotValueStart, ScaleStart - RotValueStart).TrimStartAndEnd();
 
-        // 각 배열 초기화
-        if (!PosKeys.InitFromString(PosPart)) return false;
-        if (!RotKeys.InitFromString(RotPart)) return false;
-        if (!ScaleKeys.InitFromString(ScalePart)) return false;
+        // ScaleKeys 부분 추출 (끝까지)
+        int32 ScaleValueStart = ScaleStart + ScaleKeysMarker.Len();
+        FString ScaleString = InString.Mid(ScaleValueStart).TrimStartAndEnd();
 
-        return true;
+        // 각각의 키 값을 파싱 (아래 ParseFromString 함수는 각 타입에 맞게 직접 구현 필요)
+        bool Success = PosKeys.InitFromString(PosString);
+        Success |= RotKeys.InitFromString(RotString);
+        Success |= ScaleKeys.InitFromString(ScaleString);
+
+        return Success;
     }
 };
 
@@ -192,6 +165,4 @@ struct FBoneAnimationTrack
         // InternalTrackData 파싱
         return InternalTrackData.InitFromString(TrackDataString);
     }
-
-
 };

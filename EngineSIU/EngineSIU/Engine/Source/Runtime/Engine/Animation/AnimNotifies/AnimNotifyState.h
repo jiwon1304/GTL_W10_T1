@@ -22,5 +22,8 @@ public:
 
     // Notify가 끝날 때 호출 (EndTriggerTime 시점)
     virtual void NotifyEnd(USkeletalMeshComponent* MeshComp) = 0;
+
+    virtual void GetProperties(TMap<FString, FString>& OutProperties) const = 0;
+    virtual void SetProperties(const TMap<FString, FString>& InProperties) = 0;
     int a;
 };
