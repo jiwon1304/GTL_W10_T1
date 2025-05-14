@@ -745,7 +745,20 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent*SkeletalC
 
                 if (ImGui::Selectable(ItemName, bIsSelected))
                 {
-                    UAnimInstance* Instance = Cast<UAnimInstance>(FObjectFactory::ConstructObject(AnimInstance, GEngine));
+                    SelectedAnimInstanceIndex = i;
+                    // TODO : 인덱스에 따른 클래스 생성 하드 코딩 수정
+                    if (i == 2) {
+                        if (UMyAnimInstance* Instance = Cast<UMyAnimInstance>(FObjectFactory::ConstructObject(AnimClasses[i], GEngine)))
+                        {
+                            SkeletalComp->SetAnimationInstance(Instance);
+                        }
+                    }
+                    else if (i == 6) {
+                        if (UPreviewAnimInstance* Instance = Cast<UPreviewAnimInstance>(FObjectFactory::ConstructObject(AnimClasses[i], GEngine))) {
+                            SkeletalComp->SetAnimationInstance(Instance);
+                        }
+                    }
+                    ULuaAnimInstance* Instance = Cast<ULuaAnimInstance>(FObjectFactory::ConstructObject(AnimClasses[i], GEngine));
                     SkeletalComp->SetAnimationInstance(Instance);
                 }
                 if (bIsSelected)

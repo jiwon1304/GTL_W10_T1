@@ -208,26 +208,15 @@ void FFbxManager::LoadFunc()
                 TArray<FFbxAnimStack*> AnimStacks;
                 FWString BinaryPath = (FileName + ".bin").ToWideString();
                 // Last Modified Time
-                int64_t lastModifiedTime;
-                if (std::filesystem::exists(BinaryPath))
+                int64_t lastModifiedTime = 0;
+                if (std::filesystem::exists(FileName.ToWideString()))
                 {
-                    // BinaryPath의 마지막 수정시간을 가져옵니다.
-                    if (std::filesystem::exists(FileName.ToWideString()))
-                    {
-                        auto FileTime = std::filesystem::last_write_time(FileName.ToWideString());
-                        lastModifiedTime = std::chrono::system_clock::to_time_t(
-                            std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                FileTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()));
-                    }
+                    auto FileTime = std::filesystem::last_write_time(FileName.ToWideString());
+                    lastModifiedTime = std::chrono::system_clock::to_time_t(
+                        std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                            FileTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()));
+
                 }
-                else
-                {
-                    lastModifiedTime = 0; // BinaryPath가 존재하지 않으면 0으로 설정
-                }
-                //auto FileTime = std::filesystem::last_write_time(FileName.ToWideString());
-                //int64_t lastModifiedTime = std::chrono::system_clock::to_time_t(
-                //    std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                //        FileTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()));
 
                 bool Success = false;
                 Success = LoadFBXFromBinary(BinaryPath, lastModifiedTime, FbxMesh, AnimSequences);

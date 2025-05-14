@@ -13,6 +13,8 @@ public:
     UAnimSingleNodeInstance() = default;
     void SetAnimationAsset(UAnimSequenceBase* AnimToPlay, bool Cond);
 
+    virtual void NativeUpdateAnimation(float DeltaSeconds) override {}
+
     UAnimSequenceBase* GetCurrentSequence() const { return Sequence; }
 };
 
