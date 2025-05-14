@@ -146,6 +146,8 @@ namespace ImGui {
 
     IMGUI_API bool IsNeoTimelineSelected(ImGuiNeoTimelineIsSelectedFlags flags = ImGuiNeoTimelineIsSelectedFlags_None);
 
+    IMGUI_API void NeoNotifyRange(float_t* startFrame, const float* duration, ImU32 color);
+
 #ifdef __cplusplus
     // C++ helper
     IMGUI_API bool BeginNeoTimeline(const char* label,std::vector<float_t> & keyframes ,bool * open = nullptr, ImGuiNeoTimelineFlags flags = ImGuiNeoTimelineFlags_None);

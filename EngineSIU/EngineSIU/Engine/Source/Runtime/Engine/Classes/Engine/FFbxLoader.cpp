@@ -137,7 +137,7 @@ bool FFbxLoader::ParseFBX(const FString& FBXFilePath,
 
     if (sceneAxisSystem != UnrealTargetAxisSystem)
     {
-        UnrealTargetAxisSystem.ConvertScene(scene);
+        UnrealTargetAxisSystem.DeepConvertScene(scene);
     }
     
     FbxSystemUnit SceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();

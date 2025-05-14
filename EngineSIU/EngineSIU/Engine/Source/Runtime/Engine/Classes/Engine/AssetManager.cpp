@@ -189,6 +189,11 @@ void UAssetManager::RegisterAsset(FString filePath, FAssetInfo::LoadState State)
     std::wstring wFilePath = filePath.ToWideString();
     std::filesystem::path path(wFilePath);
     EAssetType assetType;
+    if (!std::filesystem::exists(wFilePath))
+    {
+        return;
+    }
+
     if (path.extension() == ".fbx" || path.extension() == ".FBX")
     {
         assetType = EAssetType::SkeletalMesh;

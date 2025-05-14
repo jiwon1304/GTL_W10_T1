@@ -53,17 +53,37 @@ void UClass::RegisterProperty(const FProperty& Prop)
 
 void UClass::SerializeBin(FArchive& Ar, void* Data)
 {
-    // 상속받은 클래스의 프로퍼티들도 직렬화
+    if (bHasCopiedParentFields)   // 이미 복사했으면 바로 리턴
+        return;
+
+    bHasCopiedParentFields = true; // 이제 복사했다고 체크
+
     if (SuperClass)
     {
-        SuperClass->SerializeBin(Ar, Data);
-    }
+        SuperClass->ForEachField([&](UField* Field) {
+            // 자식 리스트에 똑같은 이름의 필드가 이미 있으면 건너뛸 수도 있습니다.
+            // 예) if (FindFieldByName(Field->Name)) return;
 
-    // 이 클래스의 프로퍼티들 직렬화
-    for (const FProperty& Prop : Properties)
+            UField* Clone = Field->Clone();
+            RegisterField(Clone);
+            });
+    }
+}
+
+void UClass::RegisterField(UField* Field)
+{
+    AddField(Field);
+}
+
+/** 부모 UClass에 등록된 모든 UField 를 이 클래스에도 복사해 등록합니다. */
+void UClass::CopyParentFields()
+{
+    if (SuperClass)   // 부모 UClass 가 있으면
     {
-        void* PropData = static_cast<uint8*>(Data) + Prop.Offset;
-        Ar.Serialize(PropData, Prop.Size);
+        SuperClass->ForEachField([&](UField* Field) {
+            UField* Clone = Field->Clone();  // 깊은 복사
+            RegisterField(Clone);            // UStruct::AddField
+            });
     }
 }
 

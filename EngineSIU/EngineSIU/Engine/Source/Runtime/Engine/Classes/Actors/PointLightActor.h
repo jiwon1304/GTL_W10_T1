@@ -9,6 +9,6 @@ public:
     virtual ~APointLight();
 protected:
     UPROPERTY
-    (UPointLightComponent*, PointLightComponent, = nullptr);
+    (None, UPointLightComponent*, PointLightComponent, = nullptr);
 };
 

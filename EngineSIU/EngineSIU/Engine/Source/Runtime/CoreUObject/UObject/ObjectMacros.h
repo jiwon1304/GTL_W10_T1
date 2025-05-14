@@ -4,6 +4,8 @@
 #include "Class.h"
 #include "UObjectHash.h"
 
+
+
 // name을 문자열화 해주는 매크로
 #define INLINE_STRINGIFY(name) #name
 
@@ -15,17 +17,17 @@ private: \
     TClass& operator=(const TClass&) = delete; \
     TClass(TClass&&) = delete; \
     TClass& operator=(TClass&&) = delete; \
-    inline static struct TClass##_StaticClassRegistrar_ \
-    { \
-        TClass##_StaticClassRegistrar_() \
-        { \
-            UClass::GetClassMap().Add(#TClass, ThisClass::StaticClass()); \
-            AddClassToChildListMap(ThisClass::StaticClass()); \
-        } \
-    } TClass##_StaticClassRegistrar_{}; \
 public: \
     using Super = TSuperClass; \
     using ThisClass = TClass;
+    //inline static struct TClass##_StaticClassRegistrar_ \
+    //{ \
+    //    TClass##_StaticClassRegistrar_() \
+    //    { \
+    //        UClass::GetClassMap().Add(#TClass, ThisClass::StaticClass()); \
+    //        AddClassToChildListMap(ThisClass::StaticClass()); \
+    //    } \
+    //} TClass##_StaticClassRegistrar_{}; \
 
 
 // RTTI를 위한 클래스 매크로
@@ -44,7 +46,17 @@ public: \
             } \
         }; \
         return &ClassInfo; \
-    }
+    } \
+    inline static struct TClass##_StaticClassRegistrar_                 \
+    {                                                                   \
+        TClass##_StaticClassRegistrar_()                                \
+        {                                                               \
+            UClass* C = ThisClass::StaticClass();                       \
+            UClass::GetClassMap().Add(#TClass, C);                      \
+            AddClassToChildListMap(C);                                  \
+            C->CopyParentFields();  /* ← 부모 필드 복사하여 등록 */       \
+        }                                                               \
+    } TClass##_StaticClassRegistrar_{};                                 \
 
 // RTTI를 위한 추상 클래스 매크로
 #define DECLARE_ABSTRACT_CLASS(TClass, TSuperClass) \
@@ -70,21 +82,27 @@ public: \
  * @param VarName 변수 이름
  * @param ... 기본값
  *
+ * [추가]: UField 기반 링크드 리스트에 RegisterField()
  * Example Code
  * ```
  * UPROPERTY
  * (int, Value, = 10)
  * ```
  */
-#define UPROPERTY(Type, VarName, ...) \
+#define UPROPERTY(Flags, Type, VarName, ...) \
     Type VarName FIRST_ARG(__VA_ARGS__); \
     inline static struct VarName##_PropRegistrar \
     { \
         VarName##_PropRegistrar() \
         { \
             constexpr int64 Offset = offsetof(ThisClass, VarName); \
+            constexpr EPropertyType PT = GetPropertyType<Type>(); \
             ThisClass::StaticClass()->RegisterProperty( \
                 { #VarName, sizeof(Type), Offset } \
             ); \
+            TField<Type>* Field = new TField<Type>( \
+            FString(TEXT(#VarName)), Offset, sizeof(Type), PT, Flags \
+            ); \
+            ThisClass::StaticClass()->RegisterField(Field); \
         } \
     } VarName##_PropRegistrar_{};

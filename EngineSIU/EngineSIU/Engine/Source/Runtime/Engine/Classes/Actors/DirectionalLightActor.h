@@ -13,6 +13,6 @@ public:
 
 protected:
     UPROPERTY
-    (UDirectionalLightComponent*, DirectionalLightComponent, = nullptr);
+    (None, UDirectionalLightComponent*, DirectionalLightComponent, = nullptr);
 };
 

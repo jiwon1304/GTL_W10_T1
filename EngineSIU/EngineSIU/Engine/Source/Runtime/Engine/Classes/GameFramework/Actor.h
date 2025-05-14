@@ -95,16 +95,17 @@ public:
 
     bool SetActorLocation(const FVector& NewLocation);
     bool SetActorRotation(const FRotator& NewRotation);
+    bool SetActorRotationUnsafe(const FRotator& NewRotation);
     bool SetActorScale(const FVector& NewScale);
 
 protected:
     UPROPERTY
-    (USceneComponent*, RootComponent, = nullptr)
+    (None, USceneComponent*, RootComponent, = nullptr)
 
 private:
     /** 이 Actor를 소유하고 있는 다른 Actor의 정보 */
     UPROPERTY
-    (AActor*, Owner, = nullptr)
+    (None, AActor*, Owner, = nullptr)
 
     /** 본인이 소유하고 있는 컴포넌트들의 정보 */
     TSet<UActorComponent*> OwnedComponents;
@@ -127,7 +128,7 @@ public:
 private:
     /** 에디터상에 보이는 Actor의 이름 */
     UPROPERTY
-    (FString, ActorLabel)
+    (EditAnywhere, FString, ActorLabel)
 #endif
 
 public:

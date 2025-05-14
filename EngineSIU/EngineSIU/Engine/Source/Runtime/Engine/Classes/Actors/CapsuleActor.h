@@ -13,7 +13,7 @@ public:
     UCapsuleComponent* GetShapeComponent() const;
 protected:
     UPROPERTY
-    (UCapsuleComponent*, CapsuleComponent, = nullptr);
+    (None, UCapsuleComponent*, CapsuleComponent, = nullptr);
 
 };
 

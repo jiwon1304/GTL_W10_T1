@@ -72,21 +72,21 @@ public:
 protected:
     /** 부모 컴포넌트로부터 상대적인 위치 */
     UPROPERTY
-    (FVector, RelativeLocation)
+    (EditAnywhere, FVector, RelativeLocation)
 
     /** 부모 컴포넌트로부터 상대적인 회전 */
     UPROPERTY
-    (FRotator, RelativeRotation)
+    (EditAnywhere, FRotator, RelativeRotation)
 
     /** 부모 컴포넌트로부터 상대적인 크기 */
     UPROPERTY
-    (FVector, RelativeScale3D)
+    (EditAnywhere, FVector, RelativeScale3D)
 
     UPROPERTY
-    (USceneComponent*, AttachParent, = nullptr)
+    (None, USceneComponent*, AttachParent, = nullptr)
 
     UPROPERTY
-    (TArray<USceneComponent*>, AttachChildren)
+    (None, TArray<USceneComponent*>, AttachChildren)
 
     virtual void UpdateOverlapsImpl(const TArray<FOverlapInfo>* PendingOverlaps = nullptr, bool bDoNotifies = true, const TArray<const FOverlapInfo>* OverlapsAtEndLocation = nullptr);
 

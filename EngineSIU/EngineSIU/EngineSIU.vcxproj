@@ -204,6 +204,9 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Source\Contents\LuaAnimInstance.cpp" />
+    <ClCompile Include="Engine\Source\Contents\PreviewAnimInstance.cpp" />
+    <ClCompile Include="Engine\Source\Editor\PropertyEditor\ImGuiInspector.cpp" />
     <ClCompile Include="Engine\Source\Contents\MyAnimInstance.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimationStateMachine.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimNode_State.cpp" />
@@ -212,6 +215,8 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimationRuntime.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimNotifyQueue.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimSequenceBase.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimTransitionInstance.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimTwoNodeBlendInstance.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Animation\AnimTypes.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\GameFramework\Character.cpp" />
     <ClCompile Include="Engine\Source\Contents\Actors\Fish.cpp" />
@@ -490,6 +495,11 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Source\Contents\PreviewAnimInstance.h" />
+    <ClInclude Include="Engine\Source\Contents\LuaAnimInstance.h" />
+    <ClInclude Include="Engine\Source\Editor\PropertyEditor\ImGuiInspector.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\Template\IsArray.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\PropertyTypes.h" />
     <ClInclude Include="Engine\Source\Contents\MyAnimInstance.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Container\Helpers.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimationStateMachine.h" />
@@ -497,6 +507,9 @@ xcopy /y /d "$(SolutionDir)$(ProjectName)\Engine\Source\ThirdParty\FBX\lib\x64\$
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimNotifies\AnimNotifyState_SlowMotion.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimNotifies\AnimNotifyState.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimationRuntime.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimTransitionInstance.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimTwoNodeBlendInstance.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\Asset\AnimationAsset.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Animation\AnimNotifyQueue.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\GameFramework\Character.h" />
     <ClInclude Include="Engine\Source\Contents\Actors\Fish.h" />

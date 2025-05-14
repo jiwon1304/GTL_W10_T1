@@ -16,6 +16,10 @@ public:
     void Initialize(FName InStateName, UAnimSequenceBase* InLinkAnimationSequence);
 
     uint32 GetStateName() const { return StateName.GetComparisonIndex(); }
+
+    FName GetStateNameFName() const {
+        return StateName;
+    }
     UAnimSequenceBase* GetLinkAnimationSequence() const;
 
     void GetProperties(TMap<FString, FString>& OutProperties) const;

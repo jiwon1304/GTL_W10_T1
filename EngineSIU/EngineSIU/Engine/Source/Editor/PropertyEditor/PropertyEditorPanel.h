@@ -11,6 +11,8 @@
 #include "UObject/Casts.h"
 #include "Components/Material/Material.h"
 
+#include "ImGuiInspector.h"
+
 class USpringArmComponent;
 class UShapeComponent;
 class UAmbientLightComponent;
@@ -50,11 +52,12 @@ public:
     virtual void Render() override;
     virtual void OnResize(HWND hWnd) override;
 
-private:
     static void RGBToHSV(float R, float G, float B, float& H, float& S, float& V);
     static void HSVToRGB(float H, float S, float V, float& R, float& G, float& B);
 
-    void RenderForSceneComponent(USceneComponent* SceneComponent, AEditorPlayer* Player) const;
+private:
+
+    void RenderForSceneComponent(USceneComponent* SceneComponent, AEditorPlayer* Player);
     void RenderForCameraComponent(UCameraComponent* InCameraComponent);
     void RenderForPlayerActor(APlayer* InPlayerActor);
     void RenderForActor(AActor* SelectedActor, USceneComponent* TargetComponent) const;
@@ -62,6 +65,7 @@ private:
     /* Static Mesh Settings */
     void RenderForStaticMesh(UStaticMeshComponent* StaticMeshComp) const;
     void DrawAnimationControls(USkeletalMeshComponent* SkeletalComp);
+    void DrawStateMachineDebugControls(USkeletalMeshComponent* SkeletalComp);
     void RenderForSkeletalMesh(USkeletalMeshComponent* SkeletalComp);
     void RenderForModifySkeletalBone(USkeletalMeshComponent* SkeletalMeshComponent);
 
@@ -73,7 +77,7 @@ private:
     void RenderForLightCommon(ULightComponentBase* LightComponent) const;
 
     
-    void RenderForProjectileMovementComponent(UProjectileMovementComponent* ProjectileComp) const;
+    void RenderForProjectileMovementComponent(UProjectileMovementComponent* ProjectileComp);
     void RenderForTextComponent(UTextComponent* TextComponent) const;
     
     /* Materials Settings */
@@ -81,16 +85,18 @@ private:
     void RenderMaterialView(UMaterial* Material);
     void RenderCreateMaterialView();
 
-    void RenderForExponentialHeightFogComponent(UHeightFogComponent* FogComponent) const;
+    void RenderForExponentialHeightFogComponent(UHeightFogComponent* FogComponent);
 
-    void RenderForShapeComponent(UShapeComponent* ShapeComponent) const;
-    void RenderForSpringArmComponent(USpringArmComponent* SpringArmComponent) const;
+    void RenderForShapeComponent(UShapeComponent* ShapeComponent);
+    void RenderForSpringArmComponent(USpringArmComponent* SpringArmComponent);
     
     template<typename T>
         requires std::derived_from<T, UActorComponent>
     T* GetTargetComponent(AActor* SelectedActor, USceneComponent* SelectedComponent);
 
-    
+    template <class T>
+    void RenderProperties(T* Obj);
+
 private:
     float Width = 0, Height = 0;
     FVector Location = FVector(0, 0, 0);
@@ -109,6 +115,14 @@ private:
     /* Animation Property for Debug */
     int SelectedAnimIndex = -1;
     FString SelectedAnimName;
+
+    /* Animation Blend Property for Debug */
+    int SelectedAnimIndexA = -1;
+    FString SelectedAnimNameA;
+
+    int SelectedAnimIndexB = -1;
+    FString SelectedAnimNameB;
+
 };
 
 template <typename T> requires std::derived_from<T, UActorComponent>
@@ -125,4 +139,22 @@ T* PropertyEditorPanel::GetTargetComponent(AActor* SelectedActor, USceneComponen
     }
         
     return ResultComp;
+}
+
+template<typename T>
+void PropertyEditorPanel::RenderProperties(T* Obj)
+{
+    if (!Obj)
+    {
+        return;
+    }
+    UObject* UObjectPtr = Cast<UObject>(Obj);
+    UClass* Cls = UObjectPtr->GetClass();
+
+    // 등록된 모든 UField 를 순회하면서 DrawFieldEditor 호출
+    Cls->ForEachField([&](UField* Field)
+        {
+            ImGuiInspector::DrawFieldEditor(Field, UObjectPtr);
+            ImGui::Spacing();
+        });
 }

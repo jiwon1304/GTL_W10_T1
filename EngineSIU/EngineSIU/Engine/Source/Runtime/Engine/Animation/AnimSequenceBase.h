@@ -48,13 +48,13 @@ public:
     TArray<FAnimNotifyEvent> Notifies;
 
     UPROPERTY
-    (float, SequenceLength)
+    (EditAnywhere, float, SequenceLength)
 
     UPROPERTY
-    (float, RateScale)
+    (EditAnywhere, float, RateScale)
 
     UPROPERTY
-    (bool, bLoop)
+    (None, bool, bLoop)
 
     //struct FRawCurveTracks RawCurveData;
 };

@@ -51,7 +51,7 @@ public:
     
 protected:
     UPROPERTY
-    (UInputComponent*, InputComponent, = nullptr)
+    (None, UInputComponent*, InputComponent, = nullptr)
 
     virtual void SetupInputComponent();
 

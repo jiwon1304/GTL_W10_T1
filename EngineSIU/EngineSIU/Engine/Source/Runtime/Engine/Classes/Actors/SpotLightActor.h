@@ -9,6 +9,6 @@ public:
     virtual ~ASpotLight();
 protected:
     UPROPERTY
-    (USpotLightComponent*, SpotLightComponent, = nullptr);
+    (None, USpotLightComponent*, SpotLightComponent, = nullptr);
 };
 

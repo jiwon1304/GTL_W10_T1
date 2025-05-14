@@ -173,4 +173,15 @@ public:
     FString ToString() const;
 
     bool InitFromString(const FString& InSourceString);
+
+    FORCEINLINE void Blend(const FTransform& A, const FTransform& B, float Alpha)
+    {
+        // 위치 선형 보간
+        Translation = A.Translation * (1.0f - Alpha) + B.Translation * Alpha;
+        // 스케일 선형 보간
+        Scale3D = A.Scale3D * (1.0f - Alpha) + B.Scale3D * Alpha;
+        // 회전 구면선형 보간(Slerp) 후 정규화
+        Rotation = FQuat::Slerp(A.Rotation, B.Rotation, Alpha).GetNormalized();
+    }
+
 };

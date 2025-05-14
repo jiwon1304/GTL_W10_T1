@@ -13,7 +13,7 @@ public:
     USphereComponent* GetShapeComponent() const;
 protected:
     UPROPERTY
-    (USphereComponent*, SphereComponent, = nullptr);
+    (None, USphereComponent*, SphereComponent, = nullptr);
 
 };
 

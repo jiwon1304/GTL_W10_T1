@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "GameFramework/Actor.h"
 
 class UStaticMeshComponent;
@@ -21,10 +21,10 @@ public:
 protected:
 
     UPROPERTY
-    (UBoxComponent*, BoxComponent, = nullptr)
+    (None, UBoxComponent*, BoxComponent, = nullptr)
 
     UPROPERTY
-    (UStaticMeshComponent*, MeshComponent, = nullptr)
+    (None, UStaticMeshComponent*, MeshComponent, = nullptr)
 
     void ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 };

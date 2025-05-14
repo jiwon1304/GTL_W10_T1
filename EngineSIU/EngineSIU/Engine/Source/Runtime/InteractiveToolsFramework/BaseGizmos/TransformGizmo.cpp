@@ -115,11 +115,11 @@ void ATransformGizmo::Tick(float DeltaTime)
         SetActorLocation(TargetComponent->GetWorldLocation());
         if (EditorPlayer->GetCoordMode() == ECoordMode::CDM_LOCAL || EditorPlayer->GetControlMode() == EControlMode::CM_SCALE)
         {
-            SetActorRotation(TargetComponent->GetWorldRotation());
+            SetActorRotationUnsafe(TargetComponent->GetWorldRotation());
         }
         else
         {
-            SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
+            SetActorRotationUnsafe(FRotator(0.0f, 0.0f, 0.0f));
         }
     }
 }

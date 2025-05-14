@@ -1,4 +1,4 @@
-﻿#include "MyAnimInstance.h"
+#include "MyAnimInstance.h"
 
 #include "Animation/AnimationStateMachine.h"
 #include "Components/SkeletalMeshComponent.h"

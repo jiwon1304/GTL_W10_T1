@@ -48,13 +48,13 @@ public:
     
 protected:
     UPROPERTY
-    (USphereComponent*, SphereComponent, = nullptr)
+    (None, USphereComponent*, SphereComponent, = nullptr)
 
     UPROPERTY
-    (UFishBodyComponent*, FishBody, = nullptr)
+    (None, UFishBodyComponent*, FishBody, = nullptr)
 
     UPROPERTY
-    (UFishTailComponent*, FishTail, = nullptr)
+    (None, UFishTailComponent*, FishTail, = nullptr)
 
     FVector Velocity = FVector::ZeroVector;
 

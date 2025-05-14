@@ -17,5 +17,6 @@ public:
     float GetRadius() const { return SphereRadius; }
     
 private:
-    float SphereRadius = 1.f;
+    UPROPERTY
+    (EditAnywhere, float, SphereRadius, = 1.f)
 };

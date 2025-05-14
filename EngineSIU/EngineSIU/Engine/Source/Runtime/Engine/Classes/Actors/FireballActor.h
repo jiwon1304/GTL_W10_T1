@@ -16,12 +16,12 @@ public:
 protected:
     
     UPROPERTY
-    (UProjectileMovementComponent*, ProjectileMovementComponent, = nullptr);
+    (None, UProjectileMovementComponent*, ProjectileMovementComponent, = nullptr);
    
     UPROPERTY
-    (UPointLightComponent*, PointLightComponent, = nullptr);
+    (None, UPointLightComponent*, PointLightComponent, = nullptr);
    
     UPROPERTY
-    (USphereComp*, SphereComp, = nullptr);
+    (None, USphereComp*, SphereComp, = nullptr);
 
 };

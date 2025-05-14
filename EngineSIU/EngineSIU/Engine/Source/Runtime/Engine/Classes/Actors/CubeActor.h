@@ -13,7 +13,7 @@ public:
     UBoxComponent* GetShapeComponent() const;
 protected:
     UPROPERTY
-    (UBoxComponent*, BoxComponent, = nullptr);
+    (None, UBoxComponent*, BoxComponent, = nullptr);
 
 };
 

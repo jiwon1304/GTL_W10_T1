@@ -9,8 +9,8 @@ public:
 
 protected:
     UPROPERTY
-    (UAmbientLightComponent*, AmbientLightComponent, = nullptr);
+    (None, UAmbientLightComponent*, AmbientLightComponent, = nullptr);
 
     UPROPERTY
-    (UBillboardComponent*, BillboardComponent, = nullptr);
+    (None, UBillboardComponent*, BillboardComponent, = nullptr);
 };

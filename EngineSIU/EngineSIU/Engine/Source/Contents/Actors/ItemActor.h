@@ -31,10 +31,10 @@ protected:
     float ElapsedTime = 0.f;
 
     UPROPERTY
-    (USphereComponent*, SphereComponent, = nullptr)
+    (None, USphereComponent*, SphereComponent, = nullptr)
 
     UPROPERTY
-    (USkeletalMeshComponent*, MeshComponent, = nullptr)
+    (None, USkeletalMeshComponent*, MeshComponent, = nullptr)
 
     void ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 };

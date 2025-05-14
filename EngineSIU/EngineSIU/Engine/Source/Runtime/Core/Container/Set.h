@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <unordered_set>
 
 #include "Array.h"
@@ -117,3 +117,14 @@ FArchive& operator<<(FArchive& Ar, TSet<ElementType, Hasher, Allocator>& Set)
 
     return Ar;
 }
+
+
+template <typename T> constexpr bool TIsTSet_V = false;
+
+template <typename T, typename Hasher, typename Allocator> constexpr bool TIsTSet_V<               TSet<T, Hasher, Allocator>> = true;
+template <typename T, typename Hasher, typename Allocator> constexpr bool TIsTSet_V<const          TSet<T, Hasher, Allocator>> = true;
+template <typename T, typename Hasher, typename Allocator> constexpr bool TIsTSet_V<      volatile TSet<T, Hasher, Allocator>> = true;
+template <typename T, typename Hasher, typename Allocator> constexpr bool TIsTSet_V<const volatile TSet<T, Hasher, Allocator>> = true;
+
+template <typename T>
+concept TIsTSet = TIsTSet_V<T>;

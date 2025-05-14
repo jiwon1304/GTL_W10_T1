@@ -13,8 +13,8 @@ public:
 
 protected:
     UPROPERTY
-    (UBoxComponent*, BoxComponent, = nullptr)
+    (None, UBoxComponent*, BoxComponent, = nullptr)
 
     UPROPERTY
-    (UStaticMeshComponent*, MeshComponent, = nullptr)
+    (None, UStaticMeshComponent*, MeshComponent, = nullptr)
 };

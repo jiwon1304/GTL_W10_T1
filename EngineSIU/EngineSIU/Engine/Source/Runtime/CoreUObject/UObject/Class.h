@@ -2,16 +2,123 @@
 #include <concepts>
 #include "Object.h"
 #include "Property.h"
+#include "PropertyTypes.h"
 
+class UField
+{
+public:
+    UField(const FString& InName, int64 InOffset, uint32 InSize,
+        EPropertyType InPropType, EPropertyFlags InFlags)
+        : Next(nullptr)
+        , Name(InName)
+        , Offset(InOffset)
+        , Size(InSize)
+        , PropType(InPropType)
+        , Flags(InFlags)
+    {
+    }
+    virtual UField* Clone() const
+    {
+        // 기본 UField 복사
+        return new UField(Name, Offset, Size, PropType, Flags);
+    }
+
+
+    virtual ~UField() {}
+
+    UField*             Next;     // 링크드 리스트 다음 노드
+    FString             Name;     // 변수 이름
+    int64               Offset;   // offsetof(ThisClass, Var)
+    uint32              Size;     // sizeof(Type)
+    EPropertyType       PropType;   // 값의 타입
+    EPropertyFlags      Flags;      
+};
+
+template<typename T>
+class TField : public UField
+{
+public:
+    TField(const FString& InName, int64 InOffset, uint32 InSize,
+        EPropertyType InPropType, EPropertyFlags InFlags)
+        : UField(InName, InOffset, InSize, InPropType, InFlags)
+    {
+    }
+
+    virtual UField* Clone() const override
+    {
+        return new TField<T>(Name, Offset, Size, PropType, Flags);
+    }
+
+    virtual ~TField() override {}
+
+    T GetValue(UObject* Obj) const
+    {
+        return *(T*)((uint8*)Obj + Offset);
+    }
+
+    void SetValue(UObject* Obj, const T& NewValue)
+    {
+       *(T*)((uint8*)Obj + Offset) = NewValue;
+    }
+};
+
+
+class UStruct : public UObject
+{
+public:
+    UStruct()
+        : HeadField(nullptr)
+    {}
+
+    virtual ~UStruct() override
+    {
+        // 할당한 UField 모두 delete
+        UField* Node = HeadField;
+        while (Node)
+        {
+            UField* Next = Node->Next;
+            delete Node;
+            Node = Next;
+        }
+    }
+
+    void AddField(UField* InField)
+    {
+        if (HeadField == nullptr)
+        {
+            HeadField = InField;
+        }
+        else
+        {
+            UField* Temp = HeadField;
+            while (Temp->Next)
+            {
+                Temp = Temp->Next;
+            }
+            Temp->Next = InField;
+        }
+    }
+
+    template<typename Func>
+    void ForEachField(Func&& InFunc)
+    {
+        for (UField* Field = HeadField; Field != nullptr; Field = Field->Next)
+        {
+            InFunc(Field);
+        }
+    }
+    void CopyParentFields();
+private:
+    UField* HeadField;
+};
 
 class FArchive;
 /**
  * UObject의 RTTI를 가지고 있는 클래스
  */
-class UClass : public UObject
-{
+class UClass : public UStruct
+{    
     using ClassConstructorType = UObject*(*)();
-
 public:
     UClass(
         const char* InClassName,
@@ -74,6 +181,10 @@ public:
     /** 바이너리 직렬화 함수 */
     void SerializeBin(FArchive& Ar, void* Data);
 
+    void RegisterField(UField* Field);
+
+    void CopyParentFields();
+
 protected:
     virtual UObject* CreateDefaultObject();
 
@@ -89,6 +200,8 @@ private:
     UObject* ClassDefaultObject = nullptr;
 
     TArray<FProperty> Properties;
+
+    bool bHasCopiedParentFields = false; // 1번만 복사하도록
 };
 
 template <typename T>

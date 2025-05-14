@@ -25,6 +25,7 @@ void FStatOverlay::ToggleStat(const std::string& Command)
     {
         bShowMemory = true;
         bShowRender = true;
+        bShowGPUMemory = true;
     }
     else if (Command == "stat light")
     {
