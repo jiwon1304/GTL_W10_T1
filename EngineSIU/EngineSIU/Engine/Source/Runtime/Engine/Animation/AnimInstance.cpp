@@ -281,6 +281,7 @@ void UAnimInstance::LoadStateMachineFromLua()
     }
     catch (const sol::error& err) {
         UE_LOG(ELogLevel::Error, TEXT("Lua Initialization error: %s"), err.what());
+        return;
     }
 
     sol::table States = LuaState["States"];

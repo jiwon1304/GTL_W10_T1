@@ -347,13 +347,12 @@ void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* NewAnimToPlay)
         return;
     }
 
-    // AnimationSingleNode 모드인지 확인 및 AnimScriptInstance 생성/가져오기
-    //if (AnimationMode != EAnimationMode::AnimationSingleNode)
-    //{
-    //    UE_LOG(ELogLevel::Warning, TEXT("SetAnimation called but AnimationMode is not AnimationSingleNode. Forcing mode."));
-    //    SetAnimationMode(EAnimationMode::AnimationSingleNode); // 강제로 모드 변경
-    //}
-
+     // AnimationSingleNode 모드인지 확인 및 AnimScriptInstance 생성/가져오기
+    if (AnimationMode != EAnimationMode::AnimationSingleNode)
+    {
+        UE_LOG(ELogLevel::Warning, TEXT("SetAnimation called but AnimationMode is not AnimationSingleNode. Forcing mode."));
+        SetAnimationMode(EAnimationMode::AnimationSingleNode); // 강제로 모드 변경
+    }
     
     switch (AnimationMode) {
     case EAnimationMode::AnimationSingleNode:
