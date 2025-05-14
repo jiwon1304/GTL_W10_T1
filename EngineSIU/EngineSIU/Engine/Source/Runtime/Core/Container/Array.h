@@ -6,6 +6,7 @@
 
 #include "ContainerAllocator.h"
 #include "Serialization/Archive.h"
+#include "Core/Misc/Char.h"
 
 
 template <typename T, typename Allocator = FDefaultAllocator<T>>
@@ -190,6 +191,12 @@ public:
     bool IsValidIndex(uint32 ElementIndex) const;
 
     ElementType Pop();
+
+    FString ToString() const;
+
+    bool InitFromString(const FString& InSourceString);
+
+    static int32 ParseIntoArray(const FString& Source, TArray<FString>& OutArray, const TCHAR* Separator, bool bCullEmpty = true);
 };
 
 
@@ -592,6 +599,123 @@ typename TArray<T, Allocator>::ElementType TArray<T, Allocator>::Pop()
     ElementType Element = ContainerPrivate.back();
     ContainerPrivate.pop_back();
     return Element;
+}
+
+template<typename T, typename Allocator>
+inline FString TArray<T, Allocator>::ToString() const
+{
+    if (IsEmpty())
+    {
+        return FString::Printf("[]");
+    }
+
+
+    FString OutString = FString::Printf("[");
+    for (const T& Elem : ContainerPrivate)
+    {
+        FString ElememtString = FString::Printf("[%s]", *Elem.ToString());
+        OutString += ElememtString;
+    }
+    OutString += FString::Printf("]");
+
+    return OutString;
+}
+
+template<typename T, typename Allocator>
+inline bool TArray<T, Allocator>::InitFromString(const FString& InSourceString)
+{
+    this->Empty();
+
+    FString Trimmed = InSourceString.TrimStartAndEnd();
+    if (!Trimmed.StartsWith(TEXT("[")) || !Trimmed.EndsWith(TEXT("]")))
+    {
+        // 올바른 포맷이 아님
+        return false;
+    }
+
+    // 양 끝 대괄호 제거
+    Trimmed = Trimmed.Mid(1, Trimmed.Len() - 2);
+
+    int32 Pos = 0;
+    while (Pos < Trimmed.Len())
+    {
+        // '['로 시작하는지 확인
+        if (Trimmed[Pos] != '[')
+        {
+            // 잘못된 포맷
+            return false;
+        }
+
+        // ']'의 위치를 찾음
+        int32 EndBracket = Trimmed.Find(TEXT("]"), ESearchCase::IgnoreCase, ESearchDir::FromStart, Pos);
+        if (EndBracket == INDEX_NONE)
+        {
+            // 닫는 괄호 없음
+            return false;
+        }
+
+        // [ ... ] 안의 서브스트링 추출
+        FString ElemString = Trimmed.Mid(Pos + 1, EndBracket - Pos - 1);
+
+        T Element;
+        if constexpr (requires(T v, const FString & s) { v.InitFromString(s); }) // UE5 이상 C++20
+        {
+            if (!Element.InitFromString(ElemString))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            // 지원하지 않는 타입
+            static_assert(false, "T must implement InitFromString(const FString&)");
+        }
+
+        this->Add(Element);
+
+        // 다음 원소 위치로 이동 (EndBracket + 1)
+        Pos = EndBracket + 1;
+        // 공백 및 쉼표 등 스킵
+        while (Pos < Trimmed.Len() && (Trimmed[Pos] == ',' || FChar::IsWhitespace(Trimmed[Pos])))
+        {
+            ++Pos;
+        }
+    }
+
+    return true;
+}
+
+template<typename T, typename Allocator>
+inline int32 TArray<T, Allocator>::ParseIntoArray(const FString& Source, TArray<FString>& OutArray, const TCHAR* Separator, bool bCullEmpty)
+{
+    OutArray.Empty();
+
+    int32 SepLen = FCString::Strlen(Separator);
+    int32 Start = 0;
+
+    while (Start <= Source.Len())
+    {
+        int32 SepIdx = Source.Find(Separator, ESearchCase::CaseSensitive, ESearchDir::FromStart, Start);
+        FString Token;
+
+        if (SepIdx == INDEX_NONE)
+        {
+            Token = Source.Mid(Start);
+            Start = Source.Len() + 1; // Exit loop
+        }
+        else
+        {
+            Token = Source.Mid(Start, SepIdx - Start);
+            Start = SepIdx + SepLen;
+        }
+
+        if (!bCullEmpty || !Token.IsEmpty())
+        {
+            OutArray.Add(Token);
+        }
+    }
+
+    return OutArray.Num();
 }
 
 template <typename ElementType, typename Allocator>

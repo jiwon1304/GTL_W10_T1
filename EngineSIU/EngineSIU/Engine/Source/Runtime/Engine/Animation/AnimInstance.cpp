@@ -12,6 +12,7 @@
 #include "UObject/Casts.h"
 #include "AnimTypes.h"
 #include "AnimNotifies/AnimNotifyState.h"
+#include "Engine/FbxManager.h"
 
 UAnimInstance::UAnimInstance()
     : Sequence(nullptr)
@@ -30,6 +31,37 @@ void UAnimInstance::InitializeAnimation(USkeletalMeshComponent* InOwningComponen
         AnimSM = FObjectFactory::ConstructObject<UAnimationStateMachine>(this);
     }
     NativeInitializeAnimation();
+}
+
+void UAnimInstance::GetProperties(TMap<FString, FString>& OutProperties) const
+{
+
+}
+
+void UAnimInstance::SetProperties(const TMap<FString, FString>& InProperties)
+{
+    const FString* SkeletalMeshPath = InProperties.Find(TEXT("SkeletalMeshPath"));
+    if (SkeletalMeshPath)
+    {
+        if (*SkeletalMeshPath != TEXT("None"))
+        {
+            if (USkeletalMesh* MeshToSet = FFbxManager::GetSkeletalMesh(*SkeletalMeshPath))
+            {
+                OwningComp->SetSkeletalMesh(MeshToSet);
+                UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not load SkeletalMesh '%s' for %s"), **SkeletalMeshPath, *GetName());
+                OwningComp->SetSkeletalMesh(nullptr);
+            }
+        }
+        else
+        {
+            OwningComp->SetSkeletalMesh(nullptr);
+            UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
+        }
+    }
 }
 
 

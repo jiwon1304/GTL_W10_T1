@@ -169,4 +169,8 @@ public:
     {
         Rotation.Normalize();
     }
+
+    FString ToString() const;
+
+    bool InitFromString(const FString& InSourceString);
 };

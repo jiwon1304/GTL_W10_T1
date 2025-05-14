@@ -21,6 +21,9 @@ public:
     UAnimInstance();
     virtual void InitializeAnimation(USkeletalMeshComponent* InOwningComponent);
 
+    virtual void GetProperties(TMap<FString, FString>& OutProperties) const;
+    virtual void SetProperties(const TMap<FString, FString>& InProperties);
+
     // 매 틱마다 애니메이션을 업데이트하고 최종 포즈를 OutPose에 반환합니다.
     virtual void UpdateAnimation(float DeltaSeconds);
     virtual const TArray<FTransform>& EvaluateAnimation();

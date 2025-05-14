@@ -2,6 +2,7 @@
 
 #include "Vector.h"
 #include "Matrix.h"
+#include "Core/Misc/Parse.h"
 
 const FQuat FQuat::Identity = FQuat{0.0f, 0.0f, 0.0f, 1.0f};
 
@@ -377,4 +378,19 @@ FQuat FQuat::GetInverse() const
         FQuat NormalizedQuat = GetNormalized();
         return FQuat(-NormalizedQuat.X, -NormalizedQuat.Y, -NormalizedQuat.Z, NormalizedQuat.W);
     }
+}
+
+FString FQuat::ToString() const
+{
+    // 언리얼 엔진의 FQuat::ToString() 메서드 로직 참고
+    // X, Y, Z, W 순서로 문자열 생성
+    return FString::Printf(TEXT("X=%3.3f, Y=%3.3f, Z=%3.3f, W=%3.3f"), X, Y, Z, W);
+}
+
+bool FQuat::InitFromString(const FString& InSourceString)
+{
+    return FParse::Value(*InSourceString, TEXT("X="), X) &&
+        FParse::Value(*InSourceString, TEXT("Y="), Y) &&
+        FParse::Value(*InSourceString, TEXT("Z="), Z) &&
+        FParse::Value(*InSourceString, TEXT("W="), W);
 }

@@ -62,6 +62,12 @@ void USkeletalMeshComponent::GetProperties(TMap<FString, FString>& OutProperties
     {
         OutProperties.Add(TEXT("SkeletalMeshPath"), TEXT("None"));
     }
+
+    OutProperties.Add(TEXT("CurrentPosePath"), CurrentPose.ToString());
+    OutProperties.Add(TEXT("SelectedBoneIndex"), FString::Printf(TEXT("%d"), SelectedBoneIndex));
+    OutProperties.Add(TEXT("AnimationMode"), FString::Printf(TEXT("%d"), AnimationMode));
+    OutProperties.Add(TEXT("bEnableAnimation"), FString::Printf(TEXT("%d"), bEnableAnimation));
+    OutProperties.Add(TEXT("CurrentAnimTime"), FString::Printf(TEXT("%f"), CurrentAnimTime));
 }
 
 void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InProperties)
@@ -89,6 +95,33 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
             SetSkeletalMesh(nullptr);
             UE_LOG(ELogLevel::Display, TEXT("Set SkeletalMesh to None for %s"), *GetName());
         }
+    }
+
+    const FString* TempStr = nullptr;
+    TempStr = InProperties.Find(TEXT("CurrentPosePath"));
+    if (TempStr)
+    {
+        CurrentPose.InitFromString(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("SelectedBoneIndex"));
+    if (TempStr)
+    {
+        SelectedBoneIndex = FString::ToInt(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("AnimationMode"));
+    if (TempStr)
+    {
+        AnimationMode = static_cast<EAnimationMode::Type>(FString::ToInt(*TempStr));
+    }
+    TempStr = InProperties.Find(TEXT("bEnableAnimation"));
+    if (TempStr)
+    {
+        bEnableAnimation = FString::ToInt(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("CurrentAnimTime"));
+    if (TempStr)
+    {
+        CurrentAnimTime = FString::ToFloat(*TempStr);
     }
 }
 

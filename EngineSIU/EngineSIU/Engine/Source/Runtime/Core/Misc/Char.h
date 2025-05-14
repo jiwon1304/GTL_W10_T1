@@ -23,4 +23,15 @@ struct FChar
         return std::isdigit(static_cast<unsigned char>(Ch)) != 0;
 #endif
     }
+
+    /**
+     * 주어진 문자가 공백 문자(스페이스, 탭 등)인지 확인합니다.
+     * @param Ch 확인할 TCHAR 문자.
+     * @return 문자가 공백이면 true, 그렇지 않으면 false를 반환합니다.
+     */
+    static inline bool IsWhitespace(TCHAR Ch)
+    {
+        // 공백 문자를 확인합니다.
+        return std::isspace(static_cast<unsigned char>(Ch)) != 0;
+    }
 };

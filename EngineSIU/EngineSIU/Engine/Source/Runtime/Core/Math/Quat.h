@@ -146,6 +146,12 @@ public:
     FRotator Rotator() const;
 
     FQuat GetInverse() const;
+
+    // 쿼터니언을 문자열로 변환
+    FString ToString() const;
+
+    // 문자열로부터 쿼터니언 초기화
+    bool InitFromString(const FString& InSourceString);
 };
 
 inline FArchive& operator<<(FArchive& Ar, FQuat& Q)

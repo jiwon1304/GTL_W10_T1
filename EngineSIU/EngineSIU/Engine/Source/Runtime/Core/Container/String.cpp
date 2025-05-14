@@ -491,6 +491,59 @@ FString FString::Printf(const ElementType* Format, ...)
     }
 }
 
+bool FString::ParseValueString(const FString& Source, const FString& Key, FString& OutValueString)
+{
+    int32 KeyIdx = Source.Find(Key, ESearchCase::IgnoreCase);
+    if (KeyIdx == INDEX_NONE) return false;
+
+    int32 ValueStart = KeyIdx + Key.Len();
+
+    // 다음 콤마(,)를 값의 끝으로 간주 (없으면 문자열 끝까지)
+    int32 ValueEnd = Source.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart, ValueStart);
+
+    if (ValueEnd == INDEX_NONE)
+    {
+        OutValueString = Source.Mid(ValueStart).TrimStartAndEnd();
+    }
+    else
+    {
+        OutValueString = Source.Mid(ValueStart, ValueEnd - ValueStart).TrimStartAndEnd();
+    }
+    return true;
+}
+
+FString FString::TrimStartAndEnd(const FString& InString)
+{
+    auto IsSpace = [](TCHAR c) {
+        // C++ 표준 라이브러리의 iswspace 사용
+        return std::iswspace(static_cast<wint_t>(c));
+        };
+
+    int32 Start = 0;
+    while (Start < InString.Len() && IsSpace(InString[Start]))
+    {
+        ++Start;
+    }
+
+    int32 End = InString.Len() - 1;
+    while (End >= Start && IsSpace(InString[End]))
+    {
+        --End;
+    }
+
+    if (Start > End)
+    {
+        return FString(); // 모든 문자가 공백이면 빈 문자열 반환
+    }
+
+    return InString.Mid(Start, End - Start + 1);
+}
+
+FString FString::TrimStartAndEnd() const
+{
+    return TrimStartAndEnd(*this);
+}
+
 FString operator/(const FString& Lhs, const FString& Rhs)
 {
     // Lhs가 비어있으면 Rhs만 반환 (Rhs가 절대 경로일 수 있음)

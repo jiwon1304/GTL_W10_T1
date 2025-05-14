@@ -1098,7 +1098,7 @@ ID3D11InputLayout* FDXDShaderManager::GetInputLayoutByKey(const std::wstring& Ke
         }
         lock.unlock();
         InputLayoutCompileQueue.erase(Key);
-        return nullptr;
+        return nullptr; 
     }
     return nullptr;
 }

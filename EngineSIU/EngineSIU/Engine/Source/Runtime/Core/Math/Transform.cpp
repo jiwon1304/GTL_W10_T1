@@ -2,6 +2,7 @@
 #include "Transform.h"
 
 #include "JungleMath.h"
+#include "Misc/Parse.h"
 
 const FTransform FTransform::Identity = FTransform(FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
@@ -225,4 +226,45 @@ FTransform FTransform::operator*(const FTransform& Other) const
     FVector ResultPosition = Translation + ScaledPosition;
 
     return FTransform{ ResultPosition, ResultRotation, ResultScale };
+}
+
+FString FTransform::ToString() const
+{
+    return FString::Printf(TEXT("Translation: %s, Rotation: %s, Scale: %s"), *Translation.ToString(), *Rotation.ToString(), *Scale3D.ToString());
+}
+
+bool FTransform::InitFromString(const FString& InSourceString)
+{
+    // 초기화
+    Translation = FVector::ZeroVector;
+    Rotation = FQuat::Identity;
+    Scale3D = FVector(1, 1, 1);
+
+    // Translation 파싱
+    FString TranslationString;
+    if (!FString::ParseValueString(*InSourceString, TEXT("Translation:"), TranslationString))
+    {
+        return false;
+    }
+
+    // Rotation 파싱
+    FString RotationString;
+    if (!FString::ParseValueString(*InSourceString, TEXT("Rotation:"), RotationString))
+    {
+        return false;
+    }
+
+    // Scale 파싱
+    FString ScaleString;
+    if (!FString::ParseValueString(*InSourceString, TEXT("Scale:"), ScaleString))
+    {
+        return false;
+    }
+
+    // 각 요소별 InitFromString 호출
+    bool bSuccess = true;
+    bSuccess &= Translation.InitFromString(TranslationString);
+    bSuccess &= Rotation.InitFromString(RotationString);
+    bSuccess &= Scale3D.InitFromString(ScaleString);
+
 }
