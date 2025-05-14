@@ -34,7 +34,7 @@ void ACharacter::PostSpawnInitialize()
     UCameraComponent* CameraComp = AddComponent<UCameraComponent>(FName("CameraComponent_0"));
     CameraComp->SetupAttachment(SpringArmComp);
 
-    SetActorTickInEditor(true);
+    SetActorTickInEditor(false);
 }
 
 UObject* ACharacter::Duplicate(UObject* InOuter)
