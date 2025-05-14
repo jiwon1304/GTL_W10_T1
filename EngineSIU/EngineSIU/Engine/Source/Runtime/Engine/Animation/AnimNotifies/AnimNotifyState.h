@@ -22,5 +22,4 @@ public:
 
     // Notify가 끝날 때 호출 (EndTriggerTime 시점)
     virtual void NotifyEnd(USkeletalMeshComponent* MeshComp) = 0;
-    int a;
 };

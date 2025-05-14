@@ -146,7 +146,9 @@ void ULuaScriptComponent::BindEngineAPI()
             &AActor::GetActorRotation,
             &AActor::SetActorRotation
         ),
-        "Forward", &AActor::GetActorForwardVector
+        "Forward", &AActor::GetActorForwardVector,
+
+        "SetRotationUnsafe", & AActor::SetActorRotationUnsafe
     );
     
     // 프로퍼티 바인딩

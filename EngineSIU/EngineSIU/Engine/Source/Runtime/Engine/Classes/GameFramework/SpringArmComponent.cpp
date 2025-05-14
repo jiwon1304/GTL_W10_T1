@@ -18,13 +18,13 @@ USpringArmComponent::USpringArmComponent()
     bUsePawnControlRotation = true;
     bDoCollisionTest = false;
 
-    bInheritPitch = bInheritYaw = bInheritRoll = true;
+    bInheritPitch = bInheritYaw = bInheritRoll = false;
     bEnableCameraLag = true;
     bEnableCameraRotationLag = true;
     bUseCameraLagSubstepping = true;
 
     ProbeSize = 0.3f;
-    CameraLagSpeed = 10.f;
+    CameraLagSpeed = 100.f;
     CameraRotationLagSpeed = 10.f;
     CameraLagMaxTimeStep = 1.f / 60.f;
     CameraLagMaxDistance = 0.f;
@@ -107,7 +107,7 @@ UObject* USpringArmComponent::Duplicate(UObject* InOuter)
 void USpringArmComponent::TickComponent(float DeltaTime)
 {
 
-    //Super::TickComponent(DeltaTime);
+    Super::TickComponent(DeltaTime);
     UpdateDesiredArmLocation(bDoCollisionTest, bEnableCameraLag, bEnableCameraRotationLag, DeltaTime);
 }
 
@@ -247,7 +247,12 @@ void USpringArmComponent::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocati
 
     //UE_LOG(ELogLevel::Display, TEXT("Result Location : %.2f %.2f %.2f"), ResultLoc.X, ResultLoc.Y, ResultLoc.Z);
     SetWorldLocation(ResultLoc);
-    SetWorldRotation(DesiredRot);
+	SetRelativeRotation(DesiredRot);
+    /*for (auto* Child : AttachChildren)
+    {
+        Child->SetRelativeRotationUnsafe(DesiredRot);
+    }*/
+    //SetRelativeRotationUnsafe(DesiredRot);
 
 }
 

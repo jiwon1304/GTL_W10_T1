@@ -18,6 +18,8 @@ public:
 
     void HandleAnimNotify(const FAnimNotifyEvent& NotifyEvent) const;
 
+
+    float Velocity;
 private:
     USkeletalMeshComponent* Mesh;
     UCapsuleComponent* CapsuleComponent;

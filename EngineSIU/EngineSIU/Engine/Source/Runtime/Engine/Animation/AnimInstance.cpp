@@ -232,7 +232,6 @@ void UAnimInstance::TriggerAnimNotifies(float DeltaSeconds)
             NotifyEvent.NotifyStateClass->NotifyTick(OwningComp, DeltaSeconds);
 
             NewActiveAnimNotifyState.Add(NotifyEvent);
-            //NotifyQueue.AddStateNotify(NotifyEvent);
         }
         else
         {

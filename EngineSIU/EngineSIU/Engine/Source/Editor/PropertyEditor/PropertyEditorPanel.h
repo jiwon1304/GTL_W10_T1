@@ -142,8 +142,6 @@ void PropertyEditorPanel::RenderProperties(T* Obj)
     }
     UObject* UObjectPtr = Cast<UObject>(Obj);
     UClass* Cls = UObjectPtr->GetClass();
-
-    // 등록된 모든 UField 를 순회하면서 DrawFieldEditor 호출
     Cls->ForEachField([&](UField* Field)
         {
             ImGuiInspector::DrawFieldEditor(Field, UObjectPtr);
