@@ -320,6 +320,18 @@ void AEditorPlayer::ControlRotation(USceneComponent* Component, UGizmoBaseCompon
                                                         ? &ActiveViewport->PerspectiveCamera
                                                         : &ActiveViewport->OrthogonalCamera;
 
+    static USceneComponent* PreviousComponent = nullptr;
+    static FQuat AccumulatedRotation = FQuat::Identity;
+    static FQuat OriginalRotation = FQuat::Identity;
+    bool bComponentChanged = false;
+    if (PreviousComponent != Component)
+    {
+        PreviousComponent = Component;
+        bComponentChanged = true;
+        AccumulatedRotation = FQuat::Identity;
+        OriginalRotation = Component->GetWorldRotation().Quaternion();
+    }
+
     FVector CameraForward = ViewTransform->GetForwardVector();
     FVector CameraRight = ViewTransform->GetRightVector();
     FVector CameraUp = ViewTransform->GetUpVector();
@@ -339,7 +351,7 @@ void AEditorPlayer::ControlRotation(USceneComponent* Component, UGizmoBaseCompon
             Axis = Component->GetForwardVector();
         }
 
-        RotationDelta = FQuat(Axis, RotationAmount);
+        AccumulatedRotation = FQuat(Axis, RotationAmount) * AccumulatedRotation;
     }
     else if (Gizmo->GetGizmoType() == UGizmoBaseComponent::CircleY)
     {
@@ -352,7 +364,7 @@ void AEditorPlayer::ControlRotation(USceneComponent* Component, UGizmoBaseCompon
             Axis = Component->GetRightVector();
         }
 
-        RotationDelta = FQuat(Axis, RotationAmount);
+        AccumulatedRotation = FQuat(Axis, RotationAmount) * AccumulatedRotation;
     }
     else if (Gizmo->GetGizmoType() == UGizmoBaseComponent::CircleZ)
     {
@@ -364,11 +376,11 @@ void AEditorPlayer::ControlRotation(USceneComponent* Component, UGizmoBaseCompon
             Axis = Component->GetUpVector();
         }
         
-        RotationDelta = FQuat(Axis, RotationAmount);
+        AccumulatedRotation = FQuat(Axis, RotationAmount) * AccumulatedRotation;
     }
 
     // 쿼터니언의 곱 순서는 delta * current 가 맞음.
-    Component->SetWorldRotation(RotationDelta * CurrentRotation); 
+    Component->SetWorldRotation(AccumulatedRotation * OriginalRotation);
 }
 
 void AEditorPlayer::ControlScale(USceneComponent* Component, UGizmoBaseComponent* Gizmo, float DeltaX, float DeltaY)

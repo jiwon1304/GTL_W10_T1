@@ -318,6 +318,16 @@ bool AActor::SetActorRotation(const FRotator& NewRotation)
     return false;
 }
 
+bool AActor::SetActorRotationUnsafe(const FRotator& NewRotation)
+{
+    if (RootComponent)
+    {
+        RootComponent->SetRelativeRotationUnsafe(NewRotation);
+        return true;
+    }
+    return false;
+}
+
 bool AActor::SetActorScale(const FVector& NewScale)
 {
     if (RootComponent)

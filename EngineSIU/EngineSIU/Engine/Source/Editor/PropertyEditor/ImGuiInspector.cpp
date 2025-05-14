@@ -77,7 +77,7 @@ namespace ImGuiInspector
             FR->SetValue(ObjPtr, R);
             if (auto* SC = GetSceneComp())
             {
-                SC->SetRelativeRotation(R);
+                SC->SetRelativeRotationUnsafe(R);
             }
             break;
         }

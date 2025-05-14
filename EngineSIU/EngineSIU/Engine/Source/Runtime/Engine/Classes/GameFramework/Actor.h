@@ -95,6 +95,7 @@ public:
 
     bool SetActorLocation(const FVector& NewLocation);
     bool SetActorRotation(const FRotator& NewRotation);
+    bool SetActorRotationUnsafe(const FRotator& NewRotation);
     bool SetActorScale(const FVector& NewScale);
 
 protected:

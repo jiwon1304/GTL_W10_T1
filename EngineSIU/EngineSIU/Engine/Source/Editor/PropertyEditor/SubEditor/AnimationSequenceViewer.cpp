@@ -30,27 +30,56 @@ void AnimationSequenceViewer::Render()
         }
     }
 
-    // Update CurrentFrameSeconds if playing
+    // Update CurrentFrameSeconds if Playing
     if (bIsPlaying && SelectedAnimSequence && SelectedAnimSequence->GetDataModel())
     {
-        float deltaTime = ImGui::GetIO().DeltaTime;
-        CurrentFrameSeconds += deltaTime;
-        
-        if (CurrentFrameSeconds >= MaxFrameSeconds)
+        float DeltaTime = ImGui::GetIO().DeltaTime;
+        float RateScale = SelectedAnimSequence->GetRateScale();
+        CurrentFrameSeconds += DeltaTime * RateScale;
+
+        if (RateScale >= 0.0f)
         {
-            if (bIsRepeating)
+            // Forward playback
+            if (CurrentFrameSeconds >= MaxFrameSeconds)
             {
-                CurrentFrameSeconds = fmodf(CurrentFrameSeconds, MaxFrameSeconds);
-                if (SelectedSkeletalMeshComponent)
+                if (bIsRepeating)
                 {
-                    SelectedSkeletalMeshComponent->PlayAnimation(SelectedAnimSequence, bIsRepeating);
+                    CurrentFrameSeconds = fmodf(CurrentFrameSeconds, MaxFrameSeconds);
+                }
+                else
+                {
+                    CurrentFrameSeconds = MaxFrameSeconds;
+                    bIsPlaying = false;
                 }
             }
-            else
+        }
+        else
+        {
+            // Reverse playback
+            if (CurrentFrameSeconds < 0.0f)
             {
-                CurrentFrameSeconds = MaxFrameSeconds;
-                bIsPlaying = false; // Stop playing
+                if (bIsRepeating)
+                {
+                    float Wrapped = fmodf(-CurrentFrameSeconds, MaxFrameSeconds);
+                    CurrentFrameSeconds = MaxFrameSeconds - Wrapped;
+                    if (CurrentFrameSeconds >= MaxFrameSeconds)
+                    {
+                        CurrentFrameSeconds -= MaxFrameSeconds;
+                    }
+                }
+                else
+                {
+                    CurrentFrameSeconds = EndFrameSeconds;
+                    bIsPlaying = false;
+                }
             }
+        }
+
+        if (SelectedSkeletalMeshComponent)
+        {
+            auto* NodeInstance = SelectedSkeletalMeshComponent->GetSingleNodeInstance();
+            NodeInstance->SetPlaying(bIsPlaying);
+            NodeInstance->SetCurrentTime(CurrentFrameSeconds);
         }
     }
 
@@ -297,6 +326,8 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
     {
         CurrentFrameSeconds = 0.0f;
         bIsPlaying = false;
+        SingleNode->SetCurrentTime(0.0f);
+        SingleNode->SetPlaying(false);
     }
     
     ImGui::SameLine();
@@ -319,7 +350,7 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
             // Already Playing
             if (CurrentFrameSeconds < MaxFrameSeconds && CurrentFrameSeconds > 0.0f)
             {
-                SingleNode->GetCurrentSequence()->SetRateScale(1.0f);
+                SingleNode->SetPlaying(true);
             }
             else 
             {
@@ -327,9 +358,10 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
                 if (CurrentFrameSeconds >= MaxFrameSeconds && MaxFrameSeconds > 0.0f)
                 {
                     CurrentFrameSeconds = 0.0f;
+                    SingleNode->SetCurrentTime(0.0f);
                 }
 
-                SelectedSkeletalMeshComponent->PlayAnimation(SelectedAnimSequence, bIsRepeating);
+                // SelectedSkeletalMeshComponent->PlayAnimation(SelectedAnimSequence, bIsRepeating);
             }
         }
         else
@@ -337,8 +369,7 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
             // Pause
             if (SingleNode != nullptr)
             {
-                SingleNode->GetCurrentSequence()->SetRateScale(0.0f);
-                
+                SingleNode->SetPlaying(false);
             }
         }
     }
@@ -350,11 +381,13 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
         if (SelectedAnimSequence && SelectedAnimSequence->GetDataModel())
         {
             CurrentFrameSeconds = MaxFrameSeconds;
+            SingleNode->SetCurrentTime(CurrentFrameSeconds);
         }
         
         if (!bIsRepeating)
         {
             bIsPlaying = false; // Stop Play
+            SingleNode->SetPlaying(false);
         }
     }
 
@@ -414,6 +447,27 @@ void AnimationSequenceViewer::RenderPlayController(float InWidth, float InHeight
 
 void AnimationSequenceViewer::RenderAssetDetails()
 {
+    if (SelectedAnimSequence)
+    {
+        float RateScale = SelectedAnimSequence->GetRateScale();
+        ImGui::Text("Rate Scale ");
+        ImGui::SameLine();
+        if (ImGui::DragFloat("##RateScale", &RateScale, 0.01f, -100.0f, 100.0f, "%.2f"))
+        {
+            SelectedAnimSequence->SetRateScale(RateScale);
+        }
+
+        ImGui::Text("Loop ");
+        ImGui::SameLine();
+        bool* bLoop = &SelectedAnimSequence->bLoop;
+        if (ImGui::Checkbox("##Loop", bLoop))
+        {
+            
+        }
+
+        ImGui::Separator();
+    }
+    
     if (SelectedNotifyIndex == -1)
     {
         return;
@@ -422,8 +476,7 @@ void AnimationSequenceViewer::RenderAssetDetails()
     FAnimNotifyEvent& Notify = SelectedAnimSequence->Notifies[SelectedNotifyIndex];
     
     static char NotifyBuffer[128] = { 0 };
-
-    // FString → char (UTF8 변환)
+    
     std::string NotifyNameStr = GetData(*Notify.NotifyName.ToString());
     strncpy(NotifyBuffer, NotifyNameStr.c_str(), sizeof(NotifyBuffer));
     NotifyBuffer[sizeof(NotifyBuffer) - 1] = '\0'; // null-termination 보장
@@ -489,8 +542,9 @@ void AnimationSequenceViewer::RenderAssetBrowser()
                         MaxFrameSeconds = SelectedAnimSequence->GetPlayLength();
                         EndFrameSeconds = MaxFrameSeconds; // Set sequencer end to anim length
 
-                        SelectedSkeletalMeshComponent->PlayAnimation(SelectedAnimSequence, false);
-                        SelectedSkeletalMeshComponent->GetSingleNodeInstance()->GetCurrentSequence()->SetRateScale(0.0f);
+                        SelectedSkeletalMeshComponent->SetAnimation(SelectedAnimSequence);
+                        SelectedSkeletalMeshComponent->GetSingleNodeInstance()->SetCurrentTime(0.0f);
+                        SelectedSkeletalMeshComponent->GetSingleNodeInstance()->SetPlaying(false);
                     }
                     else
                     {

@@ -156,8 +156,10 @@ void SkeletalTreePanel::CreateSkeletalDetail()
         ImGui::Spacing();
 
         FRotator Rotator = boneTransform.Rotation.Rotator();
-        FImGuiWidget::DrawRot3Control("Rotation", Rotator, 0, 85);
-        boneTransform.Rotation = FQuat(Rotator);
+        FRotator OriginalRotator = Rotator;
+         FImGuiWidget::DrawRot3Control("Rotation", Rotator, 0, 85);
+         FRotator Delta = Rotator - OriginalRotator;
+         boneTransform.Rotate(Delta);
 
         ImGui::Spacing();
 
