@@ -6,34 +6,8 @@
 #include "Serializer.h"
 #include "Engine/AssetManager.h"
 #include "Components/Material/Material.h"
-
-
-FFbxManager::~FFbxManager()
-{
-    bStopThread = true;
-    LoadCondition.notify_all();
-    ConvertCondition.notify_all();
-    SaveCondition.notify_all();
-    {
-        std::unique_lock<std::mutex> LockL(LoadTerminatedMutex);
-        LoadTerminatedCondition.wait(LockL, [&] { return bLoadThreadTerminated; });
-    }
-
-    {
-        std::unique_lock<std::mutex> LockC(ConvertTerminatedMutex);
-        ConvertTerminatedCondition.wait(LockC, [&] { return bConvertThreadTerminated; });
-    }
-
-    {
-        std::unique_lock<std::mutex> LockS(SaveTerminatedMutex);
-        SaveTerminatedCondition.wait(LockS, [&] { return bSaveThreadTerminated; });
-    }
-
-    for (auto& pair : FbxMeshMap)
-    {
-        delete pair.Value;
-    }
-}
+#include "UObject/ObjectFactory.h"
+#include "Runtime/Engine/Animation/AnimNotifies/AnimNotifyState.h"
 
 void FFbxManager::Init()
 {
@@ -45,6 +19,55 @@ void FFbxManager::Init()
     LoadThread.detach();
     SaveThread.detach();
     ConvertThread.detach();
+}
+
+void FFbxManager::Shutdown()
+{
+    bStopThread = true;
+    ConvertCondition.notify_all();
+    SaveCondition.notify_all();
+    LoadCondition.notify_all();
+    {
+        std::unique_lock<std::mutex> LockL(LoadTerminatedMutex);
+        LoadTerminatedCondition.wait(LockL, [&] { return bLoadThreadTerminated; });
+    }
+    {
+        std::unique_lock<std::mutex> LockC(ConvertTerminatedMutex);
+        ConvertTerminatedCondition.wait(LockC, [&] { return bConvertThreadTerminated; });
+    }
+    {
+        std::unique_lock<std::mutex> LockS(SaveTerminatedMutex);
+        SaveTerminatedCondition.wait(LockS, [&] { return bSaveThreadTerminated; });
+    }
+
+    // 1. FileName별로 AnimName-Notifies 맵 만들기
+    TMap<FString, TMap<FString, TArray<FAnimNotifyEvent>>> FileNameToAnimNotifiesMap;
+    for (const auto& pair : AnimMap)
+    {
+        if (pair.Value.State != LoadState::Completed)
+            continue;
+        const FString& FileName = pair.Value.FileName;
+        UAnimSequence* Sequence = pair.Value.Sequence;
+        if (!Sequence) continue;
+        FileNameToAnimNotifiesMap
+            .FindOrAdd(FileName)
+            .Add(Sequence->GetSeqName(), Sequence->Notifies);
+    }
+
+    // 2. FileName별로 .notifies 파일 저장
+    for (const auto& pair : FileNameToAnimNotifiesMap)
+    {
+        const FString& FileName = pair.Key;
+        const TMap<FString, TArray<FAnimNotifyEvent>>& AnimNotifiesMap = pair.Value;
+        FString NotifyFileName = FileName + TEXT(".notifies");
+        SaveNotifiesToBinary(StringToWString(*NotifyFileName), AnimNotifiesMap);
+    }
+
+    // 3. FbxMeshMap 정리
+    for (auto& pair : FbxMeshMap)
+    {
+        delete pair.Value;
+    }
 }
 
 void FFbxManager::Load(const FString& filename, bool bPrioritized)
@@ -159,7 +182,9 @@ void FFbxManager::LoadFunc()
     {
         std::unique_lock<std::mutex> Lock(LoadMutex);
         // 비어있으면 Condition Variable을 대기
-        LoadCondition.wait(Lock, [&] { return !PriorityLoadQueue.IsEmpty() || !LoadQueue.IsEmpty(); });
+        LoadCondition.wait(Lock, [&] { 
+            return bStopThread || !PriorityLoadQueue.IsEmpty() || !LoadQueue.IsEmpty();
+            });
 
         while (!PriorityLoadQueue.IsEmpty() || !LoadQueue.IsEmpty())
         {
@@ -261,7 +286,9 @@ void FFbxManager::ConvertFunc()
     while (!bStopThread)
     {
         std::unique_lock<std::mutex> Lock(ConvertMutex);
-        ConvertCondition.wait(Lock, [&] { return !PriorityConvertQueue.IsEmpty() || !ConvertQueue.IsEmpty(); });
+        ConvertCondition.wait(Lock, [&] { 
+            return !PriorityConvertQueue.IsEmpty() || !ConvertQueue.IsEmpty() || bStopThread;
+            });
 
         while (!PriorityConvertQueue.IsEmpty() || !ConvertQueue.IsEmpty())
         {
@@ -305,6 +332,12 @@ void FFbxManager::ConvertFunc()
                 TArray<FFbxAnimSequence*> FbxSequences = FbxAnimMap[FileName];
                 TArray<UAnimSequence*> AnimSequences;
                 TArray<FString> AnimNames;
+
+                // 노티파이도 같이 로드
+                TMap<FString, TArray<FAnimNotifyEvent>> AnimNameToNotifies;
+                FString NotifyFileName = FileName + ".notifies";
+                LoadNotifiesFromBinary(StringToWString(*NotifyFileName), AnimNameToNotifies);
+
                 for (const FFbxAnimSequence* FbxSequence : FbxSequences)
                 {
                     // 애니메이션을 생성
@@ -313,6 +346,12 @@ void FFbxManager::ConvertFunc()
                         UAnimSequence* AnimSequence = nullptr;
                         FString AnimName;
                         FFbxLoader::GenerateAnimations(FbxMesh, FbxSequence, AnimName, AnimSequence);
+
+                        if (AnimSequence && AnimNameToNotifies.Contains(AnimName))
+                        {
+                            AnimSequence->Notifies = AnimNameToNotifies[AnimName];
+                        }
+
                         AnimSequences.Add(AnimSequence);
                         AnimNames.Add(AnimName);
                     }
@@ -323,7 +362,7 @@ void FFbxManager::ConvertFunc()
                     {
                         if (AnimSeq)
                         {
-                            AnimMap.Add(FileName + "::" + AnimSeq->Name, {LoadState::Completed, AnimSeq});
+                            AnimMap.Add(FileName + "::" + AnimSeq->Name, {LoadState::Completed, FileName, AnimSeq});
                         }
                     }
                 }
@@ -350,7 +389,7 @@ void FFbxManager::SaveFunc()
         // condition variable을 혼자 갖기위해 lock를 획득
         std::unique_lock<std::mutex> Lock(SaveMutex);
         // 비어있으면 Condition Variable을 대기
-        SaveCondition.wait(Lock, [&] { return !SaveQueue.IsEmpty(); });
+        SaveCondition.wait(Lock, [&] { return !SaveQueue.IsEmpty() || bStopThread; });
         while (!SaveQueue.IsEmpty())
         {
             if (bStopThread)
@@ -918,5 +957,88 @@ bool FFbxManager::LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifi
     }
     UE_LOG(ELogLevel::Display, "Binary loaded : %s", WStringToString(FilePath).c_str());
 
+    return true;
+}
+
+bool FFbxManager::SaveNotifiesToBinary(const FWString& FilePath, const TMap<FString, TArray<FAnimNotifyEvent>>& AnimationNotifiesMap)
+{
+    bool bEmpty = false;
+
+    for (const auto& Pair : AnimationNotifiesMap)
+    {
+        if (Pair.Value.Num() > 0)
+        {
+            bEmpty = true;
+            break;
+        }
+    }
+
+    std::ofstream File(FilePath, std::ios::binary);
+    if (!File.is_open())
+        return false;
+
+    // 1. 애니메이션 개수 저장
+    uint32 AnimCount = AnimationNotifiesMap.Num();
+    File.write(reinterpret_cast<const char*>(&AnimCount), sizeof(AnimCount));
+
+    for (const auto& Pair : AnimationNotifiesMap)
+    {
+        // 2. 애니메이션 이름 저장
+        Serializer::WriteFString(File, *Pair.Key);
+
+        // 3. 노티파이 배열 직렬화
+        const TArray<FAnimNotifyEvent>& Notifies = Pair.Value;
+        uint32 NotifyCount = Notifies.Num();
+        File.write(reinterpret_cast<const char*>(&NotifyCount), sizeof(NotifyCount));
+        for (const FAnimNotifyEvent& Notify : Notifies)
+        {
+            FString NotifyString = Notify.ToString();
+            Serializer::WriteFString(File, NotifyString);
+        }
+    }
+
+    File.close();
+    return true;
+}
+
+bool FFbxManager::LoadNotifiesFromBinary(const FWString& FilePath, TMap<FString, TArray<FAnimNotifyEvent>>& AnimationNotifiesMap)
+{
+    AnimationNotifiesMap.Empty();
+
+    if (!std::filesystem::exists(FilePath))
+        return false;
+
+    std::ifstream File(FilePath, std::ios::binary);
+    if (!File.is_open())
+        return false;
+
+    // 1. 애니메이션 개수 읽기
+    uint32 AnimCount = 0;
+    File.read(reinterpret_cast<char*>(&AnimCount), sizeof(AnimCount));
+
+    for (uint32 i = 0; i < AnimCount; ++i)
+    {
+        // 2. 애니메이션 이름 읽기
+        FString AnimName;
+        Serializer::ReadFString(File, AnimName);
+
+        // 3. 노티파이 배열 읽기
+        uint32 NotifyCount = 0;
+        File.read(reinterpret_cast<char*>(&NotifyCount), sizeof(NotifyCount));
+        TArray<FAnimNotifyEvent> Notifies;
+        Notifies.Reserve(NotifyCount);
+
+        for (uint32 j = 0; j < NotifyCount; ++j)
+        {
+            FString NotifyString;
+            Serializer::ReadFString(File, NotifyString);
+            FAnimNotifyEvent Notify;
+            Notify.InitFromString(NotifyString);
+            Notifies.Add(Notify);
+        }
+        AnimationNotifiesMap.Add(AnimName, Notifies);
+    }
+
+    File.close();
     return true;
 }

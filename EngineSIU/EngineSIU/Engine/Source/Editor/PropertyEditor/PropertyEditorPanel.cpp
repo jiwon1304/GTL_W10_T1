@@ -248,7 +248,7 @@ void PropertyEditorPanel::RenderForSceneComponent(USceneComponent* SceneComponen
         ImGui::Spacing();
 
         SceneComponent->SetRelativeLocation(Location);
-        SceneComponent->SetRelativeRotation(Rotation);
+        SceneComponent->SetRelativeRotationUnsafe(Rotation);
         SceneComponent->SetRelativeScale3D(Scale);
 
         std::string CoordiButtonLabel;
@@ -788,7 +788,7 @@ void PropertyEditorPanel::RenderForModifySkeletalBone(USkeletalMeshComponent* Sk
 
             
             FRotator SkelRotator = boneTransform.Rotation.Rotator();
-            FImGuiWidget::DrawRot3Control("Rotation", SkelRotator, 0, 85);
+            //FImGuiWidget::DrawRot3Control("Rotation", SkelRotator, 0, 85);
             boneTransform.Rotation = FQuat(SkelRotator);
             ImGui::Spacing();
 

@@ -333,6 +333,11 @@ void USceneComponent::SetRelativeRotation(const FRotator& InRotation)
     SetRelativeRotation(InRotation.GetNormalized().Quaternion());
 }
 
+void USceneComponent::SetRelativeRotationUnsafe(const FRotator& InRotation)
+{
+    RelativeRotation = InRotation;
+}
+
 void USceneComponent::SetRelativeRotation(const FQuat& InQuat)
 {
     FQuat NormalizedQuat = InQuat.GetNormalized();

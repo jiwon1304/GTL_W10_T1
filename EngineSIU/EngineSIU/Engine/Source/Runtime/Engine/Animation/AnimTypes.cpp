@@ -32,38 +32,39 @@ FString FAnimNotifyEvent::ToString() const
 {
     FString NotifyString = NotifyName.ToString();
     TMap<FString, FString> NotifyStateProperties;
-    NotifyStateClass->GetProperties(NotifyStateProperties);
+    if (NotifyStateClass)
+    {
+        NotifyStateClass->GetProperties(NotifyStateProperties);
+    }
     FString NotifyStateString = NotifyStateProperties.ToString();
     
-    return FString::Printf(TEXT("TrackIndex=%d TriggerTime=%.3f TriggerTimeOffset=%3.f EndTriggerTimeOffset=%.3f Duration=%.3f NotifyName=%s NotifyStateClass=%s"),
-        TrackIndex, TriggerTime, TriggerTimeOffset, EndTriggerTimeOffset, Duration, NotifyString, NotifyStateString);
+    return FString::Printf(TEXT("TrackIndex=%d TriggerTime=%f TriggerTimeOffset=%f EndTriggerTimeOffset=%f Duration=%f NotifyName=%s NotifyStateClass=%s"),
+        TrackIndex, TriggerTime, TriggerTimeOffset, EndTriggerTimeOffset, Duration, *NotifyString, *NotifyStateString);
 }
 
 bool FAnimNotifyEvent::InitFromString(const FString& InSourceString)
 {
-    FString NotifyStateString;
-    const bool bSuccessful = FParse::Value(*InSourceString, TEXT("TrackIndex="), TrackIndex) ||
-        FParse::Value(*InSourceString, TEXT("TriggerTime="), TriggerTime) ||
-        FParse::Value(*InSourceString, TEXT("Duration="), Duration) ||
-        FParse::Value(*InSourceString, TEXT("TriggerTimeOffset="), TriggerTimeOffset) ||
-        FParse::Value(*InSourceString, TEXT("EndTriggerTimeOffset="), EndTriggerTimeOffset) ||
-        FParse::Value(*InSourceString, TEXT("NotifyName="), NotifyName);
+    bool bSuccessful = FParse::Value(*InSourceString, TEXT("TrackIndex="), TrackIndex);
+    bSuccessful |= FParse::Value(*InSourceString, TEXT("TriggerTime="), TriggerTime);
+    bSuccessful |= FParse::Value(*InSourceString, TEXT("Duration="), Duration);
+    bSuccessful |= FParse::Value(*InSourceString, TEXT("TriggerTimeOffset="), TriggerTimeOffset);
+    bSuccessful |= FParse::Value(*InSourceString, TEXT("EndTriggerTimeOffset="), EndTriggerTimeOffset);
+    bSuccessful |= FParse::Value(*InSourceString, TEXT("NotifyName="), NotifyName);
 
+    //FString NotifyStateString;
     FString NotifyStateClassMarker = TEXT("NotifyStateClass=");
     int32 NotifyStateClassStart = InSourceString.Find(NotifyStateClassMarker, ESearchCase::IgnoreCase);
-    if (NotifyStateClassStart != INDEX_NONE)
-    {
-        if (!NotifyStateClass)
-        {
-            NotifyStateClass = FObjectFactory::ConstructObject<UAnimNotifyState>(nullptr);
-        }
-        int32 NotifyStateClassEnd = InSourceString.Len();
-        NotifyStateString = InSourceString.Mid(NotifyStateClassStart + NotifyStateClassMarker.Len(), NotifyStateClassEnd - NotifyStateClassStart - NotifyStateClassMarker.Len());
+    // 저장안함
+    //if (NotifyStateClassStart != INDEX_NONE)
+    //{
+    //    assert(NotifyStateClass != nullptr);
+    //    int32 NotifyStateClassEnd = InSourceString.Len();
+    //    NotifyStateString = InSourceString.Mid(NotifyStateClassStart + NotifyStateClassMarker.Len(), NotifyStateClassEnd - NotifyStateClassStart - NotifyStateClassMarker.Len());
 
-        TMap<FString, FString> NotifyStateProperties;
-        NotifyStateProperties.InitFromString(NotifyStateString);
-        NotifyStateClass->SetProperties(NotifyStateProperties);
-    }
+    //    TMap<FString, FString> NotifyStateProperties;
+    //    NotifyStateProperties.InitFromString(NotifyStateString);
+    //    NotifyStateClass->SetProperties(NotifyStateProperties);
+    //}
 
     return bSuccessful;
 }

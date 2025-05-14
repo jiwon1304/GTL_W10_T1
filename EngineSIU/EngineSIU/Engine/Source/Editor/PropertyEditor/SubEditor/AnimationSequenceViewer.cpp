@@ -110,25 +110,34 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
     {
         return;
     }
-    
-    static bool transformOpen = false;
-    TArray<FAnimNotifyEvent>& Notifies =  SelectedAnimSequence->Notifies;
 
+    static bool transformOpen = false;
+    TArray<FAnimNotifyEvent>& Notifies = SelectedAnimSequence->Notifies;
+
+    // TrackList는 사용자가 추가/삭제한 트랙을 직접 관리한다.
+    // Notifies를 기반으로는 TrackAndKeyMap만 동기화한다.
     if (SelectedAnimSequence && SelectedAnimSequence->GetDataModel() && bNeedsNotifyUpdate)
     {
         TrackAndKeyMap.Empty();
-        for (auto& v : Notifies)
+
+        // 1. Notifies에 있는 모든 TrackIndex를 TrackList에 포함시킴
+        for (const auto& Notify : Notifies)
         {
-            TrackAndKeyMap[v.TrackIndex].Add(v.TriggerTime);
+            if (!TrackList.Contains(Notify.TrackIndex))
+            {
+                TrackList.Add(Notify.TrackIndex);
+            }
+            TrackAndKeyMap.FindOrAdd(Notify.TrackIndex).Add(Notify.TriggerTime);
         }
+
         bNeedsNotifyUpdate = false;
     }
-    
-    if (ImGui::BeginNeoSequencer("Sequencer", &CurrentFrameSeconds, &StartFrameSeconds, &EndFrameSeconds, {InWidth, InHeight},
-                                 ImGuiNeoSequencerFlags_EnableSelection |
-                                 ImGuiNeoSequencerFlags_Selection_EnableDragging |
-                                 ImGuiNeoSequencerFlags_AllowLengthChanging |
-                                 ImGuiNeoSequencerFlags_Selection_EnableDeletion))
+
+    if (ImGui::BeginNeoSequencer("Sequencer", &CurrentFrameSeconds, &StartFrameSeconds, &EndFrameSeconds, { InWidth, InHeight },
+        ImGuiNeoSequencerFlags_EnableSelection |
+        ImGuiNeoSequencerFlags_Selection_EnableDragging |
+        ImGuiNeoSequencerFlags_AllowLengthChanging |
+        ImGuiNeoSequencerFlags_Selection_EnableDeletion))
     {
         EndFrameSeconds = std::min(EndFrameSeconds, MaxFrameSeconds);
 
@@ -139,7 +148,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                 UE_LOG(ELogLevel::Warning, "RIGHT CLICKED");
                 ImGui::OpenPopup("TrackPopup");
             }
-            
+
             if (ImGui::BeginPopup("TrackPopup"))
             {
                 if (ImGui::BeginMenu("Track"))
@@ -147,17 +156,16 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                     if (ImGui::MenuItem("Add Track"))
                     {
                         int FindTrackIndex = FindAvailableTrackIndex(Notifies);
-                        TrackAndKeyMap.Add(FindTrackIndex, TArray<ImGui::FrameIndexType>());
                         TrackList.Add(FindTrackIndex);
                         bNeedsNotifyUpdate = true;
                     }
-                    
+
                     if (ImGui::MenuItem("Remove Track"))
                     {
                         if (SelectedTrackIndex >= 0)
                         {
                             TrackList.Remove(SelectedTrackIndex);
-                            
+
                             for (int32 i = Notifies.Num() - 1; i >= 0; --i)
                             {
                                 if (Notifies[i].TrackIndex == SelectedTrackIndex)
@@ -165,13 +173,13 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                                     Notifies.RemoveAt(i);
                                 }
                             }
-                            
+
                             SelectedTrackIndex = -1;
                             SelectedNotifyIndex = -1;
                             bNeedsNotifyUpdate = true;
                         }
                     }
-                    
+
                     ImGui::EndMenu();
                 }
                 ImGui::EndPopup();
@@ -180,7 +188,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
             for (int32 TrackIndex : TrackList)
             {
                 FString TimelineId = FString::Printf(TEXT("Track_%d"), TrackIndex);
-                
+
                 if (ImGui::BeginNeoTimelineEx(GetData(TimelineId)))
                 {
                     if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
@@ -188,7 +196,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                         SelectedTrackIndex = TrackIndex;
                         ImGui::OpenPopup("NotifyPopup_Generic"); // 우선은 하나의 제네릭 팝업 사용
                     }
-                
+
                     // 해당 트랙에 속한 Notify만 찾아서 렌더링
                     for (int32 i = 0; i < Notifies.Num(); ++i)
                     {
@@ -221,16 +229,16 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                                 bNeedsNotifyUpdate = true;
                             }
                         }
-                                
+
                         ImGui::EndPopup();
                     }
-                    
+
                     ImGui::SetItemDefaultFocus();
-                    
+
                     ImGui::EndNeoTimeLine();
                 }
             }
-            
+
             // 모든 타임라인에 공통으로 적용될 수 있는 팝업 (혹은 위에서처럼 각 타임라인별 팝업)
             if (ImGui::BeginPopup("NotifyPopup_Generic"))
             {
@@ -239,7 +247,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                     if (ImGui::MenuItem("Add Notify"))
                     {
                         UE_LOG(ELogLevel::Display, "Add Notify Clicked");
-                        
+
                         FAnimNotifyEvent NewNotify;
                         NewNotify.TrackIndex = SelectedTrackIndex;
                         NewNotify.TriggerTime = CurrentFrameSeconds;
@@ -249,8 +257,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                         NewNotify.Duration = 2.0f;
                         NewNotify.NotifyName = "SLOW_MOTION";
                         UAnimNotifyState_SlowMotion* NewNotifyState = FObjectFactory::ConstructObject<UAnimNotifyState_SlowMotion>(nullptr);
-                            NewNotify.NotifyStateClass = Cast<UAnimNotifyState>(NewNotifyState);
-
+                        NewNotify.NotifyStateClass = Cast<UAnimNotifyState>(NewNotifyState);
 #endif
                         Notifies.Add(NewNotify);
                         bNeedsNotifyUpdate = true;
@@ -259,13 +266,13 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                 }
                 ImGui::EndPopup();
             }
-            
+
             ImGui::EndNeoGroup();
         }
 
-        if ( SelectedSkeletalMeshComponent->GetSingleNodeInstance() != nullptr)
+        if (SelectedSkeletalMeshComponent && SelectedSkeletalMeshComponent->GetSingleNodeInstance() != nullptr)
         {
-             SelectedSkeletalMeshComponent->GetSingleNodeInstance()->SetCurrentTime(CurrentFrameSeconds);
+            SelectedSkeletalMeshComponent->GetSingleNodeInstance()->SetCurrentTime(CurrentFrameSeconds);
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_Delete))
@@ -278,7 +285,7 @@ void AnimationSequenceViewer::RenderAnimationSequence(float InWidth, float InHei
                 bNeedsNotifyUpdate = true;
             }
         }
-        
+
         ImGui::EndNeoSequencer();
     }
 }
@@ -526,20 +533,22 @@ void AnimationSequenceViewer::RepeatButton(bool* v) const
     ImGui::PopStyleColor();
 }
 
-int AnimationSequenceViewer::FindAvailableTrackIndex(const TArray<FAnimNotifyEvent>& NotifyEvents) const
+int AnimationSequenceViewer::FindAvailableTrackIndex(const TArray<FAnimNotifyEvent>& Notifies)
 {
-    TSet<int> UsedTrackIndex;
-
-    for (const FAnimNotifyEvent& Notify : NotifyEvents)
+    TSet<int32> UsedIndices;
+    for (const FAnimNotifyEvent& Notify : Notifies)
     {
-        UsedTrackIndex.Add(Notify.TrackIndex);
+        UsedIndices.Add(Notify.TrackIndex);
+    }
+    for (int32 TrackIdx : TrackList)
+    {
+        UsedIndices.Add(TrackIdx);
     }
 
-    for (int i = 0;; ++i)
+    int32 NewIndex = 0;
+    while (UsedIndices.Contains(NewIndex))
     {
-        if (!UsedTrackIndex.Contains(i))
-        {
-            return i;
-        }
+        ++NewIndex;
     }
+    return NewIndex;
 }

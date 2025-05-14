@@ -49,6 +49,7 @@ void UEditorEngine::Init()
 
 void UEditorEngine::Release()
 {
+    FFbxManager::Shutdown();
     SaveLevel("Saved/AutoSaves.scene");
 }
 

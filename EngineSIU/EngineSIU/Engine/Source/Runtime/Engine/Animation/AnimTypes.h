@@ -24,7 +24,7 @@ struct FAnimNotifyEvent
     /* Notify 종료 보정을 위한 시간 오프셋 : 종료가 너무 늦거나 빠르게 되는 것을 조절 */
     float EndTriggerTimeOffset = 0.f;
 
-    FName NotifyName;
+    FName NotifyName = FName("None");
 
     UAnimNotifyState* NotifyStateClass = nullptr;
 

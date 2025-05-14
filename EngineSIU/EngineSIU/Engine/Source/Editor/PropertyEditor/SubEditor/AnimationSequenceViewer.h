@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "GameFramework/Actor.h"
 #include "ImGui/imgui_neo_sequencer.h"
 #include "UnrealEd/EditorPanel.h"
@@ -23,7 +23,7 @@ private:
     void RepeatButton(bool* v) const;
 
 private:
-    int FindAvailableTrackIndex(const TArray<FAnimNotifyEvent>& NotifyEvents) const;
+    int FindAvailableTrackIndex(const TArray<FAnimNotifyEvent>& Notifies);
     
 private:
     float Width = 800, Height = 600;

@@ -38,14 +38,15 @@ public:
     struct AnimEntry
     {
         LoadState State; // 항상 Completed가 될것임
+        FString FileName; // SkeletalMesh의 파일이름
         UAnimSequence* Sequence;
     };
 
     inline static FSpinLock MeshMapLock; // MeshEntry의 Map에 접근할 때 쓰는 스핀락 : map 접근에는 mutex사용안함
     inline static FSpinLock AnimMapLock; // AnimEntry의 Map에 접근할 때 쓰는 스핀락
 public:
-    ~FFbxManager(); // 호출 안되고있음
     static void Init();
+    static void Shutdown();
     static void Load(const FString& filename, bool bPrioritized = false);
 
     static USkeletalMesh* GetSkeletalMesh(const FString& filename);
@@ -68,8 +69,11 @@ private:
     static bool LoadFBXFromBinary(const FWString& FilePath, int64_t LastModifiedTime,
         FFbxSkeletalMesh* OutFBXObject, TArray<FFbxAnimSequence*>& OutFBXSequence);
 
+    static bool SaveNotifiesToBinary(const FWString& FilePath, const TMap<FString, TArray<FAnimNotifyEvent>>& AnimationNotifiesMap);
+    static bool LoadNotifiesFromBinary(const FWString& FilePath, TMap<FString, TArray<FAnimNotifyEvent>>& AnimationNotifiesMap);
+
     inline static TMap<FString, MeshEntry> MeshMap;
-    inline static TMap<FString, AnimEntry> AnimMap; // filename + 애니메이션 이름
+    inline static TMap<FString, AnimEntry> AnimMap; // filename::애니메이션 이름
 
     /*
     MainThread -> LoadThread -> ConvertThread -> AnimThread -> SaveThread

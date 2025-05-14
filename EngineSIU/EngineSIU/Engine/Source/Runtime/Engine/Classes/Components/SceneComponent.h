@@ -41,6 +41,7 @@ public:
 public:
     void SetRelativeLocation(const FVector& InLocation) { RelativeLocation = InLocation; }
     void SetRelativeRotation(const FRotator& InRotation);
+    void SetRelativeRotationUnsafe(const FRotator& InRotation);
     void SetRelativeRotation(const FQuat& InQuat);
     void SetRelativeScale3D(const FVector& InScale) { RelativeScale3D = InScale; }
     

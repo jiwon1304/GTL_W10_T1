@@ -619,6 +619,8 @@ inline FString TArray<T, Allocator>::ToString() const
 template<typename T, typename Allocator>
 inline bool TArray<T, Allocator>::InitFromString(const FString& InString)
 {
+    static_assert(!std::is_pointer<T>::value, "TArray::InitFromString does not support pointer element types!");
+
     Empty();
 
     const FString StartMarker = TEXT("@@TARRAY_START@@");
