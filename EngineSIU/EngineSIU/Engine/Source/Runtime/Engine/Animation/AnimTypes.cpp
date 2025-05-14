@@ -30,6 +30,8 @@ bool FAnimNotifyEvent::IsStateNotify() const
 
 FString FAnimNotifyEvent::ToString() const
 {
+    FString NotifyClassName = NotifyStateClass ? NotifyStateClass->GetClass()->StaticClass()->GetName() : TEXT("None");
+
     FString NotifyString = NotifyName.ToString();
     TMap<FString, FString> NotifyStateProperties;
     if (NotifyStateClass)
@@ -38,8 +40,8 @@ FString FAnimNotifyEvent::ToString() const
     }
     FString NotifyStateString = NotifyStateProperties.ToString();
     
-    return FString::Printf(TEXT("TrackIndex=%d TriggerTime=%f TriggerTimeOffset=%f EndTriggerTimeOffset=%f Duration=%f NotifyName=%s NotifyStateClass=%s"),
-        TrackIndex, TriggerTime, TriggerTimeOffset, EndTriggerTimeOffset, Duration, *NotifyString, *NotifyStateString);
+    return FString::Printf(TEXT("Class=%s TrackIndex=%d TriggerTime=%f TriggerTimeOffset=%f EndTriggerTimeOffset=%f Duration=%f NotifyName=%s NotifyStateClass=%s"),
+        *NotifyClassName, TrackIndex, TriggerTime, TriggerTimeOffset, EndTriggerTimeOffset, Duration, *NotifyString, *NotifyStateString);
 }
 
 bool FAnimNotifyEvent::InitFromString(const FString& InSourceString)

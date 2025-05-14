@@ -64,6 +64,8 @@ void USkeletalMeshComponent::GetProperties(TMap<FString, FString>& OutProperties
     // 이후 UObject를 저장한다면 나중에 변경 필요.
     if (AnimScriptInstance)
     {
+        OutProperties.Add(TEXT("USkeletalMeshComponent::AnimScriptInstance_ClassName"),
+            AnimScriptInstance->GetClass()->GetName());
         AnimScriptInstance->GetProperties(OutProperties);
     }
     else
@@ -115,9 +117,23 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
         }
     }
 
+    const FString* TempStr = nullptr;
     if (!AnimScriptInstance)
     {
-        AnimScriptInstance = FObjectFactory::ConstructObject<UAnimSingleNodeInstance>(nullptr);
+        TempStr = InProperties.Find(TEXT("USkeletalMeshComponent::AnimScriptInstance_ClassName"));
+        if (TempStr)
+        {
+            UClass** AnimClass = UClass::GetClassMap().Find(*TempStr);
+            if (AnimClass)
+            {
+                AnimScriptInstance = Cast<UAnimInstance>(FObjectFactory::ConstructObject(*AnimClass, this));
+            }
+            else
+            {
+                UE_LOG(ELogLevel::Warning, TEXT("Could not find AnimScriptInstance class '%s' for %s"), **TempStr, *GetName());
+                return;
+            }
+        }
         if (AnimScriptInstance)
         {
             AnimScriptInstance->InitializeAnimation(this); // UAnimInstance 초기화
@@ -130,7 +146,6 @@ void USkeletalMeshComponent::SetProperties(const TMap<FString, FString>& InPrope
         }
     }
 
-    const FString* TempStr = nullptr;
     TempStr = InProperties.Find(TEXT("CurrentPosePath"));
     if (TempStr)
     {

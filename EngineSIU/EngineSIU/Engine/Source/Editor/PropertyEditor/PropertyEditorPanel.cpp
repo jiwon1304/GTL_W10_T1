@@ -812,7 +812,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent*SkeletalC
             static char LuaScriptTextBuffer[128] = { 0 };
     
             std::string NotifyNameStr = GetData(LuaDisplayPath);
-            strncpy(LuaScriptTextBuffer, NotifyNameStr.c_str(), sizeof(LuaScriptTextBuffer));
+            strncpy_s(LuaScriptTextBuffer, NotifyNameStr.c_str(), sizeof(LuaScriptTextBuffer));
             LuaScriptTextBuffer[sizeof(LuaScriptTextBuffer) - 1] = '\0'; // null-termination 보장
     
             if (ImGui::InputText("Script File", LuaScriptTextBuffer, IM_ARRAYSIZE(LuaScriptTextBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
@@ -848,6 +848,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent*SkeletalC
             {
                 if (ImGui::Selectable(*animNames[i], false))
                 {
+                    SelectedAnim1Index = i;
                     UMyAnimInstance* MyAnimInstance = Cast<UMyAnimInstance>(SkeletalComp->GetAnimationInstance());
                     UPreviewAnimInstance* PreviewAnimInstance = Cast<UPreviewAnimInstance>(SkeletalComp->GetAnimationInstance());
                     if (MyAnimInstance)
@@ -879,6 +880,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent*SkeletalC
             {
                 if (ImGui::Selectable(*animNames[i], false))
                 {
+                    SelectedAnim2Index = i;
                     UMyAnimInstance* MyAnimInstance = Cast<UMyAnimInstance>(SkeletalComp->GetAnimationInstance());
                     UPreviewAnimInstance* PreviewAnimInstance = Cast<UPreviewAnimInstance>(SkeletalComp->GetAnimationInstance());
                     if (MyAnimInstance)
@@ -907,6 +909,7 @@ void PropertyEditorPanel::RenderForSkeletalMesh(USkeletalMeshComponent*SkeletalC
             {
                 if (ImGui::Selectable(*animNames[i], false))
                 {
+                    SelectedAnim3Index = i;
                     UMyAnimInstance* MyAnimInstance = Cast<UMyAnimInstance>(SkeletalComp->GetAnimationInstance());
                     UPreviewAnimInstance* PreviewAnimInstance = Cast<UPreviewAnimInstance>(SkeletalComp->GetAnimationInstance());
                     if (PreviewAnimInstance) {
@@ -1157,7 +1160,7 @@ void PropertyEditorPanel::RenderForDirectionalLightComponent(UDirectionalLightCo
         const uint32& NumCascades = FEngineLoop::Renderer.ShadowManager->GetNumCasCades();
         for (uint32 i = 0; i < NumCascades; ++i)
         {
-            ImGui::Image(reinterpret_cast<ImTextureID>(FEngineLoop::Renderer.ShadowManager->GetDirectionalShadowCascadeDepthRHI()->ShadowSRVs[i]), ImVec2(200, 200));
+           //ImGui::Image(reinterpret_cast<ImTextureID>(FEngineLoop::Renderer.ShadowManager->GetDirectionalShadowCascadeDepthRHI()->ShadowSRVs[i]), ImVec2(200, 200));
             //ImGui::SameLine();
         }
         ImGui::TreePop();

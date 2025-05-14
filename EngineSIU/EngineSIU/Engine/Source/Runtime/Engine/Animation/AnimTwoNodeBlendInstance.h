@@ -15,6 +15,10 @@ class UAnimTwoNodeBlendInstance : public UAnimInstance
 public:
     UAnimTwoNodeBlendInstance() = default;
     
+
+    virtual void GetProperties(TMap<FString, FString>& OutProperties) const;
+    virtual void SetProperties(const TMap<FString, FString>& InProperties);
+
     // bResetTimeAndState= true면 두 애니메이션 시간 0으로 초기화.
     void SetAnimationAsset(UAnimSequenceBase* NewAnimToPlay, bool bResetTimeAndState, float InBlendTime = 0.2f);
     // 매 프레임마다 호출되어 BlendAlpha 업데이트 후, 두 애니메이션의 시간을 전진.

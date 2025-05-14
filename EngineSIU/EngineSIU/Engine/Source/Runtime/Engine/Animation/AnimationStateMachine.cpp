@@ -39,7 +39,10 @@ void UAnimationStateMachine::SetProperties(const TMap<FString, FString>& InPrope
         }
     }
     TempStr = InProperties.Find(TEXT("UAnimationStateMachine::Transitions"));
-    Transitions.InitFromString(*TempStr);
+    if (TempStr)
+    {
+        Transitions.InitFromString(*TempStr);
+    }
 
 }
 

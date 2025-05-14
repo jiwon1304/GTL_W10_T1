@@ -54,10 +54,21 @@ void UAnimInstance::GetProperties(TMap<FString, FString>& OutProperties) const
 {
     // AnimSM : 만들어줌
     // -> CurrentState, CurrentAnimationSequence, Transitions를 여기서 저장
-    AnimSM->GetProperties(OutProperties);
+    if(AnimSM)
+		AnimSM->GetProperties(OutProperties);
     
+	OutProperties.Add(TEXT("UAnimInstance::ScriptPath"), ScriptPath);
+	OutProperties.Add(TEXT("UAnimInstance::ScriptDisplayName"), ScriptDisplayName);
 
     OutProperties.Add(TEXT("UAnimInstance::CurrentPose"), CurrentPose.ToString());
+	if(PrevSequence)
+		OutProperties.Add(TEXT("UAnimInstance::PrevSequence"), PrevSequence->GetSeqName());
+	if(Sequence)
+		OutProperties.Add(TEXT("UAnimInstance::Sequence"), Sequence->GetSeqName());
+	OutProperties.Add(TEXT("UAnimInstance::PrevTime"), FString::Printf("%f", PrevTime));
+	OutProperties.Add(TEXT("UAnimInstance::NextTime"), FString::Printf("%f", NextTime));
+	OutProperties.Add(TEXT("UAnimInstance::BlendDuration"), FString::Printf("%f", BlendDuration));
+	OutProperties.Add(TEXT("UAnimInstance::BlendElapsed"), FString::Printf("%f", BlendElapsed));
     OutProperties.Add(TEXT("UAnimInstance::NotifyQueue"), NotifyQueue.ToString());
     OutProperties.Add(TEXT("UAnimInstance::ActiveAnimNotifyState"), ActiveAnimNotifyState.ToString());
     OutProperties.Add(TEXT("UAnimInstance::CurrentTime"), FString::Printf(TEXT("%f"), CurrentTime));
@@ -74,47 +85,97 @@ void UAnimInstance::SetProperties(const TMap<FString, FString>& InProperties)
     }
     AnimSM->SetProperties(InProperties);
 
+	// CurrentPose
+	TempStr = InProperties.Find(TEXT("UAnimInstance::ScriptPath"));
+	if (TempStr)
+	{
+		ScriptPath = *TempStr;
+	}
+	TempStr = InProperties.Find(TEXT("UAnimInstance::ScriptDisplayName"));
+	if (TempStr)
+	{
+		ScriptDisplayName = *TempStr;
+	}
+
+
+
     // CurrentPose
-    TempStr = InProperties.Find(TEXT("AI_CurrentPose"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::CurrentPose"));
     if (TempStr)
     {
         CurrentPose.InitFromString(*TempStr);
     }
     
     // Sequence
-    TempStr = InProperties.Find(TEXT("AI_AnimSequence"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::PrevSequence"));
     if (TempStr)
     {
         if (UAnimSequenceBase* AnimSeq = FFbxManager::GetAnimSequenceByName(*TempStr))
         {
-            Sequence = AnimSeq;
+            PrevSequence = AnimSeq;
         }
         else
         {
             UE_LOG(ELogLevel::Warning, TEXT("SetProperties: AnimSequence '%s' not found"), **TempStr);
-            Sequence = nullptr;
+			PrevSequence = nullptr;
+        }
+    }
+    TempStr = InProperties.Find(TEXT("UAnimInstance::Sequence"));
+    if (TempStr)
+    {
+        if (UAnimSequenceBase* AnimSeq = FFbxManager::GetAnimSequenceByName(*TempStr))
+        {
+			Sequence = AnimSeq;
+        }
+        else
+        {
+            UE_LOG(ELogLevel::Warning, TEXT("SetProperties: AnimSequence '%s' not found"), **TempStr);
+			Sequence = nullptr;
         }
     }
 
     // OwningComp는 USkeletalMeshComponent가 설정
 
+	TempStr = InProperties.Find(TEXT("UAnimInstance::PrevTime"));
+	if (TempStr)
+	{
+		PrevTime = FString::ToFloat(*TempStr);
+	}
+	TempStr = InProperties.Find(TEXT("UAnimInstance::NextTime"));
+	if (TempStr)
+	{
+		NextTime = FString::ToFloat(*TempStr);
+	}
+	TempStr = InProperties.Find(TEXT("UAnimInstance::BlendDuration"));
+	if (TempStr)
+	{
+		BlendDuration = FString::ToFloat(*TempStr);
+	}
+	TempStr = InProperties.Find(TEXT("UAnimInstance::BlendElapsed"));
+	if (TempStr)
+	{
+		BlendElapsed = FString::ToFloat(*TempStr);
+	}
+
+
+
     // NotifyQueue
-    TempStr = InProperties.Find(TEXT("AI_NotifyQueue"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::NotifyQueue"));
     if (TempStr)
     {
         NotifyQueue.InitFromString(*TempStr);
     }
-    TempStr = InProperties.Find(TEXT("AI_ActiveAnimNotifyState"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::ActiveAnimNotifyState"));
     if (TempStr)
     {
         ActiveAnimNotifyState.InitFromString(*TempStr);
     }
-    TempStr = InProperties.Find(TEXT("AI_CurrentTime"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::CurrentTime"));
     if (TempStr)
     {
         CurrentTime = FString::ToFloat(*TempStr);
     }
-    TempStr = InProperties.Find(TEXT("AI_bPlaying"));
+    TempStr = InProperties.Find(TEXT("UAnimInstance::bPlaying"));
     if (TempStr)
     {
         bPlaying = FString::ToInt(*TempStr);

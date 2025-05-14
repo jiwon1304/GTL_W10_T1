@@ -2,6 +2,43 @@
 #include "Engine/Classes/Components/SkeletalMeshComponent.h"
 #include "Classes/Components/Mesh/SkeletalMesh.h"
 #include "Animation/AnimData/AnimDataModel.h"
+
+void UAnimTwoNodeBlendInstance::GetProperties(TMap<FString, FString>& OutProperties) const
+{
+    Super::GetProperties(OutProperties);
+    OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::BlendAlpha"), FString::Printf(TEXT("%f"), BlendAlpha));
+    OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::BlendTime"), FString::Printf(TEXT("%f"), BlendTime));
+    OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::ElaspedBlendTime"), FString::Printf(TEXT("%f"), ElaspedBlendTime));
+    OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::bIsBlending"), FString::Printf(TEXT("%d"), bIsBlending ? 1 : 0));
+
+    if(From.Sequence)
+        OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::BlendState_From"), From.ToString());
+    if(To.Sequence)
+        OutProperties.Add(TEXT("UAnimTwoNodeBlendInstance::BlendState_To"), To.ToString());
+}
+void UAnimTwoNodeBlendInstance::SetProperties(const TMap<FString, FString>& InProperties)
+{
+    Super::SetProperties(InProperties);
+    const FString* TempStr = nullptr;
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::BlendAlpha"));
+    if (TempStr) BlendAlpha = FCString::Atof(**TempStr);
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::BlendTime"));
+    if (TempStr) BlendTime = FCString::Atof(**TempStr);
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::ElaspedBlendTime"));
+    if (TempStr) ElaspedBlendTime = FCString::Atof(**TempStr);
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::bIsBlending"));
+    if (TempStr) bIsBlending = FCString::Atoi(**TempStr) != 0;
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::BlendState_From"));
+    if (TempStr) From.InitFromString(*TempStr);
+
+    TempStr = InProperties.Find(TEXT("UAnimTwoNodeBlendInstance::BlendState_To"));
+    if (TempStr) To.InitFromString(*TempStr);
+}
 void UAnimTwoNodeBlendInstance::SetAnimationAsset(UAnimSequenceBase* NewAnimToPlay, bool bResetTimeAndState, float InBlendTime)
 {
     if (To.Sequence == NewAnimToPlay) {

@@ -485,7 +485,7 @@ void AnimationSequenceViewer::RenderAssetDetails()
     static char NotifyBuffer[128] = { 0 };
     
     std::string NotifyNameStr = GetData(*Notify.NotifyName.ToString());
-    strncpy(NotifyBuffer, NotifyNameStr.c_str(), sizeof(NotifyBuffer));
+    strncpy_s(NotifyBuffer, NotifyNameStr.c_str(), sizeof(NotifyBuffer));
     NotifyBuffer[sizeof(NotifyBuffer) - 1] = '\0'; // null-termination 보장
     
     if (ImGui::InputText("Notify Name", NotifyBuffer, sizeof(NotifyBuffer), ImGuiInputTextFlags_EnterReturnsTrue))

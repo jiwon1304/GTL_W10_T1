@@ -10,6 +10,7 @@
 AItemActor::AItemActor()
 {
     MeshComponent = AddComponent<USkeletalMeshComponent>(FName("MeshComponent_0"));
+    RootComponent = MeshComponent;
 }
 
 void AItemActor::PostSpawnInitialize()

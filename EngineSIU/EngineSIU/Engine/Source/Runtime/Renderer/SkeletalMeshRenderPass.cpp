@@ -219,7 +219,7 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
             SkeletalMeshComponent->GetWorldMatrix(),
             SkeletalMeshComponent->EncodeUUID() / 255.0f,
             SkeletalMeshComponent->IsActive(),
-            SkeletalMeshComponent->GetSkeletalMesh()->GetCPUSkinned()
+			ForceCPUSkinning
         );
 
         TArray<UMaterial*> Materials;
@@ -230,7 +230,7 @@ void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEdi
         {
             const FSkelMeshRenderSection& RenderSection = Renderdata.RenderSections[SectionIndex];
             FVertexInfo VertexInfo;
-            if (SkeletalMesh->GetCPUSkinned())
+            if (ForceCPUSkinning)
             {
                 // Update vertex buffer
                 TArray<FSkeletalVertex> Vertices;
