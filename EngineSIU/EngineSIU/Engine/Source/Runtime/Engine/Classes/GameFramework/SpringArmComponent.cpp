@@ -13,7 +13,7 @@ USpringArmComponent::USpringArmComponent()
     // SetRelativeRotation(FRotator(FVector(-3, -14, -5)));
 
     TargetArmLength = 5.f;
-    TargetOffset = FVector(-13.f, 0.f, 4.f); // 부모에 대한 상대 위치
+    TargetOffset = FVector(2.8f, 0.f, 2.1f); // 부모에 대한 상대 위치
 
     bUsePawnControlRotation = true;
     bDoCollisionTest = false;
@@ -248,6 +248,7 @@ void USpringArmComponent::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocati
     //UE_LOG(ELogLevel::Display, TEXT("Result Location : %.2f %.2f %.2f"), ResultLoc.X, ResultLoc.Y, ResultLoc.Z);
     SetWorldLocation(ResultLoc);
     SetWorldRotation(DesiredRot);
+
 }
 
 FVector USpringArmComponent::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime)
