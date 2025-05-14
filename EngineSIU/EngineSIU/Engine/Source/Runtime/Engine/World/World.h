@@ -13,6 +13,7 @@
 #include "Engine/EventManager.h"
 #include "UObject/UObjectIterator.h"
 
+class ACharacter;
 class UPrimitiveComponent;
 struct FOverlapResult;
 class UCameraComponent;
@@ -72,8 +73,8 @@ public:
     
     FEventManager EventManager;
 
-    void SetMainPlayer(APlayer* InPlayer){ MainPlayer = InPlayer; }
-    APlayer* GetMainPlayer() const;
+    void SetMainPlayer(ACharacter* InPlayer){ MainPlayer = InPlayer; }
+    ACharacter* GetMainPlayer() const;
 
     void SetPlayerController(APlayerController* InPlayerController){ PlayerController = InPlayerController; }
     APlayerController* GetPlayerController() const;
@@ -98,7 +99,7 @@ private:
     // TODO: 싱글 플레이어면 상관 없지만, 로컬 멀티 플레이어인 경우를 위해 배열로 관리하는 방법을 고려하기.
     APlayerController* PlayerController = nullptr;
 
-    APlayer* MainPlayer = nullptr;
+    ACharacter* MainPlayer = nullptr;
 
     UTextComponent* MainTextComponent = nullptr;
 

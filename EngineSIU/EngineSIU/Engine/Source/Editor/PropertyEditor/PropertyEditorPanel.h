@@ -12,6 +12,7 @@
 #include "Components/Material/Material.h"
 
 #include "ImGuiInspector.h"
+#include "GameFramework/Character.h"
 
 class USpringArmComponent;
 class UShapeComponent;
@@ -59,7 +60,7 @@ private:
 
     void RenderForSceneComponent(USceneComponent* SceneComponent, AEditorPlayer* Player);
     void RenderForCameraComponent(UCameraComponent* InCameraComponent);
-    void RenderForPlayerActor(APlayer* InPlayerActor);
+    void RenderForPlayerActor(ACharacter* InPlayerActor);
     void RenderForActor(AActor* SelectedActor, USceneComponent* TargetComponent) const;
     
     /* Static Mesh Settings */

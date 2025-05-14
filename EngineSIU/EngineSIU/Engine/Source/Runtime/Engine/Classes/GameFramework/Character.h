@@ -11,6 +11,11 @@ class ACharacter : public APawn
 public:
     ACharacter();
     virtual void PostSpawnInitialize() override;
+    virtual UObject* Duplicate(UObject* InOuter) override;
+
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
+
     void HandleAnimNotify(const FAnimNotifyEvent& NotifyEvent) const;
 
 private:

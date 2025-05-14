@@ -10,6 +10,7 @@
 #include "UObject/UObjectIterator.h"
 #include "FbxManager.h"
 #include "Contents/Actors/ItemActor.h"
+#include "GameFramework/Character.h"
 
 namespace PrivateEditorSelection
 {
@@ -133,14 +134,14 @@ void UEditorEngine::BindEssentialObjects() const
     //실수로 안만들면 넣어주기
     if (ActiveWorld->GetMainPlayer() == nullptr)
     {
-        APlayer* TempPlayer = ActiveWorld->SpawnActor<APlayer>();
+        ACharacter* TempPlayer = ActiveWorld->SpawnActor<ACharacter>();
         TempPlayer->SetActorLabel(TEXT("OBJ_PLAYER"));
         TempPlayer->SetActorTickInEditor(false);
         ActiveWorld->SetMainPlayer(TempPlayer);
     }
     
     //마찬가지
-    for (const auto iter: TObjectRange<APlayer>())
+    for (const auto iter: TObjectRange<ACharacter>())
     {
         if (iter->GetWorld() == ActiveWorld)
         {

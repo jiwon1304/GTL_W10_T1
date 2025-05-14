@@ -15,6 +15,7 @@ class USpringArmComponent : public USceneComponent
 public:
     USpringArmComponent();
     virtual ~USpringArmComponent() override = default;
+    virtual UObject* Duplicate(UObject* InOuter) override;
 
     virtual void TickComponent(float DeltaTime) override;
 

@@ -263,7 +263,7 @@ void PropertyEditorPanel::RenderForCameraComponent(UCameraComponent* InCameraCom
 {
 }
 
-void PropertyEditorPanel::RenderForPlayerActor(APlayer* InPlayerActor)
+void PropertyEditorPanel::RenderForPlayerActor(ACharacter* InPlayerActor)
 {
     if (ImGui::Button("SetMainPlayer"))
     {

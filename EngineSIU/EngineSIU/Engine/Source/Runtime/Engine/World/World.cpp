@@ -16,6 +16,7 @@
 #include "GameFramework/GameMode.h"
 #include "Classes/Components/TextComponent.h"
 #include "Contents/Actors/Fish.h"
+#include "GameFramework/Character.h"
 
 class UEditorEngine;
 
@@ -296,7 +297,7 @@ UWorld* UWorld::GetWorld() const
     return const_cast<UWorld*>(this);
 }
 
-APlayer* UWorld::GetMainPlayer() const
+ACharacter* UWorld::GetMainPlayer() const
 {
     if (MainPlayer)
     {
@@ -304,7 +305,7 @@ APlayer* UWorld::GetMainPlayer() const
     }
     
     //메인플레이어 설정안하면 있는거중 한개
-    for (const auto iter: TObjectRange<APlayer>())
+    for (const auto iter: TObjectRange<ACharacter>())
     {
         if (iter->GetWorld() == GEngine->ActiveWorld)
         {

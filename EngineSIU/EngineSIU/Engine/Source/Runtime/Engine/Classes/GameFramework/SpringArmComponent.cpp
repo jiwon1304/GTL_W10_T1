@@ -78,6 +78,32 @@ FRotator USpringArmComponent::GetTargetRotation() const
 }
 
 
+UObject* USpringArmComponent::Duplicate(UObject* InOuter)
+{
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
+
+    NewComponent->TargetOffset = TargetOffset;
+    NewComponent->TargetArmLength = TargetArmLength;
+    NewComponent->ProbeSize = ProbeSize;
+    NewComponent->bDoCollisionTest = bDoCollisionTest;
+    NewComponent->bUsePawnControlRotation = bUsePawnControlRotation;
+    NewComponent->bInheritPitch = bInheritPitch;
+    NewComponent->bInheritYaw = bInheritYaw;
+    NewComponent->bInheritRoll = bInheritRoll;
+    NewComponent->bEnableCameraLag = bEnableCameraLag;
+    NewComponent->bEnableCameraRotationLag = bEnableCameraRotationLag;
+    NewComponent->bUseCameraLagSubstepping = bUseCameraLagSubstepping;
+    NewComponent->CameraLagSpeed = CameraLagSpeed;
+    NewComponent->CameraRotationLagSpeed = CameraRotationLagSpeed;
+    NewComponent->CameraLagMaxTimeStep = CameraLagMaxTimeStep;
+    NewComponent->CameraLagMaxDistance = CameraLagMaxDistance;
+    NewComponent->bAbsoluteRotation = bAbsoluteRotation;
+    
+
+    return NewComponent;
+
+}
+
 void USpringArmComponent::TickComponent(float DeltaTime)
 {
 

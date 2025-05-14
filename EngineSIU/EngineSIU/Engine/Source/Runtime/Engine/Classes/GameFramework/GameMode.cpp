@@ -8,6 +8,7 @@
 #include "Contents/Actors/ItemActor.h"
 #include "Engine/Engine.h"
 #include "Engine/World/World.h"
+#include "GameFramework/Character.h"
 
 AGameMode::AGameMode()
 {
@@ -92,8 +93,8 @@ void AGameMode::StartMatch()
         }
     }
 
-    AFish* Fish = Cast<AFish>(GEngine->ActiveWorld->GetMainPlayer());
-    Fish->Reset();
+    ACharacter* Cloud = Cast<ACharacter>(GEngine->ActiveWorld->GetMainPlayer());
+    //Fish->Reset();
     // GEngine->ActiveWorld->GetMainPlayer()->SetActorLocation(FVector(0, 0, 10));
     GEngine->ActiveWorld->GetPlayerController()->Possess(GEngine->ActiveWorld->GetMainPlayer());
     
