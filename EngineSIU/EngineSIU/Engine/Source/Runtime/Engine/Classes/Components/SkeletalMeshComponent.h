@@ -58,6 +58,8 @@ public:
     void StopBlendAnimation();
     void SetAnimationInstance(UAnimInstance* NewAnimInstance);
     UAnimInstance* GetAnimationInstance() const { return AnimScriptInstance; }
+
+
 public:
     int SelectedBoneIndex = -1;
     TArray<FTransform> CurrentPose;

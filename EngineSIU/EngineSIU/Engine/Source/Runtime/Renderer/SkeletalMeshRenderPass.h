@@ -25,6 +25,7 @@ public:
     virtual ~FSkeletalMeshRenderPass();
 
     virtual void Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManager) override;
+    void CreateConstantBuffers();
 
     virtual void PrepareRenderArr() override;
     void PrepareRenderState(std::shared_ptr<FEditorViewportClient> Viewport);
@@ -44,6 +45,12 @@ private:
 
     void UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices);
     void GetSkinnedVertices(USkeletalMesh* SkeletalMesh, uint32 Section, const TArray<FMatrix>& BoneMatrices, TArray<FSkeletalVertex>& OutVertices) const;
+
+    void DispatchSkinningCS(
+        const FString& SectionKey,
+        const TArray<FSkeletalVertex>& InVerts,
+        const TArray<FMatrix>& BoneMats) const;
+
     bool bCPUSkinning = false;
 
 protected:
@@ -53,4 +60,10 @@ protected:
     FGraphicsDevice* Graphics;
     FDXDShaderManager* ShaderManager;
 
+};
+
+struct FDispatchInfo
+{
+    UINT NumVertices;
+    UINT _pad[3];
 };

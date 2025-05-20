@@ -343,3 +343,99 @@ void FDXDBufferManager::SetStartUV(wchar_t hangul, FVector2D& UVOffset)
     UVOffset = FVector2D(offsetU, StartV + offsetV);
 
 }
+
+
+// FDXDBufferManager.cpp 에 구현부 변경
+HRESULT FDXDBufferManager::CreateStructuredBuffer(
+    const FString& Key,UINT ElementSize,UINT Count,const void* InitialData,bool bHasUAV,bool bHasSRV,bool bHasVB)
+{
+    if (!DXDevice || StructuredBuffers.Contains(Key))
+        return S_OK;
+
+    D3D11_BUFFER_DESC desc{};
+    desc.ByteWidth = ElementSize * Count;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    desc.StructureByteStride = ElementSize;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+
+    desc.BindFlags = 0;
+    if (bHasSRV)  desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+    if (bHasUAV)  desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+    if (bHasVB)   desc.BindFlags |= D3D11_BIND_VERTEX_BUFFER;     // ← VERTEX_BUFFER 플래그
+
+    D3D11_SUBRESOURCE_DATA init{};
+    init.pSysMem = InitialData;
+
+    ID3D11Buffer* Buffer = nullptr;
+    HRESULT hr = DXDevice->CreateBuffer(
+        &desc,
+        InitialData ? &init : nullptr,
+        &Buffer
+    );
+    if (FAILED(hr))
+        return hr;
+
+    StructuredBuffers.Add(Key, Buffer);
+
+    if (bHasSRV) CreateShaderResourceView(Key);
+    if (bHasUAV) CreateUnorderedAccessView(Key);
+
+    return S_OK;
+}
+
+HRESULT FDXDBufferManager::CreateShaderResourceView(const FString& Key)
+{
+    if (!StructuredBuffers.Contains(Key) || SRVPool.Contains(Key)) return S_OK;
+    ID3D11Buffer* buf = StructuredBuffers[Key];
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC desc{};
+    desc.Format = DXGI_FORMAT_UNKNOWN;
+    desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    desc.Buffer.NumElements = UINT(-1); // 전체
+    ID3D11ShaderResourceView* SRV;
+    HRESULT hr = DXDevice->CreateShaderResourceView(buf, &desc, &SRV);
+    if (SUCCEEDED(hr)) SRVPool.Add(Key, SRV);
+    return hr;
+}
+
+HRESULT FDXDBufferManager::CreateUnorderedAccessView(const FString& Key)
+{
+    if (!StructuredBuffers.Contains(Key) || UAVPool.Contains(Key)) return S_OK;
+    ID3D11Buffer* buf = StructuredBuffers[Key];
+
+    D3D11_UNORDERED_ACCESS_VIEW_DESC desc{};
+    desc.Format = DXGI_FORMAT_UNKNOWN;
+    desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+    desc.Buffer.NumElements = UINT(-1);
+    ID3D11UnorderedAccessView* UAV;
+    HRESULT hr = DXDevice->CreateUnorderedAccessView(buf, &desc, &UAV);
+    if (SUCCEEDED(hr)) UAVPool.Add(Key, UAV);
+    return hr;
+}
+
+void FDXDBufferManager::UpdateStructuredBuffer(const FString& Key, const void* Data, UINT DataSize)
+{
+    if (!DXDeviceContext || !StructuredBuffers.Contains(Key)) return;
+    DXDeviceContext->UpdateSubresource(StructuredBuffers[Key], 0, nullptr, Data, 0, 0);
+}
+
+ID3D11Buffer* FDXDBufferManager::GetBuffer(const FString& InName) const
+{
+    // 1) 기존에 VertexBufferPool 에서 찾아보고
+    if (VertexBufferPool.Contains(InName))
+        return VertexBufferPool[InName].VertexBuffer;
+
+    // 2) StructuredBuffers 에도 있으면 리턴하도록 추가
+    if (StructuredBuffers.Contains(InName))
+        return StructuredBuffers[InName];
+
+    return nullptr;
+}
+ID3D11ShaderResourceView* FDXDBufferManager::GetSRV(const FString& Key) const
+{
+    return SRVPool.Contains(Key) ? SRVPool[Key] : nullptr;
+}
+ID3D11UnorderedAccessView* FDXDBufferManager::GetUAV(const FString& Key) const
+{
+    return UAVPool.Contains(Key) ? UAVPool[Key] : nullptr;
+}

@@ -32,8 +32,14 @@ void FSkeletalMeshRenderPass::Initialize(FDXDBufferManager* InBufferManager, FGr
     Graphics = InGraphics;
     ShaderManager = InShaderManager;
     CreateShader();
+    CreateConstantBuffers();
 }
 
+void FSkeletalMeshRenderPass::CreateConstantBuffers()
+{
+    BufferManager->CreateConstantBuffer<FDispatchInfo>(TEXT("CDispatchInfo"), sizeof(FDispatchInfo));
+        
+}
 void FSkeletalMeshRenderPass::PrepareRenderArr()
 {
     for (const auto& Component : TObjectRange<USkeletalMeshComponent>())
@@ -194,89 +200,214 @@ void FSkeletalMeshRenderPass::Render(const std::shared_ptr<FEditorViewportClient
     //ClearRenderArr();
 }
 
-void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(
+    const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
-    for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+    PrepareRenderState(Viewport);
+
+    for (USkeletalMeshComponent* Comp : SkeletalMeshComponents)
     {
-        if (!SkeletalMeshComponent) continue;
-        if (!SkeletalMeshComponent->GetSkeletalMesh()) continue;
+        if (!Comp || !Comp->GetSkeletalMesh()) continue;
 
-        // FSkeletalMeshRenderData* RenderData = SkinnedMeshData->GetSkeletalMesh()->GetRenderData();
-        USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-        if (!SkeletalMesh) continue;
-        const FSkeletalMeshRenderData& Renderdata = SkeletalMesh->GetRenderData();
+        USkeletalMesh* Mesh = Comp->GetSkeletalMesh();
+        const auto& RD = Mesh->GetRenderData();
 
-        // Bone Matrix는 CPU에서 처리
-        // Model -> j -> transform -> model space로 변환하는 행렬
-        // 즉, transform을 적용해주는 행렬
-        TArray<FMatrix> SkinningMatrices;
-        SkeletalMeshComponent->GetSkinningMatrices(SkinningMatrices);
+        // 본 매트릭스 계산
+        TArray<FMatrix> BoneMats;
+        Comp->GetSkinningMatrices(BoneMats);
 
-        bool ForceCPUSkinning = SkeletalMeshComponent->GetSkeletalMesh()->GetCPUSkinned() ? true : bCPUSkinning;
-
-        // Update constant buffers
+        // 오브젝트 상수버퍼 업데이트 (생략)
         UpdateObjectConstant(
-            SkeletalMeshComponent->GetWorldMatrix(),
-            SkeletalMeshComponent->EncodeUUID() / 255.0f,
-            SkeletalMeshComponent->IsActive(),
-            SkeletalMeshComponent->GetSkeletalMesh()->GetCPUSkinned()
+            Comp->GetWorldMatrix(),
+            Comp->EncodeUUID() / 255.0f,
+            Comp->IsActive(),
+            Mesh->GetCPUSkinned()
         );
 
-        TArray<UMaterial*> Materials;
-        SkeletalMesh->GetUsedMaterials(Materials);
-        TArray<UMaterial*> OverrideMaterials = SkeletalMeshComponent->GetOverrideMaterials();
+        // 머티리얼 취합
+        TArray<UMaterial*> Mats; Mesh->GetUsedMaterials(Mats);
+        TArray<UMaterial*> Overrides = Comp->GetOverrideMaterials();
 
-        for (int SectionIndex = 0; SectionIndex < Renderdata.RenderSections.Num(); ++SectionIndex)
+        for (int sec = 0; sec < RD.RenderSections.Num(); ++sec)
         {
-            const FSkelMeshRenderSection& RenderSection = Renderdata.RenderSections[SectionIndex];
+            const auto& Section = RD.RenderSections[sec];
             FVertexInfo VertexInfo;
-            if (SkeletalMesh->GetCPUSkinned())
-            {
-                // Update vertex buffer
-                TArray<FSkeletalVertex> Vertices;
-                GetSkinnedVertices(SkeletalMesh, SectionIndex, SkinningMatrices, Vertices);
+            FVertexInfo dstInfo;
 
-                BufferManager->CreateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices, VertexInfo);
-                BufferManager->UpdateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices);
+            if (Mesh->GetCPUSkinned())
+            {
+                // CPU 스키닝 (기존)
+                TArray<FSkeletalVertex> Skinned;
+                GetSkinnedVertices(Mesh, sec, BoneMats, Skinned);
+
+                BufferManager->CreateDynamicVertexBuffer(
+                    Section.Name + TEXT("_CPU"),
+                    Skinned,
+                    VertexInfo
+                );
+                BufferManager->UpdateDynamicVertexBuffer(
+                    Section.Name + TEXT("_CPU"),
+                    Skinned
+                );
             }
             else
             {
-                // Update bone matrices
-                UpdateBoneMatrices(SkinningMatrices);
-                BufferManager->CreateVertexBuffer(RenderSection.Name + "_GPU",
-                    RenderSection.Vertices, VertexInfo);
+                DispatchSkinningCS(Section.Name, Section.Vertices, BoneMats);
+
+                // 2) '_Out' 은 StructuredBuffer 이므로
+                const FString outKey = Section.Name + TEXT("_Out");
+
+                // 3) 별도 '_GPU' 키로 정통 VertexBuffer 생성
+                const FString vbKey = Section.Name + TEXT("_GPU");
+                UINT totalBytes = Section.Vertices.Num() * sizeof(FSkeletalVertex);
+                BufferManager->CreateBufferGeneric<FSkeletalVertex>(
+                    vbKey,
+                    nullptr,
+                    totalBytes,
+                    D3D11_BIND_VERTEX_BUFFER,
+                    D3D11_USAGE_DEFAULT,
+                    /*CPU_ACCESS=*/0
+                );
+
+                // 4) CopyResource 로 StructuredBuffer → VertexBuffer 복사
+                ID3D11Buffer* srcSB = BufferManager->GetBuffer(outKey);               // VertexBuffers 맵에서
+                dstInfo = BufferManager->GetVertexBuffer(vbKey);   // StructuredBuffers 맵에서
+                Graphics->DeviceContext->CopyResource(dstInfo.VertexBuffer, srcSB);
             }
 
-            Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);
 
-            FIndexInfo IndexInfo;
-            BufferManager->CreateIndexBuffer(RenderSection.Name, RenderSection.Indices, IndexInfo);
-            if (IndexInfo.IndexBuffer)
+            // IA 셋업
+            VertexInfo = dstInfo;
+            Graphics->DeviceContext->IASetVertexBuffers(
+                0, 1,
+                &VertexInfo.VertexBuffer,
+                &VertexInfo.Stride,
+                &VertexInfo.Offset
+            );
+
+            // 인덱스 바인딩
+            FIndexInfo Idx;
+            BufferManager->CreateIndexBuffer(
+                Section.Name,
+                Section.Indices,
+                Idx
+            );
+            Graphics->DeviceContext->IASetIndexBuffer(
+                Idx.IndexBuffer,
+                DXGI_FORMAT_R32_UINT,
+                0
+            );
+
+            // DrawIndexed
+            for (uint32 subset : Section.SubsetIndex)
             {
-                Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-            }
-
-            for (int i = 0; i < RenderSection.SubsetIndex.Num(); ++i)
-            {
-                uint32 SubsetIndex = RenderSection.SubsetIndex[i];
-                uint32 MaterialIndex = Renderdata.MaterialSubsets[SubsetIndex].MaterialIndex;
-
-                if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
+                uint32 midx = RD.MaterialSubsets[subset].MaterialIndex;
+                if (midx < Overrides.Num() && Overrides[midx])
                 {
-                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+                    MaterialUtils::UpdateMaterial(
+                        BufferManager, Graphics,
+                        Overrides[midx]->GetMaterialInfo()
+                    );
                 }
                 else
                 {
-                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
+                    MaterialUtils::UpdateMaterial(
+                        BufferManager, Graphics,
+                        Mats[midx]->GetMaterialInfo()
+                    );
                 }
 
-                uint32 StartIndex = Renderdata.MaterialSubsets[SubsetIndex].IndexStart;
-                uint32 IndexCount = Renderdata.MaterialSubsets[SubsetIndex].IndexCount;
-                Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+                uint32 start = RD.MaterialSubsets[subset].IndexStart;
+                uint32 count = RD.MaterialSubsets[subset].IndexCount;
+                Graphics->DeviceContext->DrawIndexed(count, start, 0);
             }
         }
     }
 }
+
+//void FSkeletalMeshRenderPass::RenderAllSkeletalMeshes(const std::shared_ptr<FEditorViewportClient>& Viewport)
+//{
+//    for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+//    {
+//        if (!SkeletalMeshComponent) continue;
+//        if (!SkeletalMeshComponent->GetSkeletalMesh()) continue;
+//
+//        // FSkeletalMeshRenderData* RenderData = SkinnedMeshData->GetSkeletalMesh()->GetRenderData();
+//        USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+//        if (!SkeletalMesh) continue;
+//        const FSkeletalMeshRenderData& Renderdata = SkeletalMesh->GetRenderData();
+//
+//        // Bone Matrix는 CPU에서 처리
+//        // Model -> j -> transform -> model space로 변환하는 행렬
+//        // 즉, transform을 적용해주는 행렬
+//        TArray<FMatrix> SkinningMatrices;
+//        SkeletalMeshComponent->GetSkinningMatrices(SkinningMatrices);
+//
+//        bool ForceCPUSkinning = SkeletalMeshComponent->GetSkeletalMesh()->GetCPUSkinned() ? true : bCPUSkinning;
+//
+//        // Update constant buffers
+//        UpdateObjectConstant(
+//            SkeletalMeshComponent->GetWorldMatrix(),
+//            SkeletalMeshComponent->EncodeUUID() / 255.0f,
+//            SkeletalMeshComponent->IsActive(),
+//            SkeletalMeshComponent->GetSkeletalMesh()->GetCPUSkinned()
+//        );
+//
+//        TArray<UMaterial*> Materials;
+//        SkeletalMesh->GetUsedMaterials(Materials);
+//        TArray<UMaterial*> OverrideMaterials = SkeletalMeshComponent->GetOverrideMaterials();
+//
+//        for (int SectionIndex = 0; SectionIndex < Renderdata.RenderSections.Num(); ++SectionIndex)
+//        {
+//            const FSkelMeshRenderSection& RenderSection = Renderdata.RenderSections[SectionIndex];
+//            FVertexInfo VertexInfo;
+//            if (SkeletalMesh->GetCPUSkinned())
+//            {
+//                // Update vertex buffer
+//                TArray<FSkeletalVertex> Vertices;
+//                GetSkinnedVertices(SkeletalMesh, SectionIndex, SkinningMatrices, Vertices);
+//
+//                BufferManager->CreateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices, VertexInfo);
+//                BufferManager->UpdateDynamicVertexBuffer(RenderSection.Name + "_CPU", Vertices);
+//            }
+//            else
+//            {
+//                // Update bone matrices
+//                UpdateBoneMatrices(SkinningMatrices);
+//                BufferManager->CreateVertexBuffer(RenderSection.Name + "_GPU",
+//                    RenderSection.Vertices, VertexInfo);
+//            }
+//
+//            Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexInfo.VertexBuffer, &VertexInfo.Stride, &VertexInfo.Offset);
+//
+//            FIndexInfo IndexInfo;
+//            BufferManager->CreateIndexBuffer(RenderSection.Name, RenderSection.Indices, IndexInfo);
+//            if (IndexInfo.IndexBuffer)
+//            {
+//                Graphics->DeviceContext->IASetIndexBuffer(IndexInfo.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+//            }
+//
+//            for (int i = 0; i < RenderSection.SubsetIndex.Num(); ++i)
+//            {
+//                uint32 SubsetIndex = RenderSection.SubsetIndex[i];
+//                uint32 MaterialIndex = Renderdata.MaterialSubsets[SubsetIndex].MaterialIndex;
+//
+//                if (MaterialIndex < OverrideMaterials.Num() && OverrideMaterials[MaterialIndex] != nullptr)
+//                {
+//                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, OverrideMaterials[MaterialIndex]->GetMaterialInfo());
+//                }
+//                else
+//                {
+//                    MaterialUtils::UpdateMaterial(BufferManager, Graphics, Materials[MaterialIndex]->GetMaterialInfo());
+//                }
+//
+//                uint32 StartIndex = Renderdata.MaterialSubsets[SubsetIndex].IndexStart;
+//                uint32 IndexCount = Renderdata.MaterialSubsets[SubsetIndex].IndexCount;
+//                Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+//            }
+//        }
+//    }
+//}
 
 
 void FSkeletalMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected, bool bCPUSkinning) const
@@ -315,6 +446,8 @@ void FSkeletalMeshRenderPass::CreateShader()
         return;
     }
 #pragma endregion UberShader
+
+    ShaderManager->AddComputeShader(L"SkinningCS",L"Shaders/SkinningCS.hlsl","mainCS");
 }
 
 void FSkeletalMeshRenderPass::UpdateVertexBuffer(FFbxMeshData& meshData, const TArray<FMatrix>& BoneMatrices)
@@ -380,8 +513,73 @@ void FSkeletalMeshRenderPass::GetSkinnedVertices(USkeletalMesh* SkeletalMesh, ui
     }
 }
 
+void FSkeletalMeshRenderPass::DispatchSkinningCS(
+    const FString& SectionKey,
+    const TArray<FSkeletalVertex>& InVerts,
+    const TArray<FMatrix>& BoneMats) const
+{
+    // 버퍼 키
+    FString inKey = SectionKey + TEXT("_In");
+    FString outKey = SectionKey + TEXT("_Out");
+    UINT vertCount = InVerts.Num();
+
+    FDispatchInfo dispatchInfo = { vertCount, {0,0,0} };
+
+    BufferManager->UpdateConstantBuffer(TEXT("CDispatchInfo"),dispatchInfo);
+    BufferManager->BindConstantBuffer( TEXT("CDispatchInfo"), 1, EShaderStage::Compute );
+
+    // 1) 버퍼 생성 (한 번만)
+    BufferManager->CreateStructuredBuffer(
+        inKey, sizeof(FSkeletalVertex), vertCount,
+        InVerts.GetData(), true, true, false
+    );
+    BufferManager->UpdateStructuredBuffer(inKey,InVerts.GetData(),vertCount * sizeof(FSkeletalVertex));
+
+    BufferManager->CreateStructuredBuffer(
+        outKey, sizeof(FSkeletalVertex), vertCount,
+        nullptr, true, false, true
+    );
+    UpdateBoneMatrices(BoneMats);
+    // 2) 본 매트릭스 CB 업데이트
+    BufferManager->BindConstantBuffer(TEXT("FBoneMatrices"), 0, EShaderStage::Compute);
+
+    //BufferManager->UpdateStructuredBuffer(TEXT("FBoneMatrices"), BoneMats.GetData(), BoneMats.Num() * sizeof(FMatrix));
+
+    // 3) CS 디스패치
+    auto ctx = Graphics->DeviceContext;
+    ctx->CSSetShader(ShaderManager->GetComputeShaderByKey(L"SkinningCS"), nullptr, 0);
+
+    ID3D11ShaderResourceView* srv = BufferManager->GetSRV(inKey);
+    ID3D11UnorderedAccessView* uav = BufferManager->GetUAV(outKey);
+    ctx->CSSetShaderResources(0, 1, &srv);
+    ctx->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
+
+    UINT groups = (vertCount + 255) / 256;
+    ctx->Dispatch(groups, 1, 1);
+
+    // 4) 언바인딩
+    ID3D11UnorderedAccessView* nullUAV = nullptr;
+    ID3D11ShaderResourceView* nullSRV = nullptr;
+    ctx->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+    ctx->CSSetShaderResources(0, 1, &nullSRV);
+    ctx->CSSetShader(nullptr, nullptr, 0);
+
+    // 6) Compute 결과 → 전통적 VertexBuffer 로 복사
+
+    ID3D11Buffer* vb = BufferManager->GetBuffer(outKey);
+    UINT stride = sizeof(FSkeletalVertex),
+        offset = 0;
+    Graphics->DeviceContext->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+
+    //const FString vbKey = SectionKey + TEXT("_GPU");
+    //ID3D11Buffer* dstVB = BufferManager->GetBuffer(vbKey);
+    //ID3D11Buffer* srcVB = BufferManager->GetBuffer(outKey);
+    //Graphics->DeviceContext->CopyResource(dstVB, srcVB);
+}
 
 void FSkeletalMeshRenderPass::ClearRenderArr()
 {
     SkeletalMeshComponents.Empty();
 }
+
+

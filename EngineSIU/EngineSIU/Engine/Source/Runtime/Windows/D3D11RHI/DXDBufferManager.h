@@ -68,7 +68,16 @@ public:
     HRESULT CreateUnicodeTextBuffer(const FWString& Text, FBufferInfo& OutBufferInfo, float BitmapWidth, float BitmapHeight, float ColCount, float RowCount);
 
     void SetStartUV(wchar_t hangul, FVector2D& UVOffset);
-    
+    HRESULT CreateStructuredBuffer(
+        const FString& Key, UINT ElementSize, UINT Count, const void* InitialData, bool bHasUAV, bool bHasSRV, bool bHasVB
+    );
+    HRESULT CreateShaderResourceView(const FString& Key);
+    HRESULT CreateUnorderedAccessView(const FString& Key);
+    void UpdateStructuredBuffer(const FString& Key, const void* Data, UINT DataSize);
+    ID3D11Buffer* GetBuffer(const FString& Key) const;
+    ID3D11ShaderResourceView* GetSRV(const FString& Key) const;
+    ID3D11UnorderedAccessView* GetUAV(const FString& Key) const;
+
     void ReleaseBuffers();
     void ReleaseConstantBuffer();
 
@@ -120,6 +129,11 @@ private:
     TMap<FWString, FBufferInfo> TextAtlasBufferPool;
     TMap<FWString, FVertexInfo> TextAtlasVertexBufferPool;
     TMap<FWString, FIndexInfo> TextAtlasIndexBufferPool;
+
+    // Compute 추가 멤버
+    TMap<FString, ID3D11Buffer*>           StructuredBuffers;
+    TMap<FString, ID3D11ShaderResourceView*> SRVPool;
+    TMap<FString, ID3D11UnorderedAccessView*> UAVPool;
 };
 
 // 템플릿 함수 구현부
@@ -361,6 +375,15 @@ HRESULT FDXDBufferManager::CreateBufferGeneric(const FString& KeyName, T* data, 
     }
 
     ConstantBufferPool.Add(KeyName, buffer);
+    if (usage == D3D11_BIND_VERTEX_BUFFER)
+    {
+        FVertexInfo info;
+        info.NumVertices = byteWidth / sizeof(T);
+        info.Stride = sizeof(T);
+        info.Offset = 0;
+        info.VertexBuffer = buffer;
+        VertexBufferPool.Add(KeyName, info);
+    }
     return S_OK;
 }
 
